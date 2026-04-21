@@ -96,3 +96,25 @@ export interface GraphEdge {
   /** Line number where the relationship originates (1-indexed) */
   sourceLine: number;
 }
+
+// --- Query Types (P3: Query Engine) ---
+
+/** Result of a graph search operation */
+export interface SearchResult {
+  /** Nodes that matched the query directly or were included in the result */
+  nodes: GraphNode[];
+  /** Edges connecting the nodes in the result */
+  edges: GraphEdge[];
+}
+
+/** A local subgraph extracted around a specific node */
+export interface Subgraph {
+  /** The ID of the node from which the traversal started */
+  centerNodeId: string;
+  /** Maximum traversal depth used to extract this subgraph */
+  depth: number;
+  /** All nodes within the specified depth */
+  nodes: GraphNode[];
+  /** All edges connecting the nodes within the subgraph */
+  edges: GraphEdge[];
+}
