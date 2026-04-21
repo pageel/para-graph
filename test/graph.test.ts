@@ -6,16 +6,20 @@
  * 2. Parse import chain → verify IMPORTS_FROM edge
  * 3. Parse function calls → verify CALLS edge
  * 4. Export JSONL → read back → verify data integrity (H3-1)
+ * 5. [P2] Semantic field round-trip (write with semantic → import → verify)
+ * 6. [P2] Backward compat — P1 output (no semantic) still loads correctly
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { resolve, join, dirname } from 'node:path';
-import { readFileSync, existsSync, rmSync, mkdirSync } from 'node:fs';
+import { readFileSync, existsSync, rmSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { CodeGraph } from '../src/graph/code-graph.js';
 import { TreeSitterParser } from '../src/parser/tree-sitter-parser.js';
 import { exportToJsonl } from '../src/graph/jsonl-exporter.js';
-import { NodeType, EdgeRelation } from '../src/graph/models.js';
+import { importFromJsonl } from '../src/graph/jsonl-importer.js';
+import { NodeType, EdgeRelation, ExportType } from '../src/graph/models.js';
+import type { SemanticAttributes, GraphNode } from '../src/graph/models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -126,6 +130,89 @@ describe('para-graph', () => {
 
       // Cleanup
       rmSync(TEST_OUTPUT_DIR, { recursive: true });
+    });
+  });
+
+  // --- P2: Semantic Enrichment Tests ---
+
+  describe('Test 5: [P2] Semantic field round-trip', () => {
+    it('should preserve semantic data through export → import cycle', () => {
+      const semantic: SemanticAttributes = {
+        summary: 'In-memory graph storage with dual indexing',
+        complexity: 'medium',
+        domainConcepts: ['graph', 'indexing', 'code-analysis'],
+        enrichedAt: '2026-04-21T10:00:00Z',
+        enrichedBy: 'agent',
+      };
+
+      // Create a node with semantic data
+      const enrichedNode: GraphNode = {
+        id: 'test.ts::TestClass',
+        type: NodeType.CLASS,
+        name: 'TestClass',
+        filePath: 'test.ts',
+        startLine: 1,
+        endLine: 10,
+        exportType: ExportType.NAMED,
+        signature: 'export class TestClass',
+        semantic,
+      };
+
+      graph.addNode(enrichedNode);
+
+      // Export
+      const outputDir = join(TEST_OUTPUT_DIR, 'semantic-roundtrip');
+      if (existsSync(outputDir)) rmSync(outputDir, { recursive: true });
+      mkdirSync(outputDir, { recursive: true });
+      exportToJsonl(graph, outputDir);
+
+      // Import back
+      const imported = importFromJsonl(outputDir);
+      const importedNodes = imported.getAllNodes();
+
+      expect(importedNodes.length).toBe(1);
+      expect(importedNodes[0].semantic).toBeDefined();
+      expect(importedNodes[0].semantic?.summary).toBe(semantic.summary);
+      expect(importedNodes[0].semantic?.complexity).toBe('medium');
+      expect(importedNodes[0].semantic?.domainConcepts).toEqual(['graph', 'indexing', 'code-analysis']);
+      expect(importedNodes[0].semantic?.enrichedBy).toBe('agent');
+
+      // Cleanup
+      rmSync(outputDir, { recursive: true });
+    });
+  });
+
+  describe('Test 6: [P2] Backward compat — P1 output loads correctly', () => {
+    it('should load JSONL without semantic field (P1 format)', () => {
+      // Create P1-style JSONL (no semantic field)
+      const outputDir = join(TEST_OUTPUT_DIR, 'p1-compat');
+      if (existsSync(outputDir)) rmSync(outputDir, { recursive: true });
+      mkdirSync(outputDir, { recursive: true });
+
+      const p1Node = {
+        id: 'legacy.ts::LegacyFn',
+        type: 'function',
+        name: 'LegacyFn',
+        filePath: 'legacy.ts',
+        startLine: 1,
+        endLine: 5,
+        exportType: 'named',
+        signature: 'export function LegacyFn()',
+      };
+
+      writeFileSync(join(outputDir, 'entities.jsonl'), JSON.stringify(p1Node) + '\n', 'utf-8');
+      writeFileSync(join(outputDir, 'relations.jsonl'), '', 'utf-8');
+
+      // Import P1 output
+      const imported = importFromJsonl(outputDir);
+      const nodes = imported.getAllNodes();
+
+      expect(nodes.length).toBe(1);
+      expect(nodes[0].name).toBe('LegacyFn');
+      expect(nodes[0].semantic).toBeUndefined();
+
+      // Cleanup
+      rmSync(outputDir, { recursive: true });
     });
   });
 });

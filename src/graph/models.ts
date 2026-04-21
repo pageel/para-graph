@@ -31,6 +31,28 @@ export enum ExportType {
   NONE = 'none',
 }
 
+// --- Semantic Types (P2: Enrichment Schema) ---
+
+/** Complexity classification for a code entity */
+export type ComplexityLevel = 'low' | 'medium' | 'high';
+
+/**
+ * Semantic attributes added by Agent enrichment (via MCP tools).
+ * These fields are OPTIONAL — a node without enrichment has `semantic: undefined`.
+ */
+export interface SemanticAttributes {
+  /** Human-readable summary of what this code entity does */
+  summary: string;
+  /** Estimated complexity level */
+  complexity: ComplexityLevel;
+  /** Domain concepts this entity relates to (e.g., ["graph", "indexing"]) */
+  domainConcepts: string[];
+  /** ISO 8601 timestamp of when enrichment was performed */
+  enrichedAt: string;
+  /** Who performed the enrichment */
+  enrichedBy: 'agent' | 'manual';
+}
+
 // --- Interfaces ---
 
 /**
@@ -54,6 +76,8 @@ export interface GraphNode {
   exportType: ExportType;
   /** Original declaration signature (first line) */
   signature: string;
+  /** Semantic enrichment data — added by Agent via MCP, undefined if not enriched */
+  semantic?: SemanticAttributes;
 }
 
 /**

@@ -1,4 +1,30 @@
+# Dependencies
 node_modules/
+
+# Build output
 dist/
+
+# Graph output (generated data)
 output/
+
+# Environment & credentials
+.env
+.env.*
+*.pem
+*.key
+*.sqlite
+*.db
+credentials.json
+
+# Test artifacts
+test/.test-output/
 *.log
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
