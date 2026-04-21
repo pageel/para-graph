@@ -64,24 +64,32 @@ function validateSemantic(data: unknown): string | null {
 }
 
 /**
+ * Resolves the graph directory for a given project name.
+ */
+function getGraphDir(workspaceRoot: string, projectName: string): string {
+  return resolve(workspaceRoot, 'Projects', projectName, '.beads', 'graph');
+}
+
+/**
  * Register graph tools on the MCP server.
  *
  * @param server - MCP server instance
- * @param graphDir - Directory containing graph output files
+ * @param workspaceRoot - Root directory of the PARA Workspace
  */
-export function registerTools(server: McpServer, graphDir: string): void {
-  const resolved = resolve(graphDir);
+export function registerTools(server: McpServer, workspaceRoot: string): void {
 
   // --- graph_query: Filter and search graph nodes ---
   server.tool(
     'graph_query',
     'Query graph nodes with optional filters by type and name pattern',
     {
+      projectName: z.string().describe('Name of the PARA project (e.g., pageel-cms, para-graph)'),
       nodeType: z.string().optional().describe('Filter by node type (file, class, function, interface, variable)'),
       namePattern: z.string().optional().describe('Filter by name substring (case-insensitive)'),
     },
-    async ({ nodeType, namePattern }) => {
-      let entities = loadEntities(resolved);
+    async ({ projectName, nodeType, namePattern }) => {
+      const graphDir = getGraphDir(workspaceRoot, projectName);
+      let entities = loadEntities(graphDir);
 
       if (nodeType) {
         entities = entities.filter((n) => n.type === nodeType);
@@ -102,10 +110,12 @@ export function registerTools(server: McpServer, graphDir: string): void {
     'graph_edges',
     'Get all edges (relationships) connected to a specific node',
     {
+      projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the node to query edges for'),
     },
-    async ({ nodeId }) => {
-      const relations = loadRelations(resolved);
+    async ({ projectName, nodeId }) => {
+      const graphDir = getGraphDir(workspaceRoot, projectName);
+      const relations = loadRelations(graphDir);
       const connected = relations.filter((e) => e.sourceId === nodeId || e.targetId === nodeId);
 
       return {
@@ -119,13 +129,15 @@ export function registerTools(server: McpServer, graphDir: string): void {
     'graph_enrich',
     'Write semantic enrichment data (summary, complexity, domain concepts) to a graph node',
     {
+      projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the node to enrich'),
       summary: z.string().describe('Human-readable summary of what this code entity does'),
       complexity: z.enum(['low', 'medium', 'high']).describe('Estimated complexity level'),
       domainConcepts: z.array(z.string()).describe('Domain concepts this entity relates to'),
     },
-    async ({ nodeId, summary, complexity, domainConcepts }) => {
-      const entities = loadEntities(resolved);
+    async ({ projectName, nodeId, summary, complexity, domainConcepts }) => {
+      const graphDir = getGraphDir(workspaceRoot, projectName);
+      const entities = loadEntities(graphDir);
       const nodeIndex = entities.findIndex((n) => n.id === nodeId);
 
       if (nodeIndex === -1) {
@@ -155,7 +167,7 @@ export function registerTools(server: McpServer, graphDir: string): void {
 
       // Update node
       entities[nodeIndex] = { ...entities[nodeIndex], semantic };
-      saveEntities(resolved, entities);
+      saveEntities(graphDir, entities);
 
       return {
         content: [{

@@ -15,36 +15,36 @@ import { registerTools } from './tools.js';
 /**
  * Create and configure the MCP server with all resources and tools.
  *
- * @param graphDir - Directory containing graph output (entities.jsonl, etc.)
+ * @param workspaceRoot - Root directory of the PARA Workspace
  */
-export function createServer(graphDir: string): McpServer {
+export function createServer(workspaceRoot: string): McpServer {
   const server = new McpServer({
     name: 'para-graph',
-    version: '0.2.0',
+    version: '0.3.0',
   });
 
-  registerResources(server, graphDir);
-  registerTools(server, graphDir);
+  registerResources(server, workspaceRoot);
+  registerTools(server, workspaceRoot);
 
   return server;
 }
 
 /**
  * Start the MCP server with stdio transport.
- * Called when running `npx tsx src/mcp/server.ts <graph-dir>`.
+ * Called when running `npx tsx src/mcp/server.ts <workspace-root>`.
  */
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
 
   if (args.length === 0 || args[0] === '--help') {
-    console.error('Usage: para-graph-mcp <graph-dir>');
+    console.error('Usage: para-graph-mcp <workspace-root>');
     console.error('');
-    console.error('Start MCP server exposing graph data from <graph-dir>.');
+    console.error('Start MCP server exposing graph data from the PARA workspace.');
     process.exit(1);
   }
 
-  const graphDir = args[0];
-  const server = createServer(graphDir);
+  const workspaceRoot = args[0];
+  const server = createServer(workspaceRoot);
   const transport = new StdioServerTransport();
 
   await server.connect(transport);

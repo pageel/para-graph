@@ -9,41 +9,54 @@
 
 import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 
 /**
  * Register graph file resources on the MCP server.
  *
  * @param server - MCP server instance
- * @param graphDir - Directory containing graph output files
+ * @param workspaceRoot - Root directory of the PARA Workspace
  */
-export function registerResources(server: McpServer, graphDir: string): void {
-  const resolved = resolve(graphDir);
+export function registerResources(server: McpServer, workspaceRoot: string): void {
+  const resolved = resolve(workspaceRoot);
 
-  server.resource('entities', 'para-graph://entities', async () => {
-    const filePath = join(resolved, 'entities.jsonl');
-    if (!existsSync(filePath)) {
-      return { contents: [{ uri: 'para-graph://entities', text: '', mimeType: 'application/jsonl' }] };
+  server.resource(
+    'entities',
+    new ResourceTemplate('para-graph://{projectName}/entities', { list: undefined }),
+    async (uri, { projectName }) => {
+      const filePath = join(resolved, 'Projects', projectName as string, '.beads', 'graph', 'entities.jsonl');
+      if (!existsSync(filePath)) {
+        return { contents: [{ uri: uri.href, text: '', mimeType: 'application/jsonl' }] };
+      }
+      const content = readFileSync(filePath, 'utf-8');
+      return { contents: [{ uri: uri.href, text: content, mimeType: 'application/jsonl' }] };
     }
-    const content = readFileSync(filePath, 'utf-8');
-    return { contents: [{ uri: 'para-graph://entities', text: content, mimeType: 'application/jsonl' }] };
-  });
+  );
 
-  server.resource('relations', 'para-graph://relations', async () => {
-    const filePath = join(resolved, 'relations.jsonl');
-    if (!existsSync(filePath)) {
-      return { contents: [{ uri: 'para-graph://relations', text: '', mimeType: 'application/jsonl' }] };
+  server.resource(
+    'relations',
+    new ResourceTemplate('para-graph://{projectName}/relations', { list: undefined }),
+    async (uri, { projectName }) => {
+      const filePath = join(resolved, 'Projects', projectName as string, '.beads', 'graph', 'relations.jsonl');
+      if (!existsSync(filePath)) {
+        return { contents: [{ uri: uri.href, text: '', mimeType: 'application/jsonl' }] };
+      }
+      const content = readFileSync(filePath, 'utf-8');
+      return { contents: [{ uri: uri.href, text: content, mimeType: 'application/jsonl' }] };
     }
-    const content = readFileSync(filePath, 'utf-8');
-    return { contents: [{ uri: 'para-graph://relations', text: content, mimeType: 'application/jsonl' }] };
-  });
+  );
 
-  server.resource('metadata', 'para-graph://metadata', async () => {
-    const filePath = join(resolved, 'metadata.json');
-    if (!existsSync(filePath)) {
-      return { contents: [{ uri: 'para-graph://metadata', text: '{}', mimeType: 'application/json' }] };
+  server.resource(
+    'metadata',
+    new ResourceTemplate('para-graph://{projectName}/metadata', { list: undefined }),
+    async (uri, { projectName }) => {
+      const filePath = join(resolved, 'Projects', projectName as string, '.beads', 'graph', 'metadata.json');
+      if (!existsSync(filePath)) {
+        return { contents: [{ uri: uri.href, text: '{}', mimeType: 'application/json' }] };
+      }
+      const content = readFileSync(filePath, 'utf-8');
+      return { contents: [{ uri: uri.href, text: content, mimeType: 'application/json' }] };
     }
-    const content = readFileSync(filePath, 'utf-8');
-    return { contents: [{ uri: 'para-graph://metadata', text: content, mimeType: 'application/json' }] };
-  });
+  );
 }
