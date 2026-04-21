@@ -13,36 +13,7 @@ import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GraphNode, GraphEdge, SemanticAttributes } from '../graph/models.js';
 
-/**
- * Load entities from JSONL file.
- */
-function loadEntities(graphDir: string): GraphNode[] {
-  const filePath = join(graphDir, 'entities.jsonl');
-  if (!existsSync(filePath)) return [];
-  const content = readFileSync(filePath, 'utf-8').trim();
-  if (content.length === 0) return [];
-  return content.split('\n').map((line) => JSON.parse(line) as GraphNode);
-}
-
-/**
- * Load relations from JSONL file.
- */
-function loadRelations(graphDir: string): GraphEdge[] {
-  const filePath = join(graphDir, 'relations.jsonl');
-  if (!existsSync(filePath)) return [];
-  const content = readFileSync(filePath, 'utf-8').trim();
-  if (content.length === 0) return [];
-  return content.split('\n').map((line) => JSON.parse(line) as GraphEdge);
-}
-
-/**
- * Save entities back to JSONL file.
- */
-function saveEntities(graphDir: string, entities: GraphNode[]): void {
-  const filePath = join(graphDir, 'entities.jsonl');
-  const content = entities.map((n) => JSON.stringify(n)).join('\n') + '\n';
-  writeFileSync(filePath, content, 'utf-8');
-}
+import { GraphStore } from '../graph/store/GraphStore.js';
 
 /**
  * Validate SemanticAttributes structure.
@@ -88,19 +59,21 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       namePattern: z.string().optional().describe('Filter by name substring (case-insensitive)'),
     },
     async ({ projectName, nodeType, namePattern }) => {
-      const graphDir = getGraphDir(workspaceRoot, projectName);
-      let entities = loadEntities(graphDir);
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      let nodes: GraphNode[];
 
-      if (nodeType) {
-        entities = entities.filter((n) => n.type === nodeType);
-      }
       if (namePattern) {
-        const pattern = namePattern.toLowerCase();
-        entities = entities.filter((n) => n.name.toLowerCase().includes(pattern));
+        const result = graph.search(namePattern, nodeType);
+        nodes = result.nodes;
+      } else {
+        nodes = graph.getAllNodes();
+        if (nodeType) {
+          nodes = nodes.filter((n) => n.type === nodeType);
+        }
       }
 
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify(entities, null, 2) }],
+        content: [{ type: 'text' as const, text: JSON.stringify(nodes, null, 2) }],
       };
     },
   );
@@ -114,9 +87,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       nodeId: z.string().describe('ID of the node to query edges for'),
     },
     async ({ projectName, nodeId }) => {
-      const graphDir = getGraphDir(workspaceRoot, projectName);
-      const relations = loadRelations(graphDir);
-      const connected = relations.filter((e) => e.sourceId === nodeId || e.targetId === nodeId);
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const connected = graph.getConnectedEdges(nodeId);
 
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(connected, null, 2) }],
@@ -136,11 +108,10 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       domainConcepts: z.array(z.string()).describe('Domain concepts this entity relates to'),
     },
     async ({ projectName, nodeId, summary, complexity, domainConcepts }) => {
-      const graphDir = getGraphDir(workspaceRoot, projectName);
-      const entities = loadEntities(graphDir);
-      const nodeIndex = entities.findIndex((n) => n.id === nodeId);
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const node = graph.getNode(nodeId);
 
-      if (nodeIndex === -1) {
+      if (!node) {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ success: false, error: `Node not found: ${nodeId}` }) }],
           isError: true,
@@ -166,13 +137,16 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       }
 
       // Update node
-      entities[nodeIndex] = { ...entities[nodeIndex], semantic };
-      saveEntities(graphDir, entities);
+      node.semantic = semantic;
+      graph.updateNode(node);
+      
+      // Save all entities back to file (this also updates cache)
+      GraphStore.saveEntities(workspaceRoot, projectName, graph.getAllNodes());
 
       return {
         content: [{
           type: 'text' as const,
-          text: JSON.stringify({ success: true, updatedNode: entities[nodeIndex] }, null, 2),
+          text: JSON.stringify({ success: true, updatedNode: node }, null, 2),
         }],
       };
     },
