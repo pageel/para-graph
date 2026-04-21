@@ -43,9 +43,9 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 
 - **Deterministic parsing** — Tree-sitter AST, no heuristics
 - **JSONL output** — one entity/relation per line, easy to stream and process
-- **Self-contained** — no external services or databases required
-- **Fast** — parses thousands of files in seconds
-- **TypeScript-first** — built for TypeScript codebases (more languages planned)
+- **Global Workspace Server** — Serve multiple project graphs simultaneously via MCP
+- **Semantic Enrichment** — Agent-driven context tagging (summary, complexity, domain concepts)
+- **Fast In-Memory Query Engine** — Indexed lookups with LRU cache (Max=3 projects)
 
 ## 🚀 Quick Start
 
@@ -186,8 +186,8 @@ npm run test
 | Phase | Description | Status |
 |:--|:--|:--|
 | P1 | Structural Base (Tree-sitter AST) | ✅ Done |
-| P2 | Semantic Enrichment (LLM) | 📋 Planned |
-| P3 | Storage & Query Engine | 📋 Planned |
+| P2 | Semantic Enrichment (LLM) | ✅ Done |
+| P3 | Storage & Query Engine | ✅ Done |
 | P4 | PARA Workspace CLI Integration | 📋 Planned |
 | P5 | MCP Server Oracle | 📋 Planned |
 
