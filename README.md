@@ -9,6 +9,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+    <img src="https://img.shields.io/badge/version-0.4.0-brightgreen.svg" alt="Version 0.4.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -57,28 +58,65 @@ cd para-graph
 # Install
 npm install
 
-# Run on any TypeScript project
-npx tsx src/index.ts /path/to/your/ts/project ./output
+# Build
+npm run build
+
+# Scan any TypeScript project
+npx para-graph build /path/to/your/ts/project ./output
+```
+
+Or run directly without cloning:
+
+```bash
+npx para-graph build ./src ./output
 ```
 
 ## 📖 Usage
 
-```bash
-# Basic usage
-npx tsx src/index.ts <target-dir> [output-dir]
+### CLI Commands
 
-# Examples
-npx tsx src/index.ts ./src                    # Output to ./output/
-npx tsx src/index.ts ./src ./my-graph         # Custom output directory
-npx tsx src/index.ts ./src --help             # Show help
+```bash
+# Scan source code and export graph
+para-graph build <target-dir> [output-dir] [--import]
+
+# Start MCP server for AI Agent integration
+para-graph serve <workspace-root>
+
+# Show help
+para-graph --help
 ```
 
-### Arguments
+### Build Command
+
+```bash
+# Basic usage
+para-graph build ./src                       # Output to ./output/
+para-graph build ./src ./my-graph            # Custom output directory
+para-graph build ./src ./out --import        # Preserve semantic data on re-scan
+```
 
 | Argument | Required | Default | Description |
 |:--|:--|:--|:--|
 | `target-dir` | ✅ | — | Directory containing TypeScript source files |
 | `output-dir` | — | `./output` | Where to write the graph output |
+| `--import` | — | — | Load existing graph, preserve semantic enrichment data |
+
+### Serve Command
+
+```bash
+# Start MCP server (stdio transport)
+para-graph serve /path/to/workspace
+```
+
+### Library Usage
+
+```typescript
+// Import as a library
+import { CodeGraph } from 'para-graph';
+
+// Import MCP server factory
+import { createServer } from 'para-graph/mcp';
+```
 
 ## 📊 Output Format
 
@@ -137,11 +175,20 @@ Summary statistics:
 
 ```
 src/
-├── index.ts                  # CLI entry point
+├── cli.ts                    # Subcommand router (shebang entrypoint)
+├── commands/
+│   ├── build.ts              # Build command — scan, parse, export graph
+│   └── serve.ts              # Serve command — MCP server lifecycle
 ├── graph/
 │   ├── models.ts             # GraphNode, GraphEdge type definitions
 │   ├── code-graph.ts         # In-memory graph with dual indexing
-│   └── jsonl-exporter.ts     # Serialize graph → JSONL files
+│   ├── jsonl-exporter.ts     # Serialize graph → JSONL files
+│   ├── jsonl-importer.ts     # Load graph from JSONL files
+│   └── graph-store.ts        # LRU cache manager for multi-project graphs
+├── mcp/
+│   ├── server.ts             # MCP server factory (pure library export)
+│   ├── tools.ts              # MCP tools: query, edges, enrich
+│   └── resources.ts          # MCP resources: JSONL file access
 ├── parser/
 │   ├── tree-sitter-parser.ts # AST parsing and entity extraction
 │   └── file-walker.ts        # Recursive TypeScript file scanner
@@ -153,6 +200,10 @@ src/
 
 ```
 TypeScript files → File Walker → Tree-sitter Parser → CodeGraph (in-memory) → JSONL Export
+                                                            │
+                                                      GraphStore (LRU)
+                                                            │
+                                                      MCP Server → AI Agent
 ```
 
 ## 🛠️ Development
@@ -186,10 +237,10 @@ npm run test
 | Phase | Description | Status |
 |:--|:--|:--|
 | P1 | Structural Base (Tree-sitter AST) | ✅ Done |
-| P2 | Semantic Enrichment (LLM) | ✅ Done |
+| P2 | Semantic Enrichment (Agent-Driven) | ✅ Done |
 | P3 | Storage & Query Engine | ✅ Done |
-| P4 | PARA Workspace CLI Integration | 📋 Planned |
-| P5 | MCP Server Oracle | 📋 Planned |
+| P4 | CLI Integration & NPM Package | ✅ Done |
+| P5 | Documentation & Stable Release | 📋 Planned |
 
 ## 📄 License
 

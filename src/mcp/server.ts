@@ -20,7 +20,7 @@ import { registerTools } from './tools.js';
 export function createServer(workspaceRoot: string): McpServer {
   const server = new McpServer({
     name: 'para-graph',
-    version: '0.3.0',
+    version: '0.4.0',
   });
 
   registerResources(server, workspaceRoot);
