@@ -4,8 +4,9 @@ node_modules/
 # Build output
 dist/
 
-# Graph output (generated data)
+# Graph output (generated data — includes test/walkthrough runs)
 output/
+*-output/
 
 # Environment & credentials
 .env
