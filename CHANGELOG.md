@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Subcommand CLI router: `para-graph build`, `para-graph serve`
 - NPM package configuration: `bin`, `exports`, `files`
 - Source maps and declaration maps for debugging
+- README banner image aligned with PARA ecosystem standards
 - CHANGELOG.md
 
 ### Changed

@@ -1,4 +1,7 @@
 <div align="center">
+  <img src="./docs/assets/para-graph-banner.png" alt="Para-Graph Banner" width="100%">
+  <br/>
+  
   <h1>para-graph 🧠</h1>
 
   <p><b>Structural code analysis tool powered by Tree-sitter AST parsing.</b></p>
