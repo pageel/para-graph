@@ -1,56 +1,34 @@
-#!/usr/bin/env node
 /**
- * para-graph CLI — Structural code analysis tool.
+ * para-graph build command — Scan source code and generate structural graph.
  *
- * Usage:
- *   npx tsx src/index.ts <target-dir> [output-dir] [--import]
+ * Extracted from the original monolithic index.ts to support
+ * subcommand routing via cli.ts.
  *
- * Arguments:
- *   target-dir  Directory containing TypeScript source files to analyze
- *   output-dir  Directory to write graph output (default: ./output)
- *
- * Flags:
- *   --import    Load existing graph from output-dir before scanning.
- *               Preserves semantic enrichment data on re-scan (H2-1).
- *
- * Output:
- *   entities.jsonl   — All code entities (nodes)
- *   relations.jsonl  — All relationships (edges)
- *   metadata.json    — Summary statistics
+ * Usage (via CLI router):
+ *   para-graph build <target-dir> [output-dir] [--import]
  */
 
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
-import { walkDirectory } from './parser/file-walker.js';
-import { TreeSitterParser } from './parser/tree-sitter-parser.js';
-import { CodeGraph } from './graph/code-graph.js';
-import { exportToJsonl } from './graph/jsonl-exporter.js';
-import { importFromJsonl } from './graph/jsonl-importer.js';
-import type { GraphNode } from './graph/models.js';
+import { walkDirectory } from '../parser/file-walker.js';
+import { TreeSitterParser } from '../parser/tree-sitter-parser.js';
+import { CodeGraph } from '../graph/code-graph.js';
+import { exportToJsonl } from '../graph/jsonl-exporter.js';
+import { importFromJsonl } from '../graph/jsonl-importer.js';
+import type { GraphNode } from '../graph/models.js';
 
-function main(): void {
-  const args = process.argv.slice(2);
+export interface BuildOptions {
+  targetDir: string;
+  outputDir: string;
+  useImport: boolean;
+}
 
-  if (args.length === 0 || args[0] === '--help' || args[0] === '-h') {
-    console.log('Usage: para-graph <target-dir> [output-dir] [--import]');
-    console.log('');
-    console.log('Analyze TypeScript source code and generate a structural graph.');
-    console.log('');
-    console.log('Arguments:');
-    console.log('  target-dir   Directory containing *.ts files to analyze');
-    console.log('  output-dir   Output directory (default: ./output)');
-    console.log('');
-    console.log('Flags:');
-    console.log('  --import     Load existing graph, preserve semantic data on re-scan');
-    process.exit(args.length === 0 ? 1 : 0);
-  }
-
-  // Parse args: filter out flags
-  const positional = args.filter((a) => !a.startsWith('--'));
-  const useImport = args.includes('--import');
-
-  const targetDir = resolve(positional[0]);
-  const outputDir = resolve(positional[1] ?? './output');
+/**
+ * Execute the build command — scan, parse, merge, export.
+ */
+export function runBuild(options: BuildOptions): void {
+  const targetDir = resolve(options.targetDir);
+  const outputDir = resolve(options.outputDir);
 
   if (!existsSync(targetDir)) {
     console.error(`Error: Target directory not found: ${targetDir}`);
@@ -59,7 +37,7 @@ function main(): void {
 
   // Step 1: Load existing graph if --import flag is set (H2-1)
   let existingNodes: Map<string, GraphNode> = new Map();
-  if (useImport && existsSync(outputDir)) {
+  if (options.useImport && existsSync(outputDir)) {
     console.log(`[para-graph] Importing existing graph from: ${outputDir}`);
     const existing = importFromJsonl(outputDir);
     for (const node of existing.getAllNodes()) {
@@ -116,6 +94,3 @@ function main(): void {
   exportToJsonl(graph, outputDir);
   console.log(`[para-graph] Done. Output at: ${outputDir}`);
 }
-
-main();
-

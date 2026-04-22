@@ -1,11 +1,29 @@
 {
   "name": "para-graph",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Hybrid Code-Knowledge Graph tool for PARA Workspace",
-  "main": "index.js",
+  "main": "./dist/cli.js",
+  "types": "./dist/cli.d.ts",
+  "bin": {
+    "para-graph": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/graph/code-graph.d.ts",
+      "import": "./dist/graph/code-graph.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/server.d.ts",
+      "import": "./dist/mcp/server.js"
+    }
+  },
+  "files": [
+    "dist/",
+    "src/queries/"
+  ],
   "scripts": {
     "test": "vitest run",
-    "dev": "tsx src/index.ts",
+    "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.build.json"
   },
   "repository": {
