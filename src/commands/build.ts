@@ -1,8 +1,9 @@
 /**
  * para-graph build command — Scan source code and generate structural graph.
  *
- * Extracted from the original monolithic index.ts to support
- * subcommand routing via cli.ts.
+ * Supports multiple languages via Language Registry.
+ * Each file is auto-detected by extension and parsed with
+ * the corresponding tree-sitter grammar + SSEC query.
  *
  * Usage (via CLI router):
  *   para-graph build <target-dir> [output-dir] [--import]
@@ -50,12 +51,12 @@ export function runBuild(options: BuildOptions): void {
 
   console.log(`[para-graph] Scanning: ${targetDir}`);
 
-  // Step 2: Walk directory for TS files
+  // Step 2: Walk directory for supported source files
   const files = walkDirectory(targetDir);
-  console.log(`[para-graph] Found ${files.length} TypeScript file(s)`);
+  console.log(`[para-graph] Found ${files.length} source file(s)`);
 
   if (files.length === 0) {
-    console.warn('[para-graph] No TypeScript files found. Exiting.');
+    console.warn('[para-graph] No supported files found. Exiting.');
     process.exit(0);
   }
 

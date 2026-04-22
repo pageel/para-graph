@@ -1,41 +1,49 @@
-; Tree-sitter query patterns for TypeScript
-; Written from scratch based on official tree-sitter docs (Clean Room — H2-1)
-; Reference: https://tree-sitter.github.io/tree-sitter/syntax-highlighting
+; Tree-sitter SSEC query patterns for TypeScript
+; Standard: S-Expression Semantic Entity Convention (SSEC)
+; Tags: @entity.* for nodes, @relation.* for edges, @export.* for visibility
+; Reference: brainstorm-2026-04-22-query-based-parser
 
 ;; ============================================================
-;; NODE DECLARATIONS — captures code entities as GraphNodes
+;; ENTITY DECLARATIONS — captures code entities as GraphNodes
 ;; ============================================================
 
 ;; Classes
 (class_declaration
-  name: (type_identifier) @class.name) @class.definition
+  name: (type_identifier) @entity.class.name) @entity.class
 
 ;; Functions (top-level)
 (function_declaration
-  name: (identifier) @function.name) @function.definition
+  name: (identifier) @entity.function.name) @entity.function
 
 ;; Arrow functions assigned to const/let/var
 (lexical_declaration
   (variable_declarator
-    name: (identifier) @variable.name
-    value: (arrow_function))) @arrow.definition
+    name: (identifier) @entity.variable.name
+    value: (arrow_function))) @entity.variable
 
 ;; Interfaces
 (interface_declaration
-  name: (type_identifier) @interface.name) @interface.definition
+  name: (type_identifier) @entity.interface.name) @entity.interface
 
 ;; Method definitions inside classes
 (method_definition
-  name: (property_identifier) @method.name) @method.definition
+  name: (property_identifier) @entity.method.name) @entity.method
 
 ;; ============================================================
-;; EDGE CAPTURES — captures relationships between entities
+;; RELATION CAPTURES — captures relationships between entities
 ;; ============================================================
 
 ;; Import statements (for IMPORTS_FROM edges)
 (import_statement
-  source: (string) @import.source) @import.statement
+  source: (string) @relation.import.source) @relation.import
 
 ;; Call expressions (for CALLS edges) — simple identifier calls
 (call_expression
-  function: (identifier) @call.name) @call.expression
+  function: (identifier) @relation.call.target) @relation.call
+
+;; ============================================================
+;; EXPORT CAPTURES — captures export visibility
+;; ============================================================
+
+;; Named exports: export class Foo {}
+(export_statement) @export.statement

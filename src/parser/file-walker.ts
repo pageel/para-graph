@@ -1,11 +1,13 @@
 /**
- * File Walker — Recursively scans a directory for TypeScript files.
+ * File Walker — Recursively scans a directory for source files
+ * supported by the Language Registry.
  *
  * Excludes: node_modules/, dist/, .d.ts files, and symlinks (H2-3 guard).
  */
 
 import { readdirSync, statSync, lstatSync } from 'node:fs';
 import { join, extname } from 'node:path';
+import { getSupportedExtensions } from './registry.js';
 
 /** Default maximum number of files to collect (H2-3: traversal bomb guard) */
 const MAX_FILES = 10_000;
@@ -13,12 +15,22 @@ const MAX_FILES = 10_000;
 /** Directories to skip during traversal */
 const EXCLUDED_DIRS = new Set(['node_modules', 'dist', '.git', 'output', 'coverage']);
 
+/** Supported extensions — loaded once from Registry */
+let _supportedExtensions: Set<string> | null = null;
+
+function supportedExtensions(): Set<string> {
+  if (!_supportedExtensions) {
+    _supportedExtensions = new Set(getSupportedExtensions());
+  }
+  return _supportedExtensions;
+}
+
 /**
- * Recursively walk a directory and collect all TypeScript file paths.
+ * Recursively walk a directory and collect all supported source file paths.
  *
  * @param dirPath - Root directory to scan
  * @param maxFiles - Maximum number of files to collect (default: 10000)
- * @returns Array of absolute file paths matching *.ts or *.tsx
+ * @returns Array of absolute file paths matching supported extensions
  */
 export function walkDirectory(dirPath: string, maxFiles: number = MAX_FILES): string[] {
   const results: string[] = [];
@@ -59,8 +71,8 @@ function walk(dir: string, results: string[], maxFiles: number): void {
         }
       } else if (stat.isFile()) {
         const ext = extname(entry);
-        // Include .ts and .tsx, exclude .d.ts declaration files
-        if ((ext === '.ts' || ext === '.tsx') && !entry.endsWith('.d.ts')) {
+        // Include supported extensions, exclude .d.ts declaration files
+        if (supportedExtensions().has(ext) && !entry.endsWith('.d.ts')) {
           results.push(fullPath);
         }
       }

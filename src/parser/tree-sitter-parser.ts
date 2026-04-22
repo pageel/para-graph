@@ -1,21 +1,30 @@
 /**
- * TreeSitterParser — Parses TypeScript files using Tree-sitter AST
- * and populates a CodeGraph with structural nodes and edges.
+ * TreeSitterParser — Query-based parser using SSEC .scm files.
  *
- * Clean Room Design (H2-1): All query patterns and parsing logic
- * written from scratch based on official Tree-sitter documentation.
+ * Architecture: Pure Query-based (SSEC)
+ * - No hardcoded language-specific AST walking
+ * - Each language defined by .scm query file with SSEC tags
+ * - Language detection via Registry (extension → profile)
+ *
+ * Reference: brainstorm-2026-04-22-query-based-parser
  */
 
 import { readFileSync } from 'node:fs';
-import { relative } from 'node:path';
+import { relative, extname } from 'node:path';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
 const Parser = require('tree-sitter');
-const TypeScript = require('tree-sitter-typescript/typescript');
+
 import { CodeGraph } from '../graph/code-graph.js';
 import { NodeType, EdgeRelation, ExportType } from '../graph/models.js';
 import type { GraphNode, GraphEdge } from '../graph/models.js';
+import {
+  getProfile,
+  loadLanguageModule,
+  resolveQueryPath,
+} from './registry.js';
+import type { Capture, LanguageProfile } from './registry.js';
 
 /** Tree-sitter AST node type (from CJS require — no ESM type export) */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +34,8 @@ export class TreeSitterParser {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private parser: any;
   private rootDir: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private queryCache: Map<string, any> = new Map();
 
   /**
    * @param rootDir - Project root directory (used for relative path calculation)
@@ -32,18 +43,40 @@ export class TreeSitterParser {
   constructor(rootDir: string) {
     this.rootDir = rootDir;
     this.parser = new Parser();
-    this.parser.setLanguage(TypeScript);
   }
 
   /**
-   * Parse a single TypeScript file and add its entities/relations to the graph.
+   * Parse a single source file and add its entities/relations to the graph.
+   * Language is auto-detected from file extension via Registry.
    *
-   * @param filePath - Absolute path to the .ts file
+   * @param filePath - Absolute path to the source file
    * @param graph - CodeGraph instance to populate
    */
   parseFile(filePath: string, graph: CodeGraph): void {
+    const ext = extname(filePath);
+    const profile = getProfile(ext);
+
+    if (!profile) {
+      // Unsupported extension — skip silently
+      return;
+    }
+
+    // Step 1: Load language module (lazy, cached)
+    const languageModule = loadLanguageModule(profile);
+    if (!languageModule) return;
+
+    // Step 2: Set language and parse
+    this.parser.setLanguage(languageModule);
     const content = readFileSync(filePath, 'utf-8');
-    const tree = this.parser.parse(content);
+
+    let tree: SyntaxNode;
+    try {
+      tree = this.parser.parse(content);
+    } catch (error) {
+      console.warn(`[para-graph] Warning: Failed to parse file ${filePath}. Skipping...`);
+      return;
+    }
+
     const relPath = relative(this.rootDir, filePath);
     const lines = content.split('\n');
 
@@ -60,209 +93,242 @@ export class TreeSitterParser {
     };
     graph.addNode(fileNode);
 
-    // Walk the root children to extract declarations
-    this.extractDeclarations(tree.rootNode, relPath, lines, graph);
-    this.extractImports(tree.rootNode, relPath, graph);
-    this.extractCalls(tree.rootNode, relPath, graph);
+    // Step 3: Run SSEC query
+    const query = this.getQuery(profile, languageModule);
+    if (!query) return;
+
+    const captures: Capture[] = query.captures(tree.rootNode);
+
+    // Step 4: Map captures to graph
+    this.mapCapturesToGraph(captures, relPath, lines, graph);
+
+    // Step 5: Run post-process hook if defined
+    if (profile.postProcess) {
+      profile.postProcess(captures, graph);
+    }
   }
 
   /**
-   * Extract declaration nodes (classes, functions, interfaces, arrow fns, methods).
+   * Load and cache the SSEC query for a language profile.
    */
-  private extractDeclarations(
-    rootNode: SyntaxNode,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private getQuery(profile: LanguageProfile, languageModule: any): any {
+    const cacheKey = profile.queryFile;
+    if (this.queryCache.has(cacheKey)) {
+      return this.queryCache.get(cacheKey);
+    }
+
+    try {
+      const queryPath = resolveQueryPath(profile);
+      const querySource = readFileSync(queryPath, 'utf-8');
+
+      if (!querySource.trim()) {
+        // Empty .scm file — language not yet implemented
+        return null;
+      }
+
+      // node-tree-sitter API: new Parser.Query(language, querySource)
+      const query = new Parser.Query(languageModule, querySource);
+      this.queryCache.set(cacheKey, query);
+      return query;
+    } catch (error) {
+      console.warn(
+        `[para-graph] Warning: Failed to load query file for ${profile.name}. ` +
+        `Error: ${(error as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Map SSEC captures to GraphNodes and GraphEdges.
+   *
+   * SSEC Tag Mapping:
+   * - @entity.class + @entity.class.name → NodeType.CLASS
+   * - @entity.function + @entity.function.name → NodeType.FUNCTION
+   * - @entity.interface + @entity.interface.name → NodeType.INTERFACE
+   * - @entity.method + @entity.method.name → NodeType.FUNCTION (id: ClassName.methodName)
+   * - @entity.variable + @entity.variable.name → NodeType.FUNCTION (arrow fns)
+   * - @relation.import + @relation.import.source → EdgeRelation.IMPORTS_FROM
+   * - @relation.call + @relation.call.target → EdgeRelation.CALLS
+   * - @export.statement → ExportType detection
+   */
+  private mapCapturesToGraph(
+    captures: Capture[],
     filePath: string,
     lines: string[],
     graph: CodeGraph,
   ): void {
-    const visit = (node: SyntaxNode): void => {
-      switch (node.type) {
-        case 'class_declaration': {
-          const nameNode = node.childForFieldName('name');
-          if (nameNode) {
-            graph.addNode(this.createNode(
-              filePath, nameNode.text, NodeType.CLASS, node, lines,
-              this.detectExport(node),
-            ));
-          }
-          // Look for methods inside the class body
-          const classBody = node.childForFieldName('body');
-          if (classBody) {
-            for (const child of classBody.children) {
-              if (child.type === 'method_definition') {
-                const methodName = child.childForFieldName('name');
-                if (methodName) {
-                  graph.addNode(this.createNode(
-                    filePath,
-                    `${nameNode?.text ?? ''}.${methodName.text}`,
-                    NodeType.FUNCTION,
-                    child,
-                    lines,
-                    ExportType.NONE,
-                  ));
-                }
-              }
-            }
-          }
+    // Collect export statement ranges for export detection
+    const exportRanges: Array<{ startRow: number; endRow: number }> = [];
+
+    // Track the current class context for method → class association
+    let currentClassName: string | null = null;
+    let currentClassEndRow: number = -1;
+
+    for (const capture of captures) {
+      const { name, node } = capture;
+      const startLine = node.startPosition.row + 1;
+      const endLine = node.endPosition.row + 1;
+
+      switch (name) {
+        // --- Export detection ---
+        case 'export.statement': {
+          exportRanges.push({
+            startRow: node.startPosition.row,
+            endRow: node.endPosition.row,
+          });
           break;
         }
 
-        case 'function_declaration': {
-          const nameNode = node.childForFieldName('name');
-          if (nameNode) {
-            graph.addNode(this.createNode(
-              filePath, nameNode.text, NodeType.FUNCTION, node, lines,
-              this.detectExport(node),
-            ));
-          }
+        // --- Entity: Class ---
+        case 'entity.class': {
+          currentClassName = null; // Will be set by entity.class.name
+          currentClassEndRow = node.endPosition.row;
+          break;
+        }
+        case 'entity.class.name': {
+          currentClassName = node.text;
+          const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
+          const signature = (lines[startLine - 1] ?? '').trim();
+          graph.addNode({
+            id: `${filePath}::${node.text}`,
+            type: NodeType.CLASS,
+            name: node.text,
+            filePath,
+            startLine,
+            endLine,
+            exportType,
+            signature,
+          });
           break;
         }
 
-        case 'interface_declaration': {
-          const nameNode = node.childForFieldName('name');
-          if (nameNode) {
-            graph.addNode(this.createNode(
-              filePath, nameNode.text, NodeType.INTERFACE, node, lines,
-              this.detectExport(node),
-            ));
-          }
+        // --- Entity: Function ---
+        case 'entity.function.name': {
+          const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
+          const signature = (lines[startLine - 1] ?? '').trim();
+          graph.addNode({
+            id: `${filePath}::${node.text}`,
+            type: NodeType.FUNCTION,
+            name: node.text,
+            filePath,
+            startLine,
+            endLine,
+            exportType,
+            signature,
+          });
           break;
         }
 
-        case 'lexical_declaration': {
-          // Detect arrow functions: const foo = () => {}
-          for (const declarator of node.children) {
-            if (declarator.type === 'variable_declarator') {
-              const nameChild = declarator.childForFieldName('name');
-              const valueChild = declarator.childForFieldName('value');
-              if (nameChild && valueChild?.type === 'arrow_function') {
-                graph.addNode(this.createNode(
-                  filePath, nameChild.text, NodeType.FUNCTION, node, lines,
-                  this.detectExport(node),
-                ));
-              }
-            }
-          }
+        // --- Entity: Interface ---
+        case 'entity.interface.name': {
+          const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
+          const signature = (lines[startLine - 1] ?? '').trim();
+          graph.addNode({
+            id: `${filePath}::${node.text}`,
+            type: NodeType.INTERFACE,
+            name: node.text,
+            filePath,
+            startLine,
+            endLine,
+            exportType,
+            signature,
+          });
           break;
         }
 
-        default:
+        // --- Entity: Method (inside class) ---
+        case 'entity.method.name': {
+          // Associate method with current class if within class body
+          const className = (node.startPosition.row <= currentClassEndRow)
+            ? currentClassName
+            : null;
+          const methodId = className
+            ? `${filePath}::${className}.${node.text}`
+            : `${filePath}::${node.text}`;
+          const methodName = className
+            ? `${className}.${node.text}`
+            : node.text;
+          const signature = (lines[startLine - 1] ?? '').trim();
+
+          graph.addNode({
+            id: methodId,
+            type: NodeType.FUNCTION,
+            name: methodName,
+            filePath,
+            startLine,
+            endLine,
+            exportType: ExportType.NONE,
+            signature,
+          });
           break;
-      }
-
-      // Recurse into top-level children only (not deep nesting)
-      if (node === rootNode || node.type === 'export_statement') {
-        for (const child of node.children) {
-          visit(child);
         }
-      }
-    };
 
-    visit(rootNode);
-  }
+        // --- Entity: Variable (arrow function) ---
+        case 'entity.variable.name': {
+          const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
+          const signature = (lines[startLine - 1] ?? '').trim();
+          graph.addNode({
+            id: `${filePath}::${node.text}`,
+            type: NodeType.FUNCTION,
+            name: node.text,
+            filePath,
+            startLine,
+            endLine,
+            exportType,
+            signature,
+          });
+          break;
+        }
 
-  /**
-   * Extract import statements and create IMPORTS_FROM edges.
-   */
-  private extractImports(
-    rootNode: SyntaxNode,
-    filePath: string,
-    graph: CodeGraph,
-  ): void {
-    for (const child of rootNode.children) {
-      if (child.type === 'import_statement') {
-        const sourceNode = child.childForFieldName('source');
-        if (sourceNode) {
-          // Remove quotes from the import source string
-          const importSource = sourceNode.text.replace(/['"]/g, '');
+        // --- Relation: Import ---
+        case 'relation.import.source': {
+          const importSource = node.text.replace(/['"]/g, '');
           const edge: GraphEdge = {
             sourceId: filePath,
             targetId: importSource,
             relation: EdgeRelation.IMPORTS_FROM,
             sourceFile: filePath,
-            sourceLine: child.startPosition.row + 1,
+            sourceLine: startLine,
           };
           graph.addEdge(edge);
+          break;
         }
+
+        // --- Relation: Call ---
+        case 'relation.call.target': {
+          const edge: GraphEdge = {
+            sourceId: filePath,
+            targetId: node.text,
+            relation: EdgeRelation.CALLS,
+            sourceFile: filePath,
+            sourceLine: startLine,
+          };
+          graph.addEdge(edge);
+          break;
+        }
+
+        default:
+          // Ignore wrapper captures (@entity.class, @entity.function, etc.)
+          break;
       }
     }
   }
 
   /**
-   * Extract call expressions and create CALLS edges.
-   * Only captures simple identifier calls (not member expressions).
+   * Detect export type by checking if a node's row falls within
+   * any collected export_statement range.
    */
-  private extractCalls(
-    rootNode: SyntaxNode,
-    filePath: string,
-    graph: CodeGraph,
-  ): void {
-    const calls: GraphEdge[] = [];
-    this.walkForCalls(rootNode, filePath, calls);
-    for (const edge of calls) {
-      graph.addEdge(edge);
-    }
-  }
-
-  private walkForCalls(
-    node: SyntaxNode,
-    filePath: string,
-    calls: GraphEdge[],
-  ): void {
-    if (node.type === 'call_expression') {
-      const fnNode = node.childForFieldName('function');
-      if (fnNode?.type === 'identifier') {
-        calls.push({
-          sourceId: filePath,
-          targetId: fnNode.text,
-          relation: EdgeRelation.CALLS,
-          sourceFile: filePath,
-          sourceLine: node.startPosition.row + 1,
-        });
+  private detectExportFromRanges(
+    nodeRow: number,
+    exportRanges: Array<{ startRow: number; endRow: number }>,
+  ): ExportType {
+    for (const range of exportRanges) {
+      if (nodeRow >= range.startRow && nodeRow <= range.endRow) {
+        // TODO: Detect DEFAULT vs NAMED export (needs .scm enhancement)
+        return ExportType.NAMED;
       }
-    }
-    for (const child of node.children) {
-      this.walkForCalls(child, filePath, calls);
-    }
-  }
-
-  // --- Helpers ---
-
-  private createNode(
-    filePath: string,
-    name: string,
-    type: NodeType,
-    node: SyntaxNode,
-    lines: string[],
-    exportType: ExportType,
-  ): GraphNode {
-    const startLine = node.startPosition.row + 1;
-    const endLine = node.endPosition.row + 1;
-    const signature = (lines[startLine - 1] ?? '').trim();
-
-    return {
-      id: `${filePath}::${name}`,
-      type,
-      name,
-      filePath,
-      startLine,
-      endLine,
-      exportType,
-      signature,
-    };
-  }
-
-  /**
-   * Detect if a declaration is exported by checking its parent node.
-   */
-  private detectExport(node: SyntaxNode): ExportType {
-    const parent = node.parent;
-    if (parent?.type === 'export_statement') {
-      // Check for "export default"
-      if (parent.children.some((c: SyntaxNode) => c.type === 'default')) {
-        return ExportType.DEFAULT;
-      }
-      return ExportType.NAMED;
     }
     return ExportType.NONE;
   }
