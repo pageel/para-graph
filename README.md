@@ -12,7 +12,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.4.0-brightgreen.svg" alt="Version 0.4.0">
+    <img src="https://img.shields.io/badge/version-0.5.0-brightgreen.svg" alt="Version 0.5.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -34,7 +34,7 @@
 
 ## 🎯 Overview
 
-**para-graph** is a deterministic code analysis tool that extracts structural information from TypeScript codebases and produces a knowledge graph in JSONL format.
+**para-graph** is a deterministic code analysis tool that extracts structural information from multi-language codebases and produces a knowledge graph in JSONL format.
 
 It uses [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) for fast, accurate AST parsing — no compiler pipeline required. The output graph captures:
 
@@ -45,7 +45,8 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 
 ## ✨ Features
 
-- **Deterministic parsing** — Tree-sitter AST, no heuristics
+- **Multi-Language Support** — TypeScript, TSX, Python 🐍, Bash 🐚, Go 🐹, PHP 🐘
+- **Deterministic parsing** — Tree-sitter AST & Pure SSEC Queries, no LLM heuristics
 - **JSONL output** — one entity/relation per line, easy to stream and process
 - **Global Workspace Server** — Serve multiple project graphs simultaneously via MCP
 - **Semantic Enrichment** — Agent-driven context tagging (summary, complexity, domain concepts)
@@ -193,20 +194,25 @@ src/
 │   ├── tools.ts              # MCP tools: query, edges, enrich
 │   └── resources.ts          # MCP resources: JSONL file access
 ├── parser/
-│   ├── tree-sitter-parser.ts # AST parsing and entity extraction
-│   └── file-walker.ts        # Recursive TypeScript file scanner
+│   ├── registry.ts           # Language Registry (lazy-loads parsers by extension)
+│   ├── tree-sitter-parser.ts # AST parsing and SSEC mapping engine
+│   └── file-walker.ts        # Recursive multi-language file scanner
 └── queries/
-    └── typescript.scm        # Tree-sitter query patterns
+    ├── typescript.scm        # SSEC query patterns for TS/TSX
+    ├── python.scm            # SSEC query patterns for Python
+    ├── go.scm                # SSEC query patterns for Go
+    ├── php.scm               # SSEC query patterns for PHP
+    └── bash.scm              # SSEC query patterns for Bash
 ```
 
 ### Data Flow
 
 ```
-TypeScript files → File Walker → Tree-sitter Parser → CodeGraph (in-memory) → JSONL Export
-                                                            │
-                                                      GraphStore (LRU)
-                                                            │
-                                                      MCP Server → AI Agent
+Source files → File Walker → Registry Lookup → Tree-sitter Parser + SSEC Query → CodeGraph (in-memory) → JSONL Export
+                                                                                       │
+                                                                                 GraphStore (LRU)
+                                                                                       │
+                                                                                 MCP Server → AI Agent
 ```
 
 ## 🛠️ Development
@@ -243,7 +249,10 @@ npm run test
 | P2 | Semantic Enrichment (Agent-Driven) | ✅ Done |
 | P3 | Storage & Query Engine | ✅ Done |
 | P4 | CLI Integration & NPM Package | ✅ Done |
-| P5 | Documentation & Stable Release | 📋 Planned |
+| P5 | Multi-language Support & Query Refactor | ✅ Done |
+| P6 | Impact & Context Queries | 📋 Planned |
+| P7 | Deep CALLS + Pattern Detection | 📋 Planned |
+| P8 | Documentation & Stable Release (v1.0.0) | 📋 Planned |
 
 ## 📄 License
 

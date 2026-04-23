@@ -1,6 +1,6 @@
 {
   "name": "para-graph",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Hybrid Code-Knowledge Graph tool for PARA Workspace",
   "main": "./dist/cli.js",
   "types": "./dist/cli.d.ts",
@@ -24,7 +24,7 @@
   "scripts": {
     "test": "vitest run",
     "dev": "tsx src/cli.ts",
-    "build": "tsc -p tsconfig.build.json && cp -r src/queries dist/queries"
+    "build": "tsc -p tsconfig.build.json && rm -rf dist/queries && cp -r src/queries dist/queries"
   },
   "repository": {
     "type": "git",
