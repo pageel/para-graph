@@ -65,7 +65,7 @@ npm install
 # Build
 npm run build
 
-# Scan any TypeScript project
+# Scan any supported project
 npx para-graph build /path/to/your/ts/project ./output
 ```
 
@@ -101,7 +101,7 @@ para-graph build ./src ./out --import        # Preserve semantic data on re-scan
 
 | Argument | Required | Default | Description |
 |:--|:--|:--|:--|
-| `target-dir` | ✅ | — | Directory containing TypeScript source files |
+| `target-dir` | ✅ | — | Directory containing supported source files |
 | `output-dir` | — | `./output` | Where to write the graph output |
 | `--import` | — | — | Load existing graph, preserve semantic enrichment data |
 
