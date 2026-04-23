@@ -1,17 +1,19 @@
 /**
- * MCP Tools — Graph query and enrichment tools.
+ * MCP Tools — Graph query, enrichment, and analysis tools.
  *
  * Tools:
- * - graph_query:   Filter and search graph nodes
- * - graph_edges:   Get edges from/to a specific node
- * - graph_enrich:  Write semantic enrichment data to a node
+ * - graph_query:           Filter and search graph nodes
+ * - graph_edges:           Get edges from/to a specific node
+ * - graph_enrich:          Write semantic enrichment data to a node
+ * - graph_impact_analysis: Analyze impact of changing a code entity (P6)
+ * - graph_context_bundle:  Get comprehensive context for a code entity (P6)
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { GraphNode, GraphEdge, SemanticAttributes } from '../graph/models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
 
@@ -149,6 +151,102 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           text: JSON.stringify({ success: true, updatedNode: node }, null, 2),
         }],
       };
+    },
+  );
+
+  // --- graph_impact_analysis: Analyze impact of changing a code entity (P6) ---
+  server.tool(
+    'graph_impact_analysis',
+    'Analyze the impact of changing a code entity — returns all upstream/downstream affected nodes',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      nodeId: z.string().describe('ID of the node to analyze impact for'),
+      depth: z.number().optional().describe('Traversal depth (default: 2, max: 5)'),
+      direction: z.enum(['upstream', 'downstream', 'both']).optional().describe('Traversal direction (default: upstream)'),
+    },
+    async ({ projectName, nodeId, depth, direction }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const targetNode = graph.getNode(nodeId);
+
+      if (!targetNode) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: `Node not found: ${nodeId}` }) }],
+          isError: true,
+        };
+      }
+
+      const result = graph.traverseReverse(
+        nodeId,
+        depth ?? 2,
+        (direction ?? 'upstream') as TraversalDirection,
+      );
+
+      // Deduplicate affected file paths
+      const affectedFiles = [...new Set(result.nodes.map(n => n.filePath))];
+
+      const response = {
+        targetNode: { id: targetNode.id, name: targetNode.name, type: targetNode.type, filePath: targetNode.filePath },
+        affectedNodes: result.nodes.map(n => ({
+          id: n.id, name: n.name, type: n.type, filePath: n.filePath,
+        })),
+        affectedFiles,
+        totalAffected: result.nodes.length,
+        depth: depth ?? 2,
+        direction: direction ?? 'upstream',
+        paths: result.paths,
+      };
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(response, null, 2) }],
+      };
+    },
+  );
+
+  // --- graph_context_bundle: Get comprehensive context for a code entity (P6) ---
+  server.tool(
+    'graph_context_bundle',
+    'Get a comprehensive context bundle for a code entity — includes source code, callers, callees, imports, and related tests',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      nodeId: z.string().describe('ID of the entity to get context for'),
+    },
+    async ({ projectName, nodeId }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+
+      // Resolve rootDir: Projects/<project>/repo/
+      const rootDir = resolve(workspaceRoot, 'Projects', projectName, 'repo');
+
+      try {
+        const bundle = graph.getContextBundle(nodeId, rootDir);
+
+        const response = {
+          target: {
+            id: bundle.target.id,
+            name: bundle.target.name,
+            type: bundle.target.type,
+            filePath: bundle.target.filePath,
+            startLine: bundle.target.startLine,
+            endLine: bundle.target.endLine,
+            summary: bundle.target.semantic?.summary ?? null,
+          },
+          sourceCode: bundle.sourceCode,
+          truncated: bundle.truncated,
+          callers: bundle.callers.map(n => ({ id: n.id, name: n.name, type: n.type, filePath: n.filePath })),
+          callees: bundle.callees.map(n => ({ id: n.id, name: n.name, type: n.type, filePath: n.filePath })),
+          imports: bundle.imports,
+          relatedTests: bundle.relatedTests.map(n => ({ id: n.id, name: n.name, filePath: n.filePath })),
+          warnings: bundle.warnings,
+        };
+
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(response, null, 2) }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: (err as Error).message }) }],
+          isError: true,
+        };
+      }
     },
   );
 }
