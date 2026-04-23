@@ -1,4 +1,14 @@
-import type { GraphNode, GraphEdge, SearchResult } from '../models.js';
+import { readFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import type {
+  GraphNode,
+  GraphEdge,
+  SearchResult,
+  TraversalResult,
+  TraversalDirection,
+  ContextBundle,
+} from '../models.js';
+import { EdgeRelation } from '../models.js';
 
 export class ProjectGraph {
   public readonly projectName: string;
@@ -120,5 +130,183 @@ export class ProjectGraph {
     const outgoing = this.edgesBySource.get(nodeId) || [];
     const incoming = this.edgesByTarget.get(nodeId) || [];
     return [...outgoing, ...incoming];
+  }
+
+  // --- P6: Impact & Context Queries ---
+
+  /** Max nodes returned by traversal to prevent explosion on large graphs */
+  private static readonly TRAVERSAL_MAX_NODES = 100;
+  /** Max depth allowed for traversal */
+  private static readonly TRAVERSAL_MAX_DEPTH = 5;
+  /** Max source code lines returned in context bundle */
+  private static readonly CONTEXT_MAX_LINES = 200;
+
+  /**
+   * BFS traversal from a node in upstream, downstream, or both directions.
+   *
+   * - upstream:   follows edges TO the node (who calls/imports this?)
+   * - downstream: follows edges FROM the node (what does this call/import?)
+   * - both:       follows edges in both directions
+   *
+   * @returns TraversalResult with affected nodes, traversed edges, and paths
+   */
+  public traverseReverse(
+    nodeId: string,
+    depth: number = 2,
+    direction: TraversalDirection = 'upstream',
+  ): TraversalResult {
+    const effectiveDepth = Math.min(depth, ProjectGraph.TRAVERSAL_MAX_DEPTH);
+    const startNode = this.nodesById.get(nodeId);
+    if (!startNode) {
+      return { nodes: [], edges: [], paths: [] };
+    }
+
+    const visited = new Set<string>([nodeId]);
+    const resultNodes: GraphNode[] = [];
+    const resultEdges: GraphEdge[] = [];
+    const resultPaths: string[][] = [];
+
+    // BFS queue: [currentNodeId, currentPath, currentDepth]
+    const queue: Array<[string, string[], number]> = [[nodeId, [nodeId], 0]];
+
+    while (queue.length > 0 && resultNodes.length < ProjectGraph.TRAVERSAL_MAX_NODES) {
+      const [currentId, currentPath, currentDepth] = queue.shift()!;
+
+      if (currentDepth >= effectiveDepth) continue;
+
+      // Collect neighbor edges based on direction
+      const neighborEdges: GraphEdge[] = [];
+      if (direction === 'upstream' || direction === 'both') {
+        const incoming = this.edgesByTarget.get(currentId) || [];
+        neighborEdges.push(...incoming);
+      }
+      if (direction === 'downstream' || direction === 'both') {
+        const outgoing = this.edgesBySource.get(currentId) || [];
+        neighborEdges.push(...outgoing);
+      }
+
+      for (const edge of neighborEdges) {
+        if (resultNodes.length >= ProjectGraph.TRAVERSAL_MAX_NODES) break;
+
+        // Determine the neighbor node ID
+        const neighborId = edge.sourceId === currentId ? edge.targetId : edge.sourceId;
+        if (visited.has(neighborId)) continue;
+
+        const neighborNode = this.nodesById.get(neighborId);
+        if (!neighborNode) continue;
+
+        visited.add(neighborId);
+        resultNodes.push(neighborNode);
+        resultEdges.push(edge);
+
+        const newPath = [...currentPath, neighborId];
+        resultPaths.push(newPath);
+
+        queue.push([neighborId, newPath, currentDepth + 1]);
+      }
+    }
+
+    return { nodes: resultNodes, edges: resultEdges, paths: resultPaths };
+  }
+
+  /**
+   * Gather comprehensive context for a code entity in one call.
+   *
+   * Reads the graph for relationships and the actual source file
+   * for code content. Designed to replace 10-15 individual tool calls
+   * with a single bundled response.
+   *
+   * @param nodeId - ID of the entity to analyze
+   * @param rootDir - Absolute path to the project repo root (for source file reading)
+   * @returns ContextBundle with source, callers, callees, imports, tests
+   * @throws Error if nodeId is not found in the graph
+   */
+  public getContextBundle(nodeId: string, rootDir: string): ContextBundle {
+    const target = this.nodesById.get(nodeId);
+    if (!target) {
+      throw new Error(`Node not found: ${nodeId}`);
+    }
+
+    const warnings: string[] = [];
+
+    // 1. Read source code from actual file
+    let sourceCode: string | null = null;
+    let truncated = false;
+    const filePath = join(rootDir, target.filePath);
+    if (existsSync(filePath)) {
+      try {
+        const fileContent = readFileSync(filePath, 'utf-8');
+        const lines = fileContent.split('\n');
+        const start = Math.max(0, target.startLine - 1); // 1-indexed to 0-indexed
+        const end = Math.min(lines.length, target.endLine);
+        const entityLines = lines.slice(start, end);
+
+        if (entityLines.length > ProjectGraph.CONTEXT_MAX_LINES) {
+          sourceCode = entityLines.slice(0, ProjectGraph.CONTEXT_MAX_LINES).join('\n');
+          truncated = true;
+          warnings.push(`Source code truncated: ${entityLines.length} lines → ${ProjectGraph.CONTEXT_MAX_LINES} lines`);
+        } else {
+          sourceCode = entityLines.join('\n');
+        }
+      } catch (err) {
+        warnings.push(`Failed to read source file: ${(err as Error).message}`);
+      }
+    } else {
+      warnings.push(`Source file not found: ${target.filePath} (graph may be stale)`);
+    }
+
+    // 2. Callers: nodes that CALL this entity (incoming CALLS edges)
+    const incomingEdges = this.edgesByTarget.get(nodeId) || [];
+    const callers: GraphNode[] = [];
+    for (const edge of incomingEdges) {
+      if (edge.relation === EdgeRelation.CALLS) {
+        const caller = this.nodesById.get(edge.sourceId);
+        if (caller) callers.push(caller);
+      }
+    }
+
+    // 3. Callees: nodes that this entity CALLS (outgoing CALLS edges)
+    const outgoingEdges = this.edgesBySource.get(nodeId) || [];
+    const callees: GraphNode[] = [];
+    for (const edge of outgoingEdges) {
+      if (edge.relation === EdgeRelation.CALLS) {
+        const callee = this.nodesById.get(edge.targetId);
+        if (callee) callees.push(callee);
+      }
+    }
+
+    // 4. Imports: IMPORTS_FROM edges originating from the file containing this entity
+    const imports: GraphEdge[] = [];
+    const fileEdges = this.edgesBySource.get(target.filePath) || [];
+    for (const edge of fileEdges) {
+      if (edge.relation === EdgeRelation.IMPORTS_FROM) {
+        imports.push(edge);
+      }
+    }
+
+    // 5. Related tests: nodes in test files whose name matches the target
+    const relatedTests: GraphNode[] = [];
+    const targetNameLower = target.name.toLowerCase();
+    for (const node of this.nodesById.values()) {
+      const fp = node.filePath.toLowerCase();
+      if (
+        (fp.includes('test/') || fp.includes('.test.') || fp.includes('.spec.')) &&
+        node.name.toLowerCase().includes(targetNameLower) &&
+        node.id !== nodeId
+      ) {
+        relatedTests.push(node);
+      }
+    }
+
+    return {
+      target,
+      sourceCode,
+      truncated,
+      callers,
+      callees,
+      imports,
+      relatedTests,
+      warnings,
+    };
   }
 }

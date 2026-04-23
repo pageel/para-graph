@@ -118,3 +118,42 @@ export interface Subgraph {
   /** All edges connecting the nodes within the subgraph */
   edges: GraphEdge[];
 }
+
+// --- Traversal Types (P6: Impact & Context Queries) ---
+
+/** Direction for graph traversal */
+export type TraversalDirection = 'upstream' | 'downstream' | 'both';
+
+/** Result of a reverse/forward BFS traversal from a target node */
+export interface TraversalResult {
+  /** All nodes discovered during traversal (excluding the start node) */
+  nodes: GraphNode[];
+  /** All edges traversed during the search */
+  edges: GraphEdge[];
+  /** Paths from start node to each discovered node (array of node ID chains) */
+  paths: string[][];
+}
+
+/**
+ * Comprehensive context bundle for a single code entity.
+ * Gathered by reading the graph + source files to give an agent
+ * full understanding of a component in one call.
+ */
+export interface ContextBundle {
+  /** The target node being analyzed */
+  target: GraphNode;
+  /** Source code of the entity (read from file using startLine/endLine). Null if file not found (stale graph). */
+  sourceCode: string | null;
+  /** True if source code was truncated (entity exceeds 200 lines) */
+  truncated: boolean;
+  /** Nodes that call this entity (reverse CALLS edges) */
+  callers: GraphNode[];
+  /** Nodes that this entity calls (forward CALLS edges) */
+  callees: GraphNode[];
+  /** Import edges from the file containing this entity */
+  imports: GraphEdge[];
+  /** Test files/functions whose name matches this entity */
+  relatedTests: GraphNode[];
+  /** Warnings encountered during bundle assembly (e.g., file not found) */
+  warnings: string[];
+}
