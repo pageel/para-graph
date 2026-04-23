@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-04-23
+
+### Added
+- **Graph Traversal Engine** — BFS traversal with upstream/downstream/both direction support, cycle detection, and configurable depth (max 5, hardcap 100 nodes).
+- **`graph_impact_analysis` MCP tool** — Analyze the impact of changing a code entity: returns all affected nodes, files, and dependency paths.
+- **`graph_context_bundle` MCP tool** — Get comprehensive context for a code entity in one call: source code, callers, callees, imports, and related tests.
+- `TraversalResult`, `ContextBundle`, `TraversalDirection` types in models.
+- Unit tests for traversal and context bundle (12 new tests).
+
 ## [0.5.0] - 2026-04-23
 
 ### Added
