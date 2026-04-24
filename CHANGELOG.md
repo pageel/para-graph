@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2026-04-24
+
+### Added
+- **Agentic Bash Edge Resolution** — Moved complex Bash link resolution (dynamic sourcing/imports) to Agent space.
+- **`graph_add_edges` MCP tool** — Allows AI agents to batch inject missing `CALLS` and `IMPORTS_FROM` relationships directly into the graph.
+- **Atomic Persistence** — `GraphStore.saveRelations()` implemented to persist agent-injected edges directly to `relations.jsonl`.
+- `AddEdgesResult` model for structured injection feedback.
+
 ## [0.6.0] - 2026-04-23
 
 ### Added

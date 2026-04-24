@@ -12,7 +12,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.6.0-brightgreen.svg" alt="Version 0.6.0">
+    <img src="https://img.shields.io/badge/version-0.7.0-brightgreen.svg" alt="Version 0.7.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -53,6 +53,7 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Fast In-Memory Query Engine** — Indexed lookups with LRU cache (Max=3 projects)
 - **Impact Analysis** — BFS traversal to find all affected nodes when changing a code entity
 - **Context Bundle** — Get source code, callers, callees, imports, and tests in one MCP call
+- **Agentic Edge Resolution** — Inject missing relationships (e.g., dynamic Bash imports) directly via MCP
 
 ## 🚀 Quick Start
 
@@ -193,7 +194,7 @@ src/
 │   └── graph-store.ts        # LRU cache manager for multi-project graphs
 ├── mcp/
 │   ├── server.ts             # MCP server factory (pure library export)
-│   ├── tools.ts              # MCP tools: query, edges, enrich, impact_analysis, context_bundle
+│   ├── tools.ts              # MCP tools: query, edges, enrich, impact_analysis, context_bundle, add_edges
 │   └── resources.ts          # MCP resources: JSONL file access
 ├── parser/
 │   ├── registry.ts           # Language Registry (lazy-loads parsers by extension)
@@ -253,8 +254,9 @@ npm run test
 | P4 | CLI Integration & NPM Package | ✅ Done |
 | P5 | Multi-language Support & Query Refactor | ✅ Done |
 | P6 | Impact & Context Queries | ✅ Done |
-| P7 | Deep CALLS + Pattern Detection | 📋 Planned |
-| P8 | Documentation & Stable Release (v1.0.0) | 📋 Planned |
+| P7 | Agentic Bash Edge Resolution | ✅ Done |
+| P8 | Deep CALLS + Pattern Detection | 📋 Planned |
+| P9 | Documentation & Stable Release (v1.0.0) | 📋 Planned |
 
 ## 📄 License
 
