@@ -29,3 +29,4 @@ test/.test-output/
 *~
 .DS_Store
 Thumbs.db
+*.tar.gz

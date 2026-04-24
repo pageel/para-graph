@@ -1,0 +1,11 @@
+# PARA Tool Manifest — para-graph
+# This file is included in the distribution tarball.
+# Validated by: para-workspace/registry/tool.schema.json
+
+name: para-graph
+version: "0.7.0"
+runtime: node
+min_runtime_version: "18.0.0"
+entry: dist/cli.js
+description: "Hybrid Code-Knowledge Graph for PARA Workspace"
+repo: "https://github.com/pageel/para-graph"
