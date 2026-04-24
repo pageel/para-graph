@@ -7,6 +7,7 @@
  * - graph_enrich:          Write semantic enrichment data to a node
  * - graph_impact_analysis: Analyze impact of changing a code entity (P6)
  * - graph_context_bundle:  Get comprehensive context for a code entity (P6)
+ * - graph_add_edges:       Batch inject edges for agentic edge resolution (P7)
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -14,6 +15,7 @@ import { join, resolve } from 'node:path';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection } from '../graph/models.js';
+import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
 
@@ -247,6 +249,44 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           isError: true,
         };
       }
+    },
+  );
+
+  // --- graph_add_edges: Batch inject edges for agentic edge resolution (P7) ---
+  server.tool(
+    'graph_add_edges',
+    'Batch inject edges (CALLS, IMPORTS_FROM) into the graph — for agentic edge resolution of languages with weak AST linking (e.g., Bash)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      edges: z.array(z.object({
+        sourceId: z.string().describe('Node ID of the source (caller/importer)'),
+        targetId: z.string().describe('Node ID of the target (callee/imported)'),
+        relation: z.enum(['CALLS', 'IMPORTS_FROM']).describe('Edge relation type'),
+        sourceFile: z.string().optional().describe('File where relation originates — derived from source node if omitted'),
+        sourceLine: z.number().optional().describe('Line number — defaults to source node startLine if omitted'),
+      })).describe('Array of edges to inject'),
+    },
+    async ({ projectName, edges }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+
+      // Build full GraphEdge objects — derive optional fields from source node
+      const fullEdges: GraphEdge[] = edges.map((e) => {
+        const sourceNode = graph.getNode(e.sourceId);
+        return {
+          sourceId: e.sourceId,
+          targetId: e.targetId,
+          relation: e.relation as EdgeRelation,
+          sourceFile: e.sourceFile ?? sourceNode?.filePath ?? e.sourceId.split('::')[0],
+          sourceLine: e.sourceLine ?? sourceNode?.startLine ?? 0,
+        };
+      });
+
+      const result = GraphStore.addEdges(workspaceRoot, projectName, fullEdges);
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        isError: result.errors.length > 0 && result.added === 0,
+      };
     },
   );
 }
