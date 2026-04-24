@@ -157,3 +157,18 @@ export interface ContextBundle {
   /** Warnings encountered during bundle assembly (e.g., file not found) */
   warnings: string[];
 }
+
+// --- Edge Injection Types (P7: Agentic Edge Resolution) ---
+
+/**
+ * Result of a batch edge injection operation.
+ * Provides structured feedback so the Agent can self-correct invalid node IDs.
+ */
+export interface AddEdgesResult {
+  /** Number of edges successfully added to the graph */
+  added: number;
+  /** Number of edges skipped due to deduplication */
+  skipped: number;
+  /** Errors for edges that could not be added (invalid node IDs) */
+  errors: Array<{ sourceId: string; targetId: string; reason: string }>;
+}

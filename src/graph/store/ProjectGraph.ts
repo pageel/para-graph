@@ -7,6 +7,7 @@ import type {
   TraversalResult,
   TraversalDirection,
   ContextBundle,
+  AddEdgesResult,
 } from '../models.js';
 import { EdgeRelation } from '../models.js';
 
@@ -130,6 +131,60 @@ export class ProjectGraph {
     const outgoing = this.edgesBySource.get(nodeId) || [];
     const incoming = this.edgesByTarget.get(nodeId) || [];
     return [...outgoing, ...incoming];
+  }
+
+  // --- P7: Agentic Edge Resolution ---
+
+  /**
+   * Batch add edges with validation and deduplication.
+   *
+   * Guarantees:
+   * 1. Both sourceId and targetId must exist in the graph (rejects otherwise).
+   * 2. Duplicate edges (same sourceId + targetId + relation) are skipped.
+   * 3. Returns structured result so the Agent can self-correct invalid IDs.
+   *
+   * @param edges - Array of edges to inject
+   * @returns AddEdgesResult with added/skipped counts and error details
+   */
+  public addEdges(edges: GraphEdge[]): AddEdgesResult {
+    let added = 0;
+    let skipped = 0;
+    const errors: AddEdgesResult['errors'] = [];
+
+    for (const edge of edges) {
+      // Validate: both nodes must exist
+      const sourceExists = this.nodesById.has(edge.sourceId);
+      const targetExists = this.nodesById.has(edge.targetId);
+
+      if (!sourceExists || !targetExists) {
+        const missing = [];
+        if (!sourceExists) missing.push(`sourceId "${edge.sourceId}"`);
+        if (!targetExists) missing.push(`targetId "${edge.targetId}"`);
+        errors.push({
+          sourceId: edge.sourceId,
+          targetId: edge.targetId,
+          reason: `Node not found: ${missing.join(', ')}`,
+        });
+        continue;
+      }
+
+      // Deduplication: check if [sourceId, targetId, relation] already exists
+      const existingEdges = this.edgesBySource.get(edge.sourceId) || [];
+      const isDuplicate = existingEdges.some(
+        (e) => e.targetId === edge.targetId && e.relation === edge.relation,
+      );
+
+      if (isDuplicate) {
+        skipped++;
+        continue;
+      }
+
+      // Add edge (reuses existing addEdge to maintain indexes)
+      this.addEdge(edge);
+      added++;
+    }
+
+    return { added, skipped, errors };
   }
 
   // --- P6: Impact & Context Queries ---
