@@ -7,7 +7,8 @@
   <p><b>Structural code analysis tool powered by Tree-sitter AST parsing.</b></p>
 
   <p>
-    <a href="README.md"><b>🇺🇸 English</b></a>
+    <a href="README.md"><b>🇺🇸 English</b></a> •
+    <a href="docs/locales/vi-VN.md"><b>🇻🇳 Tiếng Việt</b></a>
   </p>
 
   <p>
@@ -120,7 +121,21 @@ para-graph serve /path/to/workspace
 
 To connect `para-graph` to an AI Agent editor (like Claude Desktop, Cursor, or Google Antigravity), you need to configure their respective MCP settings.
 
-### Claude Desktop / Antigravity
+### Auto-Setup (Recommended)
+
+If you are using PARA Workspace v1.8.2+, you can automatically configure the MCP server in your IDE by running:
+
+```bash
+./para mcp-setup
+```
+
+This will safely detect your active IDE and inject the `para-graph` MCP server configuration.
+
+### Manual Setup (Fallback)
+
+If you prefer to configure the server manually:
+
+#### Claude Desktop / Antigravity
 
 Edit your `claude_desktop_config.json` (or `mcp_config.json` for Antigravity) and add the following:
 
@@ -141,7 +156,7 @@ Edit your `claude_desktop_config.json` (or `mcp_config.json` for Antigravity) an
 
 *Note: Replace `<ABSOLUTE_WORKSPACE_PATH>` with the absolute path to your PARA Workspace root directory.*
 
-### Cursor
+#### Cursor
 
 Go to **Cursor Settings** > **Features** > **MCP Servers** > **Add New MCP Server**:
 - **Name:** `para-graph`
