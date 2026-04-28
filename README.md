@@ -44,6 +44,12 @@ It uses [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) for fast, accu
 
 Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem.
 
+## 🛠 Requirements / Tech Stack
+
+- **Node.js** >= 18.0.0
+- **TypeScript** 5.x
+- **Tree-sitter** (native bindings compiled automatically via `node-gyp-build`)
+
 ## ✨ Features
 
 - **Multi-Language Support** — TypeScript, TSX, Python 🐍, Bash 🐚, Go 🐹, PHP 🐘
