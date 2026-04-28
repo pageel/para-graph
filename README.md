@@ -115,6 +115,46 @@ para-graph build ./src ./out --import        # Preserve semantic data on re-scan
 para-graph serve /path/to/workspace
 ```
 
+## 🤖 MCP Server Setup
+
+To connect `para-graph` to an AI Agent editor (like Claude Desktop, Cursor, or Google Antigravity), you need to configure their respective MCP settings.
+
+### Claude Desktop / Antigravity
+
+Edit your `claude_desktop_config.json` (or `mcp_config.json` for Antigravity) and add the following:
+
+```json
+{
+  "mcpServers": {
+    "para-graph": {
+      "command": "<ABSOLUTE_WORKSPACE_PATH>/cli/para",
+      "args": [
+        "graph",
+        "serve",
+        "<ABSOLUTE_WORKSPACE_PATH>"
+      ]
+    }
+  }
+}
+```
+
+*Note: Replace `<ABSOLUTE_WORKSPACE_PATH>` with the absolute path to your PARA Workspace root directory.*
+
+### Cursor
+
+Go to **Cursor Settings** > **Features** > **MCP Servers** > **Add New MCP Server**:
+- **Name:** `para-graph`
+- **Type:** `command`
+- **Command:** `<ABSOLUTE_WORKSPACE_PATH>/cli/para graph serve <ABSOLUTE_WORKSPACE_PATH>`
+
+### Available MCP Tools
+Once connected, your AI Agent gains access to the following tools:
+- `graph_query`: Search entities by name or semantic type.
+- `graph_edges`: Find function callers and imports.
+- `graph_enrich`: Automatically save documentation and complexity data into the graph.
+- `graph_impact_analysis`: Discover upstream/downstream impacted files when changing code.
+- `graph_context_bundle`: Get the entire context of a code snippet in one call.
+
 ### Library Usage
 
 ```typescript
@@ -244,17 +284,15 @@ npm run test
 | Test Runner | Vitest |
 | Dev Runner | tsx |
 
-## 🧠 AI Intelligence
+## 🧠 AI Intelligence (PARA Workspace)
 
-This tool bundles AI intelligence artifacts that enhance the PARA Workspace agent experience:
+This tool bundles AI intelligence artifacts that enhance the PARA Workspace agent experience. When installed via `./para install-tool para-graph`, these artifacts are automatically installed into your workspace's `.agents/` directory:
 
-| Type | Name | Version | Description |
+| Type | Name | Version | Description & Usage |
 |:--|:--|:--|:--|
-| Workflow | `/para-graph` | 1.8.0 | Build code-knowledge graph via CLI |
-| Skill | `graph-enrichment` | 1.0.0 | Guide agent to semantically enrich graph nodes |
-| Rule | `graph-first-policy` | 1.0.0 | Enforce graph-first development practices |
-
-When installed via `./para install-tool para-graph`, the CLI detects these artifacts and offers to install them into your workspace's `.agents/` directory.
+| Workflow | `/para-graph` | 1.8.0 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
+| Skill | `graph-enrichment` | 1.0.0 | Loaded on-demand when the agent reads graph data. Guides the agent to semantically enrich graph nodes (add summaries, complexity scores). |
+| Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 
 > Requires PARA Workspace v1.8.1+ for automatic detection.
 
