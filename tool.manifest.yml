@@ -3,7 +3,7 @@
 # Validated by: para-workspace/registry/tool.schema.json
 
 name: para-graph
-version: "0.8.0"
+version: "0.8.1"
 runtime: node
 min_runtime_version: "18.0.0"
 entry: dist/cli.js
