@@ -25,3 +25,11 @@ agents:
     - source: templates/agents/rules/graph-first-policy.md
       target: graph-first-policy.md
       version: "1.0.0"
+
+# MCP Server configuration — parsed by para-workspace mcp-setup (v1.8.2+)
+# Enables auto-configuration of IDE MCP settings during install-tool.
+mcp:
+  server_name: "para-graph"
+  transport: stdio
+  serve_args: ["serve", "${WORKSPACE_ROOT}"]
+  description: "Code-Knowledge Graph — query, enrich, impact analysis"

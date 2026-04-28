@@ -12,7 +12,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.8.0-brightgreen.svg" alt="Version 0.8.0">
+    <img src="https://img.shields.io/badge/version-0.8.1-brightgreen.svg" alt="Version 0.8.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -54,6 +54,7 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Impact Analysis** — BFS traversal to find all affected nodes when changing a code entity
 - **Context Bundle** — Get source code, callers, callees, imports, and tests in one MCP call
 - **Agentic Edge Resolution** — Inject missing relationships (e.g., dynamic Bash imports) directly via MCP
+- **MCP Auto-Setup** — Manifest-declared `mcp:` block enables automatic IDE configuration via `./para mcp-setup`
 
 ## 🚀 Quick Start
 
@@ -294,7 +295,7 @@ This tool bundles AI intelligence artifacts that enhance the PARA Workspace agen
 | Skill | `graph-enrichment` | 1.0.0 | Loaded on-demand when the agent reads graph data. Guides the agent to semantically enrich graph nodes (add summaries, complexity scores). |
 | Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 
-> Requires PARA Workspace v1.8.1+ for automatic detection.
+> Requires PARA Workspace v1.8.2+ for automatic MCP auto-setup detection.
 
 ## 🗺️ Roadmap
 
