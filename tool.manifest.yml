@@ -9,3 +9,19 @@ min_runtime_version: "18.0.0"
 entry: dist/cli.js
 description: "Hybrid Code-Knowledge Graph for PARA Workspace"
 repo: "https://github.com/pageel/para-graph"
+
+# Bundled AI Intelligence — installed by para-workspace install-tool (v1.8.1+)
+# Agent reads this block, lists artifacts, prompts user for consent.
+agents:
+  workflows:
+    - source: templates/agents/workflows/para-graph.md
+      target: para-graph.md
+      version: "1.7.15"
+  skills:
+    - source: templates/agents/skills/graph-enrichment/
+      target: graph-enrichment/
+      version: "1.0.0"
+  rules:
+    - source: templates/agents/rules/graph-first-policy.md
+      target: graph-first-policy.md
+      version: "1.0.0"
