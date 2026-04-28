@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.0] - 2026-04-28
+
+### Added
+- `agents:` block in `tool.manifest.yml` — declares bundled AI intelligence (workflows, skills, rules)
+- `templates/agents/` directory — ships workflow `/para-graph` (v1.8.0), skill `graph-enrichment` (v1.0.0), rule `graph-first-policy` (v1.0.0) with tarball
+- Manifest-Declared Intelligence architecture for PARA Workspace tool distribution
+
 ## [0.7.0] - 2026-04-24
 
 ### Added

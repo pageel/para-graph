@@ -12,7 +12,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.7.0-brightgreen.svg" alt="Version 0.7.0">
+    <img src="https://img.shields.io/badge/version-0.8.0-brightgreen.svg" alt="Version 0.8.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -243,6 +243,20 @@ npm run test
 | AST Parser | tree-sitter + tree-sitter-typescript |
 | Test Runner | Vitest |
 | Dev Runner | tsx |
+
+## 🧠 AI Intelligence
+
+This tool bundles AI intelligence artifacts that enhance the PARA Workspace agent experience:
+
+| Type | Name | Version | Description |
+|:--|:--|:--|:--|
+| Workflow | `/para-graph` | 1.8.0 | Build code-knowledge graph via CLI |
+| Skill | `graph-enrichment` | 1.0.0 | Guide agent to semantically enrich graph nodes |
+| Rule | `graph-first-policy` | 1.0.0 | Enforce graph-first development practices |
+
+When installed via `./para install-tool para-graph`, the CLI detects these artifacts and offers to install them into your workspace's `.agents/` directory.
+
+> Requires PARA Workspace v1.8.1+ for automatic detection.
 
 ## 🗺️ Roadmap
 

@@ -1,6 +1,6 @@
 {
   "name": "para-graph",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Hybrid Code-Knowledge Graph tool for PARA Workspace",
   "main": "./dist/cli.js",
   "types": "./dist/cli.d.ts",
@@ -19,7 +19,8 @@
   },
   "files": [
     "dist/",
-    "src/queries/"
+    "src/queries/",
+    "templates/"
   ],
   "scripts": {
     "test": "vitest run",

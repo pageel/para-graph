@@ -3,7 +3,7 @@
 # Validated by: para-workspace/registry/tool.schema.json
 
 name: para-graph
-version: "0.7.0"
+version: "0.8.0"
 runtime: node
 min_runtime_version: "18.0.0"
 entry: dist/cli.js
@@ -16,7 +16,7 @@ agents:
   workflows:
     - source: templates/agents/workflows/para-graph.md
       target: para-graph.md
-      version: "1.7.15"
+      version: "1.8.0"
   skills:
     - source: templates/agents/skills/graph-enrichment/
       target: graph-enrichment/
