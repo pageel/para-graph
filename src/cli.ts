@@ -12,27 +12,31 @@
  *   Each command module exports a pure function — no self-execution.
  */
 
+import { join } from 'node:path';
 import { runBuild } from './commands/build.js';
 import { runServe } from './commands/serve.js';
+import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const HELP_TEXT = `para-graph — Structural code analysis tool with MCP server.
 
 Usage:
-  para-graph build <target-dir> [output-dir] [--import]   Scan code and export graph
-  para-graph serve <workspace-root>                       Start MCP server (stdio)
+  para-graph build <project-name>                         Auto-detect workspace, scan project
+  para-graph build <target-dir> [output-dir] [--import]   Scan code and export graph (manual paths)
+  para-graph serve [workspace-root]                       Start MCP server (stdio)
   para-graph --help                                       Show this help
 
 Commands:
-  build    Analyze TypeScript source code and generate a structural graph (JSONL).
+  build    Analyze source code and generate a structural graph (JSONL).
   serve    Start the MCP server exposing graph data to AI Agents.
 
 Flags (build):
   --import    Load existing graph, preserve semantic data on re-scan.
 
 Examples:
-  para-graph build ./src ./output
-  para-graph build ./src ./output --import
-  para-graph serve /path/to/workspace
+  para-graph build para-graph                    Shorthand: auto-detect workspace
+  para-graph build ./src ./output --import       Manual: explicit paths
+  para-graph serve /path/to/workspace            Explicit workspace root
+  para-graph serve                               Auto-detect workspace root
 `;
 
 function main(): void {
@@ -51,25 +55,50 @@ function main(): void {
       const useImport = subArgs.includes('--import');
 
       if (positional.length === 0) {
-        console.error('Error: build requires <target-dir> argument.');
-        console.error('Usage: para-graph build <target-dir> [output-dir] [--import]');
+        console.error('Error: build requires <target-dir> or <project-name> argument.');
+        console.error('Usage: para-graph build <project-name>');
+        console.error('       para-graph build <target-dir> [output-dir] [--import]');
         process.exit(1);
       }
 
+      let targetDir = positional[0];
+      let outputDir = positional[1] ?? './output';
+
+      // Project-name shorthand: if input looks like a project name (no path separators)
+      // and we can find a workspace root, resolve to standard PARA paths.
+      if (isProjectName(targetDir)) {
+        const wsRoot = findWorkspaceRoot();
+        if (wsRoot) {
+          const projectName = targetDir;
+          targetDir = join(wsRoot, 'Projects', projectName, 'repo');
+          outputDir = positional[1] ?? join(wsRoot, 'Projects', projectName, '.beads', 'graph');
+          console.log(`[para-graph] Resolved project "${projectName}" in workspace: ${wsRoot}`);
+        }
+        // If wsRoot not found, fall through to use targetDir as-is (backward compatible)
+      }
+
       runBuild({
-        targetDir: positional[0],
-        outputDir: positional[1] ?? './output',
+        targetDir,
+        outputDir,
         useImport,
       });
       break;
     }
 
     case 'serve': {
-      const workspaceRoot = args[1];
+      let workspaceRoot = args[1];
+
+      // Auto-detect workspace root if not provided
       if (!workspaceRoot) {
-        console.error('Error: serve requires <workspace-root> argument.');
-        console.error('Usage: para-graph serve <workspace-root>');
-        process.exit(1);
+        const detected = findWorkspaceRoot();
+        if (detected) {
+          workspaceRoot = detected;
+          console.log(`[para-graph] Auto-detected workspace root: ${workspaceRoot}`);
+        } else {
+          console.error('Error: Could not auto-detect workspace root (.para-workspace.yml not found).');
+          console.error('Usage: para-graph serve <workspace-root>');
+          process.exit(1);
+        }
       }
 
       runServe({ workspaceRoot }).catch((err) => {
