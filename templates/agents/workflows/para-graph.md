@@ -38,12 +38,25 @@ ls -ld Projects/[project-name]/repo || echo "Error: Project [project-name] does 
 // turbo
 
 Execute the scan using the `para-graph` CLI.
-> ⚠️ **Architecture Note:** The Agent calls `dist/cli.js` of the local `para-graph` project via Node to guarantee we are using the internal version rather than a global npm package. The source code path is standardized as `repo/` and the output graph path is `.beads/graph/`.
+> ⚠️ **Architecture Note:** The CLI path is dynamically resolved to support both **dev mode** (source repo at `Projects/para-graph/repo/dist/`) and **installed mode** (tarball installed at `.para/tools/graph/dist/`). This ensures cross-platform compatibility regardless of how the tool was set up.
 
 ```bash
+# Dynamic CLI path resolution (dev mode vs installed mode)
+if [ -f "Projects/para-graph/repo/dist/cli.js" ]; then
+  CLI_PATH="Projects/para-graph/repo/dist/cli.js"
+elif [ -f ".para/tools/graph/dist/cli.js" ]; then
+  CLI_PATH=".para/tools/graph/dist/cli.js"
+else
+  echo "❌ para-graph CLI not found."
+  echo "   Dev mode:      Projects/para-graph/repo/dist/cli.js"
+  echo "   Installed mode: .para/tools/graph/dist/cli.js"
+  echo "   Run: ./para install-tool para-graph"
+  exit 1
+fi
+
 # Scan source code and dump Graph Memory.
 # We ALWAYS use --import by default to preserve AI semantic enrichment and agent-injected edges (v0.7.0+) from previous scans.
-node Projects/para-graph/repo/dist/cli.js build Projects/[project-name]/repo Projects/[project-name]/.beads/graph --import
+node "$CLI_PATH" build Projects/[project-name]/repo Projects/[project-name]/.beads/graph --import
 ```
 
 ### 3. Verification & Report
