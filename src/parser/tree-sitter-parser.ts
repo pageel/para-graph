@@ -71,9 +71,10 @@ export class TreeSitterParser {
 
     let tree: SyntaxNode;
     try {
-      tree = this.parser.parse(content);
+      const bufferSize = Math.max(32768, content.length * 2 + 1024);
+      tree = this.parser.parse(content, null, { bufferSize });
     } catch (error) {
-      console.warn(`[para-graph] Warning: Failed to parse file ${filePath}. Skipping...`);
+      console.warn(`[para-graph] Warning: Failed to parse file ${filePath}. Skipping... Error: ${(error as Error).message}`);
       return;
     }
 
