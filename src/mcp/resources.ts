@@ -11,6 +11,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { resolveGraphDir } from '../graph/store/pathResolver.js';
 
 /**
  * Register graph file resources on the MCP server.
@@ -25,7 +26,7 @@ export function registerResources(server: McpServer, workspaceRoot: string): voi
     'entities',
     new ResourceTemplate('para-graph://{projectName}/entities', { list: undefined }),
     async (uri, { projectName }) => {
-      const filePath = join(resolved, 'Projects', projectName as string, '.beads', 'graph', 'entities.jsonl');
+      const filePath = join(resolveGraphDir(resolved, projectName as string), 'entities.jsonl');
       if (!existsSync(filePath)) {
         return { contents: [{ uri: uri.href, text: '', mimeType: 'application/jsonl' }] };
       }
@@ -38,7 +39,7 @@ export function registerResources(server: McpServer, workspaceRoot: string): voi
     'relations',
     new ResourceTemplate('para-graph://{projectName}/relations', { list: undefined }),
     async (uri, { projectName }) => {
-      const filePath = join(resolved, 'Projects', projectName as string, '.beads', 'graph', 'relations.jsonl');
+      const filePath = join(resolveGraphDir(resolved, projectName as string), 'relations.jsonl');
       if (!existsSync(filePath)) {
         return { contents: [{ uri: uri.href, text: '', mimeType: 'application/jsonl' }] };
       }
@@ -51,7 +52,7 @@ export function registerResources(server: McpServer, workspaceRoot: string): voi
     'metadata',
     new ResourceTemplate('para-graph://{projectName}/metadata', { list: undefined }),
     async (uri, { projectName }) => {
-      const filePath = join(resolved, 'Projects', projectName as string, '.beads', 'graph', 'metadata.json');
+      const filePath = join(resolveGraphDir(resolved, projectName as string), 'metadata.json');
       if (!existsSync(filePath)) {
         return { contents: [{ uri: uri.href, text: '{}', mimeType: 'application/json' }] };
       }

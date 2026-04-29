@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.2] - 2026-04-29
+
+### Added
+- **Cross-Platform Path Resolution** — Dynamically resolve workspace root and CLI paths (`.para-workspace.yml` lookup) to support both dev and installed modes across OS (Windows/Linux/Mac).
+- **`@resources/` Namespace** — MCP Server and `GraphStore` now transparently support cross-repository graph resolution for external references.
+- **CLI Project Shorthand** — Support `para-graph build <project-name>` to automatically find paths without manually specifying `target-dir`.
+- **Serve Auto-Detect** — `para-graph serve` without arguments now auto-detects workspace root.
+
 ## [0.8.1] - 2026-04-28
 
 ### Added

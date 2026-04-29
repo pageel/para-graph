@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.8.1-brightgreen.svg" alt="Version 0.8.1">
+    <img src="https://img.shields.io/badge/version-0.8.2-brightgreen.svg" alt="Version 0.8.2">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -76,8 +76,8 @@ npm install
 # Build
 npm run build
 
-# Scan any supported project
-npx para-graph build /path/to/your/ts/project ./output
+# Scan a project by name (auto-detects paths)
+npx para-graph build my-project
 ```
 
 Or run directly without cloning:
@@ -91,11 +91,14 @@ npx para-graph build ./src ./output
 ### CLI Commands
 
 ```bash
-# Scan source code and export graph
+# Scan by project name (auto-detect workspace)
+para-graph build <project-name>
+
+# Scan source code and export graph (manual paths)
 para-graph build <target-dir> [output-dir] [--import]
 
 # Start MCP server for AI Agent integration
-para-graph serve <workspace-root>
+para-graph serve [workspace-root]
 
 # Show help
 para-graph --help
@@ -105,6 +108,7 @@ para-graph --help
 
 ```bash
 # Basic usage
+para-graph build my-project                  # Shorthand (recommended)
 para-graph build ./src                       # Output to ./output/
 para-graph build ./src ./my-graph            # Custom output directory
 para-graph build ./src ./out --import        # Preserve semantic data on re-scan
@@ -112,7 +116,8 @@ para-graph build ./src ./out --import        # Preserve semantic data on re-scan
 
 | Argument | Required | Default | Description |
 |:--|:--|:--|:--|
-| `target-dir` | ✅ | — | Directory containing supported source files |
+| `project-name` | ✅ (or target-dir) | — | Name of project in workspace (auto-resolves repo/ and .beads/graph/) |
+| `target-dir` | ✅ (or project-name)| — | Directory containing supported source files |
 | `output-dir` | — | `./output` | Where to write the graph output |
 | `--import` | — | — | Load existing graph, preserve semantic enrichment data |
 
@@ -121,6 +126,9 @@ para-graph build ./src ./out --import        # Preserve semantic data on re-scan
 ```bash
 # Start MCP server (stdio transport)
 para-graph serve /path/to/workspace
+
+# Or let it auto-detect the workspace root (if inside one)
+para-graph serve
 ```
 
 ## 🤖 MCP Server Setup

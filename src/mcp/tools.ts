@@ -18,6 +18,7 @@ import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection } fro
 import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
+import { resolveSourceDir } from '../graph/store/pathResolver.js';
 
 /**
  * Validate SemanticAttributes structure.
@@ -38,12 +39,6 @@ function validateSemantic(data: unknown): string | null {
   return null;
 }
 
-/**
- * Resolves the graph directory for a given project name.
- */
-function getGraphDir(workspaceRoot: string, projectName: string): string {
-  return resolve(workspaceRoot, 'Projects', projectName, '.beads', 'graph');
-}
 
 /**
  * Register graph tools on the MCP server.
@@ -215,8 +210,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     async ({ projectName, nodeId }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
 
-      // Resolve rootDir: Projects/<project>/repo/
-      const rootDir = resolve(workspaceRoot, 'Projects', projectName, 'repo');
+      // Resolve rootDir using namespace-aware path resolver
+      const rootDir = resolveSourceDir(workspaceRoot, projectName);
 
       try {
         const bundle = graph.getContextBundle(nodeId, rootDir);

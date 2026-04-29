@@ -1,6 +1,7 @@
 import { resolve, join } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { ProjectGraph } from './ProjectGraph.js';
+import { resolveGraphDir } from './pathResolver.js';
 import type { GraphNode, GraphEdge, AddEdgesResult } from '../models.js';
 
 export class GraphStore {
@@ -42,7 +43,7 @@ export class GraphStore {
 
   private static loadFromDisk(workspaceRoot: string, projectName: string): ProjectGraph {
     const graph = new ProjectGraph(projectName);
-    const graphDir = resolve(workspaceRoot, 'Projects', projectName, '.beads', 'graph');
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
 
     // Load entities
     const entitiesPath = join(graphDir, 'entities.jsonl');
@@ -70,7 +71,7 @@ export class GraphStore {
   }
 
   public static saveEntities(workspaceRoot: string, projectName: string, entities: GraphNode[]): void {
-    const graphDir = resolve(workspaceRoot, 'Projects', projectName, '.beads', 'graph');
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const entitiesPath = join(graphDir, 'entities.jsonl');
     const content = entities.map(n => JSON.stringify(n)).join('\n') + '\n';
     writeFileSync(entitiesPath, content, 'utf-8');
@@ -110,7 +111,7 @@ export class GraphStore {
    * Overwrites the entire file with the current in-memory edge set.
    */
   public static saveRelations(workspaceRoot: string, projectName: string, edges: GraphEdge[]): void {
-    const graphDir = resolve(workspaceRoot, 'Projects', projectName, '.beads', 'graph');
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const relationsPath = join(graphDir, 'relations.jsonl');
     const content = edges.map(e => JSON.stringify(e)).join('\n') + '\n';
     writeFileSync(relationsPath, content, 'utf-8');
