@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.8.3-brightgreen.svg" alt="Version 0.8.3">
+    <img src="https://img.shields.io/badge/version-0.8.4-brightgreen.svg" alt="Version 0.8.4">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
