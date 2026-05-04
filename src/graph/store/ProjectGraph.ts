@@ -73,6 +73,15 @@ export class ProjectGraph {
   public getAllEdges(): GraphEdge[] {
     return this.edges;
   }
+
+  public getStats(): { nodeCount: number; edgeCount: number; fileCount: number } {
+    const files = new Set(this.getAllNodes().map(n => n.filePath));
+    return {
+      nodeCount: this.nodesById.size,
+      edgeCount: this.edges.length,
+      fileCount: files.size,
+    };
+  }
   
   public updateNode(node: GraphNode): void {
     this.nodesById.set(node.id, node);
