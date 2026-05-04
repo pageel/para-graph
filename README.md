@@ -324,7 +324,7 @@ This tool bundles AI intelligence artifacts that enhance the PARA Workspace agen
 | Type | Name | Version | Description & Usage |
 |:--|:--|:--|:--|
 | Workflow | `/para-graph` | 1.8.0 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
-| Skill | `graph-enrichment` | 1.0.0 | Loaded on-demand when the agent reads graph data. Guides the agent to semantically enrich graph nodes (add summaries, complexity scores). |
+| Skill | `para-graph` | 2.0.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
 | Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 
 > Requires PARA Workspace v1.8.2+ for automatic MCP auto-setup detection.
