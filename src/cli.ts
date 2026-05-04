@@ -15,6 +15,7 @@
 import { join } from 'node:path';
 import { runBuild } from './commands/build.js';
 import { runServe } from './commands/serve.js';
+import { runInject } from './commands/inject.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const HELP_TEXT = `para-graph — Structural code analysis tool with MCP server.
@@ -23,11 +24,13 @@ Usage:
   para-graph build <project-name>                         Auto-detect workspace, scan project
   para-graph build <target-dir> [output-dir] [--import]   Scan code and export graph (manual paths)
   para-graph serve [workspace-root]                       Start MCP server (stdio)
+  para-graph inject <path> [--project <name>] [--dry-run]  Inject graph context into Markdown
   para-graph --help                                       Show this help
 
 Commands:
   build    Analyze source code and generate a structural graph (JSONL).
   serve    Start the MCP server exposing graph data to AI Agents.
+  inject   Inject Living Docs / Blast Radius context into Markdown files.
 
 Flags (build):
   --import    Load existing graph, preserve semantic data on re-scan.
@@ -103,6 +106,31 @@ function main(): void {
 
       runServe({ workspaceRoot }).catch((err) => {
         console.error('[para-graph] Fatal error:', err);
+        process.exit(1);
+      });
+      break;
+    }
+
+    case 'inject': {
+      const subArgs = args.slice(1);
+      const positional = subArgs.filter((a) => !a.startsWith('--'));
+      const dryRun = subArgs.includes('--dry-run');
+      
+      const projectIdx = subArgs.indexOf('--project');
+      const projectName = projectIdx !== -1 ? subArgs[projectIdx + 1] : undefined;
+
+      if (positional.length === 0) {
+        console.error('Error: inject requires <path> argument.');
+        console.error('Usage: para-graph inject <path-to-file-or-dir> [--project <name>] [--dry-run]');
+        process.exit(1);
+      }
+
+      runInject({
+        target: positional[0],
+        projectName,
+        dryRun,
+      }).catch((err) => {
+        console.error('[para-graph] Injection error:', err);
         process.exit(1);
       });
       break;
