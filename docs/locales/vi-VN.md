@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.8.1-brightgreen.svg" alt="Version 0.8.1">
+    <img src="https://img.shields.io/badge/version-0.8.5-brightgreen.svg" alt="Version 0.8.5">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -93,6 +93,9 @@ npx para-graph build ./src ./output
 ```bash
 # Quét mã nguồn và xuất đồ thị
 para-graph build <target-dir> [output-dir] [--import]
+
+# Tiêm dữ liệu Đồ thị & Xác thực sự sai lệch (Drift) trong Markdown Docs/Plans
+para-graph inject <target-dir>
 
 # Khởi động MCP server để tích hợp AI Agent
 para-graph serve <workspace-root>
