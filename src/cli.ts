@@ -13,10 +13,14 @@
  */
 
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 import { runBuild } from './commands/build.js';
 import { runServe } from './commands/serve.js';
 import { runInject } from './commands/inject.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
+
+const require = createRequire(import.meta.url);
+const pkg = require('../package.json') as { version: string };
 
 const HELP_TEXT = `para-graph — Structural code analysis tool with MCP server.
 
@@ -45,6 +49,11 @@ Examples:
 function main(): void {
   const args = process.argv.slice(2);
   const command = args[0];
+
+  if (command === '--version' || command === '-v') {
+    console.log(`para-graph v${pkg.version}`);
+    process.exit(0);
+  }
 
   if (!command || command === '--help' || command === '-h') {
     console.log(HELP_TEXT);
