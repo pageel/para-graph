@@ -24,23 +24,36 @@
 
 ## Constraints
 
-### 1. Mandatory Graph Querying
-- Agent **MUST** use `mcp_para-graph_graph_query` to locate target components or functions first.
-- Agent **MUST** use `mcp_para-graph_graph_edges` to analyze the target's dependencies and dependants (caller/callee relationships).
+### 1. Escalation Ladder (Graph → File → Search)
 
-### 2. File I/O Restrictions
-- Agent **MUST NOT** jump straight to `view_file` or `grep_search` to guess the code flow if a graph query can provide the architectural context.
-- Agent **MAY** use `view_file` only AFTER the graph edges have been analyzed to read the exact implementation details.
+Agent MUST follow this priority order when investigating code:
+
+| Priority | Tool | When to use |
+|:--|:--|:--|
+| 🥇 1st | `graph_query` + `graph_edges` | Locate entities, map dependencies, understand call graph |
+| 🥈 2nd | `graph_context_bundle` | Get full context (source + callers + callees + tests) for a specific entity |
+| 🥉 3rd | `view_file` | Read exact implementation AFTER graph has identified the target |
+| 4th | `grep_search` | Only when entity is not in graph (new/unindexed code) |
+
+**MUST NOT** skip to `view_file` or `grep_search` if a graph query can answer the question.
+
+### 2. Mandatory Graph Querying
+
+- Agent **MUST** use `graph_query` to locate target components or functions first.
+- Agent **MUST** use `graph_edges` to analyze the target's dependencies and dependants (caller/callee relationships).
+- Agent **SHOULD** use `graph_impact_analysis` before refactoring to understand blast radius.
 
 ### 3. Transparency
-- Agent **SHOULD** mention the graph edges or nodes found in the thought process before calling `replace_file_content`.
+
+- Agent **SHOULD** mention the graph edges or nodes found in the reasoning before calling `replace_file_content`.
 - Agent **MUST** explicitly state in its response that `para-graph` was utilized to map out connections before applying any fix.
 
 ### 4. Graceful Degradation
+
 - If the MCP server is unavailable or graph data is stale (`metadata.json` older than 7 days), Agent **MAY** fall back to standard file I/O with a warning to the user.
 - Agent **SHOULD** suggest running `/para-graph build` to refresh the graph after the task is complete.
 
 ## Related
 
-- Skill: `graph-enrichment` — Step-by-step guide for semantic enrichment via MCP.
+- Skill: `para-graph` — Centralized Graph Intelligence Router with enrichment workflow and workflow integration snippets.
 - Workflow: `/para-graph build` — Rebuilds the Code-Knowledge Graph for a project.
