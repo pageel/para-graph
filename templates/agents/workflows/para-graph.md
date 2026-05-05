@@ -3,12 +3,15 @@ description: Build the Code-Knowledge Graph for a specific project
 source: custom
 ---
 
-# /para-graph build [project-name]
+# /para-graph <action> [target]
 
 > **Workspace Version:** 1.7.15 (Ecosystem Integration)
-> **Goal:** Build the Code-Knowledge Graph for a specific project.
+> **Goal:** Manage Code-Knowledge Graph operations for a specific project or resource.
+> **Constraint:** Read `.para-workspace.yml` at the workspace root to get the user's preferred language from `preferences.language` (e.g., `vi` for Vietnamese). **All output and reports MUST be translated to this language.**
 
-Use this workflow when you or the Agent want to update the graph memory of a project after significant code changes, ensuring the MCP Server is serving the latest data.
+Available actions:
+- `build`: Extract AST and build the `.jsonl` graph files from source code.
+- `enrich`: Perform semantic enrichment on the existing graph using the MCP server.
 
 ## 0. Agent Indices Pre-flight
 
@@ -22,15 +25,34 @@ Use this workflow when you or the Agent want to update the graph memory of a pro
 
 ---
 
-## Steps
+## Action: build
+
+Use this action when you or the Agent want to update the graph memory after significant code changes.
 
 ### 1. Context Resolution
 
-Verify that the target project exists and contains a valid source repository (`repo/`).
+Verify that the target exists (either a Project or an external Resource).
 
 ```bash
-# Verify project exists
-ls -ld Projects/[project-name]/repo || echo "Error: Project [project-name] does not exist or has no repo/ directory."
+# Resolve target paths based on namespace
+TARGET="[target]"
+
+if [[ "$TARGET" == @resources/* ]]; then
+  # Resource namespace: @resources/github.com/rtk-ai/rtk
+  RESOURCE_PATH="${TARGET#@resources/}"
+  SOURCE_DIR="Resources/references/$RESOURCE_PATH"
+  OUT_DIR="$SOURCE_DIR/.beads/graph"
+else
+  # Standard project namespace
+  SOURCE_DIR="Projects/$TARGET/repo"
+  OUT_DIR="Projects/$TARGET/.beads/graph"
+fi
+
+# Verify source directory exists
+if [ ! -d "$SOURCE_DIR" ]; then
+  echo "❌ Error: Source directory '$SOURCE_DIR' does not exist."
+  exit 1
+fi
 ```
 
 ### 2. Execution
@@ -56,7 +78,7 @@ fi
 
 # Scan source code and dump Graph Memory.
 # We ALWAYS use --import by default to preserve AI semantic enrichment and agent-injected edges (v0.7.0+) from previous scans.
-node "$CLI_PATH" build Projects/[project-name]/repo Projects/[project-name]/.beads/graph --import
+node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR" --import
 ```
 
 ### 3. Verification & Report
@@ -65,19 +87,36 @@ Verify that the storage engine successfully exported the graph files.
 
 ```bash
 # Read metadata file generated from the build process
-cat Projects/[project-name]/.beads/graph/metadata.json 2>/dev/null
+cat "$OUT_DIR/metadata.json" 2>/dev/null
 ```
 
 The Agent should report back to the user using the following format (extracting metrics from `metadata.json`):
 
 ```text
-🧠 GRAPH REBUILT: [project-name]
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Nodes: [nodes_count] | Edges: [edges_count] | Scanned Files: [file_count]
-Location: Projects/[project-name]/.beads/graph/
+🧠 GRAPH REBUILT: [target]
+- Nodes: [nodes_count] | Edges: [edges_count] | Scanned: [file_count] files
+- Location: [OUT_DIR]
 
 The memory graph has been updated successfully. The MCP Server can now query the latest data!
 ```
+
+### 4. Enrichment Suggestion
+
+After a successful build, the Agent SHOULD actively prompt the user if they want to semantically enrich the new graph nodes (classes, exported functions) using the `para-graph` skill.
+
+**Example suggestion:**
+> "I have finished building the Graph. There are some core architecture nodes (Classes, Functions) that have not been semantically analyzed yet. Would you like me to use MCP to scan these nodes and perform data enrichment?"
+
+If the user agrees, the Agent MUST execute the Enrichment Workflow defined in `.agents/skills/para-graph/SKILL.md` (§2) using the `enrich` action.
+
+---
+
+## Action: enrich
+
+Use this action to semantically enrich the existing graph nodes (classes, exported functions, missing edges) to improve graph intelligence.
+
+The Agent MUST load `.agents/skills/para-graph/SKILL.md` and rigorously follow the **Enrichment Workflow (§2)**.
+The Agent will interact directly with the `mcp_para-graph_*` tools. No bash scripts are required for this action.
 
 ---
 

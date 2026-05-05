@@ -3,7 +3,7 @@
 # Validated by: para-workspace/registry/tool.schema.json
 
 name: para-graph
-version: "0.8.5"
+version: "0.8.6"
 runtime: node
 min_runtime_version: "18.0.0"
 entry: dist/cli.js
@@ -16,13 +16,13 @@ agents:
   workflows:
     - source: templates/agents/workflows/para-graph.md
       target: para-graph.md
-      version: "1.8.0"
+      version: "2.0.0"
       shipped_in: "0.8.6"
       min_engine_version: "0.8.0"
   skills:
     - source: templates/agents/skills/para-graph/
       target: para-graph/
-      version: "2.0.0"
+      version: "2.1.0"
       shipped_in: "0.8.6"
       min_engine_version: "0.8.0"
   rules:

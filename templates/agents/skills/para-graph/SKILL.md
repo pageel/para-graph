@@ -7,7 +7,7 @@ description: >
   when para-graph is not installed. Load this skill when working with code
   graphs, semantic enrichment, or any workflow that benefits from codebase
   structure awareness.
-version: "2.0.0"
+version: "2.1.0"
 ---
 
 # Skill: para-graph — Graph Intelligence Router
@@ -126,11 +126,12 @@ CHECK: does `.beads/graph/metadata.json` exist for the active project?
 **Detection command:**
 
 ```bash
-test -f "Projects/<project>/repo/.beads/graph/metadata.json" \
-  || test -f "Projects/<project>/.beads/graph/metadata.json"
+test -f "Projects/<target>/repo/.beads/graph/metadata.json" \
+  || test -f "Projects/<target>/.beads/graph/metadata.json" \
+  || test -f "Resources/references/<resource-path>/.beads/graph/metadata.json"
 ```
 
-> ℹ️ Graph data may live in `repo/.beads/` (git-tracked) or project-level `.beads/` (workspace-local).
+> ℹ️ Graph data may live in `repo/.beads/`, project-level `.beads/`, or `Resources/references/` for external resources.
 
 ### §3.2 Standard Pipeline Steps
 
@@ -138,7 +139,7 @@ Reusable pipeline that workflows call when graph is available:
 
 | Step | MCP Tool / Command                                                       | Purpose                                                      |
 | :--- | :----------------------------------------------------------------------- | :----------------------------------------------------------- |
-| A    | `/para-graph build [project]`                                            | Refresh graph data from latest source                        |
+| A    | `/para-graph build [target]`                                             | Refresh graph data from latest source                        |
 | B    | `graph_query(projectName, nodeType?, namePattern?)`                      | Identify target nodes                                        |
 | C    | `graph_enrich(projectName, nodeId, summary, complexity, domainConcepts)` | Write semantic metadata                                      |
 | D    | `graph_context_bundle(projectName, nodeId)`                              | Load full context (source, callers, callees, imports, tests) |
@@ -176,7 +177,7 @@ Reusable pipeline that workflows call when graph is available:
 Phase 0 Graph Pipeline (skip entirely if no `.beads/graph/`):
 
 Step A — Build/refresh graph:
-0.1 🤖 Run `/para-graph build [project]`
+0.1 🤖 Run `/para-graph build [target]`
 
 Step B — Identify enrichment targets:
 0.2 🤖 `graph_query` to list nodes relevant to docs being written
