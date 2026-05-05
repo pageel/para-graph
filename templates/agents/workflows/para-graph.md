@@ -5,7 +5,7 @@ source: custom
 
 # /para-graph <action> [target]
 
-> **Workspace Version:** 1.7.15 (Ecosystem Integration)
+> **Workspace Version:** 1.8.5 (Central Gate)
 > **Goal:** Manage Code-Knowledge Graph operations for a specific project or resource.
 > **Constraint:** Read `.para-workspace.yml` at the workspace root to get the user's preferred language from `preferences.language` (e.g., `vi` for Vietnamese). **All output and reports MUST be translated to this language.**
 
@@ -17,11 +17,26 @@ Available actions:
 
 // turbo
 
-> **Layer 3 defense:** Re-read indices to guard against attention decay.
+> **Layer 3 defense:** Even if `/open` loaded indices at session start, long conversations
+> cause attention decay. Force-load here to guarantee rules/skills awareness.
 
-1. Re-read `.agents/rules.md` (workspace rules index)
-2. Re-read `.agents/skills.md` (workspace skills index)
-3. Check `project.md` for `agent.rules` / `agent.skills` — if true, re-read project indices too
+```bash
+TARGET="[target]"
+
+# Tier-1 Index Force Load
+echo ""
+echo "> ⚠️ Proactive Trigger Scan: Workspace Indices"
+cat .agents/rules.md 2>/dev/null | head -n 30
+cat .agents/skills.md 2>/dev/null | head -n 30
+
+# Tier-2 Index Force Load
+echo ""
+echo "> ⚠️ Proactive Trigger Scan: Project Indices"
+if [[ "$TARGET" != @resources/* ]]; then
+  cat "Projects/$TARGET/.agents/rules.md" 2>/dev/null | head -n 30
+  cat "Projects/$TARGET/.agents/skills.md" 2>/dev/null | head -n 30
+fi
+```
 
 ---
 
