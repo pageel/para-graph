@@ -17,14 +17,20 @@ agents:
     - source: templates/agents/workflows/para-graph.md
       target: para-graph.md
       version: "1.8.0"
+      shipped_in: "0.8.6"
+      min_engine_version: "0.8.0"
   skills:
     - source: templates/agents/skills/para-graph/
       target: para-graph/
       version: "2.0.0"
+      shipped_in: "0.8.6"
+      min_engine_version: "0.8.0"
   rules:
     - source: templates/agents/rules/graph-first-policy.md
       target: graph-first-policy.md
       version: "1.0.0"
+      shipped_in: "0.8.6"
+      min_engine_version: "0.8.0"
 
 # MCP Server configuration — parsed by para-workspace mcp-setup (v1.8.2+)
 # Enables auto-configuration of IDE MCP settings during install-tool.
