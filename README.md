@@ -53,6 +53,9 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 ## ✨ Features
 
 - **Multi-Language Support** — TypeScript, TSX, Python 🐍, Bash 🐚, Go 🐹, PHP 🐘
+- **Deep CALLS Capture** — Extracts member call chains, object+method pairs, and constructors
+- **Topological Edge Confidence** — Edge classification (`EXTRACTED`, `INFERRED`, `AMBIGUOUS`)
+- **God Nodes Detection** — Runtime degree analytics (`fanIn`/`fanOut`) to identify architectural choke points
 - **Deterministic parsing** — Tree-sitter AST & Pure SSEC Queries, no LLM heuristics
 - **JSONL output** — one entity/relation per line, easy to stream and process
 - **Global Workspace Server** — Serve multiple project graphs simultaneously via MCP
@@ -323,8 +326,8 @@ This tool bundles AI intelligence artifacts that enhance the PARA Workspace agen
 
 | Type | Name | Version | Description & Usage |
 |:--|:--|:--|:--|
-| Workflow | `/para-graph` | 1.8.0 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
-| Skill | `para-graph` | 2.0.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
+| Workflow | `/para-graph` | 2.0.0 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
+| Skill | `para-graph` | 2.1.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
 | Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 
 > Requires PARA Workspace v1.8.2+ for automatic MCP auto-setup detection.
@@ -340,7 +343,7 @@ This tool bundles AI intelligence artifacts that enhance the PARA Workspace agen
 | P5 | Multi-language Support & Query Refactor | ✅ Done |
 | P6 | Impact & Context Queries | ✅ Done |
 | P7 | Agentic Bash Edge Resolution | ✅ Done |
-| P8 | Deep CALLS + Pattern Detection | 📋 Planned |
+| P8 | Deep CALLS + Pattern Detection | ✅ Done |
 | P9 | Documentation & Stable Release (v1.0.0) | 📋 Planned |
 
 ## 📄 License

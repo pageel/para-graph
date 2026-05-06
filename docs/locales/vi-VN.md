@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.8.5-brightgreen.svg" alt="Version 0.8.5">
+    <img src="https://img.shields.io/badge/version-0.9.0-brightgreen.svg" alt="Version 0.9.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -51,6 +51,9 @@ Công cụ sử dụng [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 ## ✨ Tính năng
 
 - **Hỗ trợ đa ngôn ngữ** — TypeScript, TSX, Python 🐍, Bash 🐚, Go 🐹, PHP 🐘
+- **Trích xuất Deep CALLS** — Phân tích chính xác các chuỗi gọi hàm, ghép cặp object+method và constructor
+- **Độ tin cậy của Mối quan hệ (Edge Confidence)** — Phân loại các cạnh đồ thị (`EXTRACTED`, `INFERRED`, `AMBIGUOUS`)
+- **Nhận diện God Nodes** — Phân tích topology (`fanIn`/`fanOut`) để tìm các điểm thắt nút (choke points) trong kiến trúc
 - **Phân tích tất định** — Tree-sitter AST & Pure SSEC Queries, không dùng LLM heuristics
 - **Định dạng JSONL** — mỗi dòng một thực thể/mối quan hệ, dễ dàng stream và xử lý
 - **Global Workspace Server** — Phục vụ đồng thời đồ thị của nhiều dự án qua MCP
@@ -320,8 +323,8 @@ Công cụ này đi kèm với các artifact trí tuệ nhân tạo nhằm nâng
 
 | Loại | Tên | Phiên bản | Mô tả & Cách dùng |
 |:--|:--|:--|:--|
-| Workflow | `/para-graph` | 1.8.0 | Gõ `@[/para-graph]` để chỉ thị cho AI quét lại dự án và cập nhật trí nhớ đồ thị. |
-| Skill | `para-graph` | 2.0.0 | Bộ định tuyến Trí tuệ Đồ thị tập trung (Centralized Graph Intelligence Router). Được tự động nạp cho các workflow như `/plan`, `/docs`, `/brainstorm` nhằm phân tích ngữ nghĩa và xác thực kiến trúc. |
+| Workflow | `/para-graph` | 2.0.0 | Gõ `@[/para-graph]` để chỉ thị cho AI quét lại dự án và cập nhật trí nhớ đồ thị. |
+| Skill | `para-graph` | 2.1.0 | Bộ định tuyến Trí tuệ Đồ thị tập trung (Centralized Graph Intelligence Router). Được tự động nạp cho các workflow như `/plan`, `/docs`, `/brainstorm` nhằm phân tích ngữ nghĩa và xác thực kiến trúc. |
 | Rule | `graph-first-policy` | 1.0.0 | Bắt buộc thực hiện lập trình kiểu "đồ thị là trên hết". Agent sẽ tự động truy vấn MCP server trước khi ra quyết định kiến trúc. |
 
 > Yêu cầu PARA Workspace v1.8.2+ để có thể sử dụng chức năng tự động nhận diện cấu hình MCP.
@@ -338,7 +341,7 @@ Công cụ này đi kèm với các artifact trí tuệ nhân tạo nhằm nâng
 | P5 | Hỗ trợ đa ngôn ngữ & Tái cấu trúc Query | ✅ Hoàn thành |
 | P6 | Truy vấn tác động & bối cảnh | ✅ Hoàn thành |
 | P7 | Giải quyết cạnh tự động cho Bash | ✅ Hoàn thành |
-| P8 | Deep CALLS + Nhận diện Design Pattern | 📋 Trong kế hoạch |
+| P8 | Deep CALLS + Nhận diện Design Pattern | ✅ Hoàn thành |
 | P9 | Viết tài liệu & Phát hành v1.0.0 | 📋 Trong kế hoạch |
 
 <a name="giay-phep"></a>
