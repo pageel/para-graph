@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.10.0] - 2026-05-06
+
+### Added
+- **Agent Auto-trigger (Hook Injection)** — `para-graph hooks install` injects a BeforeTool hook into `~/.gemini/settings.json` that nudges the AI Agent to use Knowledge Graph MCP tools before file scanning.
+- **CLI Hooks Subcommand** — `para-graph hooks [install|uninstall|status]` with idempotent state tracking via `.para/tools/graph/hooks/state.json`.
+- **Automatic Backup** — Settings backup stored in `.para/tools/graph/hooks/backups/` before any modification. Restore on uninstall.
+- **Build Lock Reset** — `para-graph build` automatically resets the `.gemini_reminded` lock file after graph rebuild, ensuring fresh nudges.
+- **Workspace Guard** — Hooks command requires PARA workspace context (`.para-workspace.yml`).
+
 ## [0.9.0] - 2026-05-06
 
 ### Added

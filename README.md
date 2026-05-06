@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.9.0-brightgreen.svg" alt="Version 0.9.0">
+    <img src="https://img.shields.io/badge/version-0.10.0-brightgreen.svg" alt="Version 0.10.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -65,6 +65,7 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Context Bundle** — Get source code, callers, callees, imports, and tests in one MCP call
 - **Agentic Edge Resolution** — Inject missing relationships (e.g., dynamic Bash imports) directly via MCP
 - **MCP Auto-Setup** — Manifest-declared `mcp:` block enables automatic IDE configuration via `./para mcp-setup`
+- **Agent Auto-trigger Hooks** — BeforeTool hooks that nudge the AI Agent to use Knowledge Graph before file scanning
 
 ## 🚀 Quick Start
 
@@ -106,9 +107,36 @@ para-graph inject <target-dir>
 # Start MCP server for AI Agent integration
 para-graph serve [workspace-root]
 
+# Manage BeforeTool hooks
+para-graph hooks install
+para-graph hooks uninstall
+para-graph hooks status
+
 # Show help
 para-graph --help
 ```
+
+### Hooks Command
+
+The `hooks` command manages BeforeTool hooks that automatically nudge your AI Agent to use the Knowledge Graph instead of scanning files blindly.
+
+```bash
+# Install hook into ~/.gemini/settings.json
+para-graph hooks install
+
+# Check current hook status
+para-graph hooks status
+
+# Remove hook and restore original settings
+para-graph hooks uninstall
+```
+
+**How it works:**
+1. `para-graph build` generates the Knowledge Graph
+2. `para-graph hooks install` injects a BeforeTool hook into Gemini CLI settings
+3. On the next file access, the Agent receives a context nudge: _"Knowledge Graph is available — use MCP tools first"_
+4. A lock file prevents repeated nudging in the same session
+5. `para-graph build` automatically resets the lock after graph updates
 
 ### Build Command
 
@@ -261,7 +289,9 @@ src/
 ├── cli.ts                    # Subcommand router (shebang entrypoint)
 ├── commands/
 │   ├── build.ts              # Build command — scan, parse, export graph
-│   └── serve.ts              # Serve command — MCP server lifecycle
+│   ├── serve.ts              # Serve command — MCP server lifecycle
+│   ├── inject.ts             # Inject command — Living Docs context
+│   └── hooks.ts              # Hooks command — BeforeTool hook management
 ├── graph/
 │   ├── models.ts             # GraphNode, GraphEdge type definitions
 │   ├── code-graph.ts         # In-memory graph with dual indexing
@@ -345,6 +375,7 @@ This tool bundles AI intelligence artifacts that enhance the PARA Workspace agen
 | P7 | Agentic Bash Edge Resolution | ✅ Done |
 | P8 | Deep CALLS + Pattern Detection | ✅ Done |
 | P9 | Documentation & Stable Release (v1.0.0) | 📋 Planned |
+| P10 | Agent Auto-trigger (Hook Injection) | ✅ Done |
 
 ## 📄 License
 
