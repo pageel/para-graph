@@ -6,13 +6,14 @@
  */
 
 import type { GraphNode, GraphEdge } from './models.js';
+import { EdgeRelation, NodeType } from './models.js';
 
 export class CodeGraph {
   /** Primary index: node ID → GraphNode */
-  private nodes: Map<string, GraphNode> = new Map();
+  private nodeMap: Map<string, GraphNode> = new Map();
 
   /** Flat list of all edges */
-  private edges: GraphEdge[] = [];
+  private edgeList: GraphEdge[] = [];
 
   /** Secondary index: file path → list of nodes in that file */
   private nodesByFile: Map<string, GraphNode[]> = new Map();
@@ -22,12 +23,12 @@ export class CodeGraph {
    * Logs a warning if a node with the same ID already exists (H1-2 guard).
    */
   addNode(node: GraphNode): void {
-    if (this.nodes.has(node.id)) {
+    if (this.nodeMap.has(node.id)) {
       console.warn(`[CodeGraph] Warning: Duplicate node ID "${node.id}" — skipping.`);
       return;
     }
 
-    this.nodes.set(node.id, node);
+    this.nodeMap.set(node.id, node);
 
     // Update file index
     const fileNodes = this.nodesByFile.get(node.filePath) ?? [];
@@ -37,12 +38,12 @@ export class CodeGraph {
 
   /** Add an edge to the graph. */
   addEdge(edge: GraphEdge): void {
-    this.edges.push(edge);
+    this.edgeList.push(edge);
   }
 
   /** Get a node by its unique ID. */
   getNode(id: string): GraphNode | undefined {
-    return this.nodes.get(id);
+    return this.nodeMap.get(id);
   }
 
   /** Get all nodes in a specific file. */
@@ -52,30 +53,136 @@ export class CodeGraph {
 
   /** Get all edges originating from a specific node. */
   getEdgesFrom(nodeId: string): GraphEdge[] {
-    return this.edges.filter((e) => e.sourceId === nodeId);
+    return this.edgeList.filter((e) => e.sourceId === nodeId);
   }
 
   /** Get all edges targeting a specific node. */
   getEdgesTo(nodeId: string): GraphEdge[] {
-    return this.edges.filter((e) => e.targetId === nodeId);
+    return this.edgeList.filter((e) => e.targetId === nodeId);
   }
 
   /** Get all nodes (for iteration/export). */
   getAllNodes(): GraphNode[] {
-    return Array.from(this.nodes.values());
+    return Array.from(this.nodeMap.values());
   }
 
   /** Get all edges (for iteration/export). */
   getAllEdges(): GraphEdge[] {
-    return [...this.edges];
+    return [...this.edgeList];
+  }
+
+  // --- Accessor aliases (for backward compat with test/external code) ---
+
+  /** @deprecated Use getAllNodes() instead. Kept for backward compat. */
+  get nodes(): Map<string, GraphNode> {
+    return this.nodeMap;
+  }
+
+  /** @deprecated Use getAllEdges() instead. Kept for backward compat. */
+  get edges(): GraphEdge[] {
+    return this.edgeList;
   }
 
   /** Get summary statistics. */
   getStats(): { nodeCount: number; edgeCount: number; fileCount: number } {
     return {
-      nodeCount: this.nodes.size,
-      edgeCount: this.edges.length,
+      nodeCount: this.nodeMap.size,
+      edgeCount: this.edgeList.length,
       fileCount: this.nodesByFile.size,
     };
+  }
+
+  // --- Topology Calculator (P8: Deep CALLS & Analytics) ---
+
+  /**
+   * Calculate Fan-in (number of incoming CALLS edges) for a node.
+   * Excludes ?unresolved edges from the count.
+   */
+  fanIn(nodeId: string): number {
+    return this.edgeList.filter(e =>
+      e.targetId === nodeId &&
+      e.relation === EdgeRelation.CALLS &&
+      !e.sourceId.startsWith('?unresolved')
+    ).length;
+  }
+
+  /**
+   * Calculate Fan-out (number of outgoing CALLS edges) from a node.
+   * Excludes ?unresolved edges from the count.
+   */
+  fanOut(nodeId: string): number {
+    return this.edgeList.filter(e =>
+      e.sourceId === nodeId &&
+      e.relation === EdgeRelation.CALLS &&
+      !e.targetId.startsWith('?unresolved')
+    ).length;
+  }
+
+  /**
+   * Get topology profile for a node — fan-in, fan-out, and inferred role.
+   * Role is based on heuristics:
+   * - High fan-in + low fan-out → 'utility' (heavily reused)
+   * - Low fan-in + high fan-out → 'controller' (orchestrator)
+   * - Balanced → 'service' (middleware)
+   * - Very low both → 'leaf' (isolated or entry point)
+   */
+  getTopologyProfile(nodeId: string): {
+    fanIn: number;
+    fanOut: number;
+    role: 'controller' | 'service' | 'utility' | 'leaf';
+  } {
+    const fi = this.fanIn(nodeId);
+    const fo = this.fanOut(nodeId);
+
+    let role: 'controller' | 'service' | 'utility' | 'leaf';
+
+    if (fi <= 1 && fo <= 1) {
+      role = 'leaf';
+    } else if (fi > fo * 2) {
+      role = 'utility';
+    } else if (fo > fi * 2) {
+      role = 'controller';
+    } else {
+      role = 'service';
+    }
+
+    return { fanIn: fi, fanOut: fo, role };
+  }
+
+  /**
+   * Detect God Nodes — most-connected real entities in the graph.
+   * Filters out file-level nodes and ?unresolved synthetic edges.
+   * Inspired by Graphify analyze.py::god_nodes (Clean Room).
+   *
+   * @param topN - Number of top nodes to return (default: 10)
+   * @returns Array of node profiles sorted by degree (descending)
+   */
+  detectGodNodes(topN: number = 10): Array<{
+    id: string;
+    name: string;
+    degree: number;
+    fanIn: number;
+    fanOut: number;
+  }> {
+    // Get all non-file nodes (filter synthetic)
+    const realNodes = this.getAllNodes().filter(n => n.type !== NodeType.FILE);
+
+    const profiles = realNodes.map(node => {
+      const fi = this.fanIn(node.id);
+      const fo = this.fanOut(node.id);
+      return {
+        id: node.id,
+        name: node.name,
+        degree: fi + fo,
+        fanIn: fi,
+        fanOut: fo,
+      };
+    });
+
+    // Sort by degree descending, take top N
+    return profiles
+      .filter(p => p.degree > 0)
+      .sort((a, b) => b.degree - a.degree)
+      .slice(0, topN);
   }
 }

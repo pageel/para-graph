@@ -18,7 +18,7 @@ const Parser = require('tree-sitter');
 
 import { CodeGraph } from '../graph/code-graph.js';
 import { NodeType, EdgeRelation, ExportType } from '../graph/models.js';
-import type { GraphNode, GraphEdge } from '../graph/models.js';
+import type { GraphNode, GraphEdge, EdgeConfidence } from '../graph/models.js';
 import {
   getProfile,
   loadLanguageModule,
@@ -298,6 +298,7 @@ export class TreeSitterParser {
             relation: EdgeRelation.IMPORTS_FROM,
             sourceFile: filePath,
             sourceLine: startLine,
+            confidence: 'EXTRACTED',
           };
           graph.addEdge(edge);
           break;
@@ -311,6 +312,7 @@ export class TreeSitterParser {
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
             sourceLine: startLine,
+            confidence: 'EXTRACTED',
           };
           graph.addEdge(edge);
           break;
@@ -325,12 +327,14 @@ export class TreeSitterParser {
         }
         case 'relation.call.method': {
           const obj = pendingCallObject ?? '?unresolved';
+          const confidence: EdgeConfidence = obj === '?unresolved' ? 'AMBIGUOUS' : 'EXTRACTED';
           const edge: GraphEdge = {
             sourceId: filePath,
             targetId: `${obj}::${node.text}`,
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
             sourceLine: pendingCallLine ?? startLine,
+            confidence,
           };
           graph.addEdge(edge);
           pendingCallObject = null;
@@ -346,6 +350,7 @@ export class TreeSitterParser {
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
             sourceLine: startLine,
+            confidence: 'EXTRACTED',
           };
           graph.addEdge(edge);
           break;

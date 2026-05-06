@@ -80,6 +80,16 @@ export interface GraphNode {
   semantic?: SemanticAttributes;
 }
 
+// --- Edge Confidence (P8: Deep CALLS & Analytics) ---
+
+/**
+ * Confidence level of a graph edge, indicating how it was resolved.
+ * - EXTRACTED: Deterministic, from Tree-sitter AST parsing
+ * - INFERRED: Agent-injected via MCP graph_add_edges
+ * - AMBIGUOUS: Partially resolved (e.g., ?unresolved prefix)
+ */
+export type EdgeConfidence = 'EXTRACTED' | 'INFERRED' | 'AMBIGUOUS';
+
 /**
  * Represents a directed relationship between two graph nodes.
  * For example: function A CALLS function B, or file X IMPORTS_FROM file Y.
@@ -95,6 +105,8 @@ export interface GraphEdge {
   sourceFile: string;
   /** Line number where the relationship originates (1-indexed) */
   sourceLine: number;
+  /** Confidence level — how this edge was resolved. Optional for backward compat. */
+  confidence?: EdgeConfidence;
 }
 
 // --- Query Types (P3: Query Engine) ---
