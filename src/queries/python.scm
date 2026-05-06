@@ -31,7 +31,18 @@
 (call
   function: (identifier) @relation.call.target) @relation.call
 
-;; Call expressions — attribute calls: obj.method()
+;; Attribute call: obj.method() — captures object + method separately
 (call
   function: (attribute
-    attribute: (identifier) @relation.call.target)) @relation.call
+    object: (identifier) @relation.call.object
+    attribute: (identifier) @relation.call.method)) @relation.call
+
+;; Nested attribute call: self.obj.method() or a.b.method()
+(call
+  function: (attribute
+    object: (attribute
+      attribute: (identifier) @relation.call.object)
+    attribute: (identifier) @relation.call.method)) @relation.call
+
+;; Note: Python constructors (ClassName()) look like function calls
+;; → already captured by @relation.call.target above

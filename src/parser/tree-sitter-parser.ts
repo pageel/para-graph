@@ -152,6 +152,8 @@ export class TreeSitterParser {
    * - @entity.variable + @entity.variable.name → NodeType.FUNCTION (arrow fns)
    * - @relation.import + @relation.import.source → EdgeRelation.IMPORTS_FROM
    * - @relation.call + @relation.call.target → EdgeRelation.CALLS
+   * - @relation.call + @relation.call.object + @relation.call.method → EdgeRelation.CALLS (member call)
+   * - @relation.call + @relation.call.new → EdgeRelation.CALLS (constructor)
    * - @export.statement → ExportType detection
    */
   private mapCapturesToGraph(
@@ -166,6 +168,10 @@ export class TreeSitterParser {
     // Track the current class context for method → class association
     let currentClassName: string | null = null;
     let currentClassEndRow: number = -1;
+
+    // State machine for member call pairing (object + method)
+    let pendingCallObject: string | null = null;
+    let pendingCallLine: number | null = null;
 
     for (const capture of captures) {
       const { name, node } = capture;
@@ -302,6 +308,41 @@ export class TreeSitterParser {
           const edge: GraphEdge = {
             sourceId: filePath,
             targetId: node.text,
+            relation: EdgeRelation.CALLS,
+            sourceFile: filePath,
+            sourceLine: startLine,
+          };
+          graph.addEdge(edge);
+          break;
+        }
+
+        // --- Relation: Member Call (object.method) ---
+        case 'relation.call.object': {
+          // Store object name temporarily — will be paired with method
+          pendingCallObject = node.text;
+          pendingCallLine = startLine;
+          break;
+        }
+        case 'relation.call.method': {
+          const obj = pendingCallObject ?? '?unresolved';
+          const edge: GraphEdge = {
+            sourceId: filePath,
+            targetId: `${obj}::${node.text}`,
+            relation: EdgeRelation.CALLS,
+            sourceFile: filePath,
+            sourceLine: pendingCallLine ?? startLine,
+          };
+          graph.addEdge(edge);
+          pendingCallObject = null;
+          pendingCallLine = null;
+          break;
+        }
+
+        // --- Relation: Constructor Call (new ClassName) ---
+        case 'relation.call.new': {
+          const edge: GraphEdge = {
+            sourceId: filePath,
+            targetId: `${node.text}::constructor`,
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
             sourceLine: startLine,

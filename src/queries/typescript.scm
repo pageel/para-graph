@@ -41,6 +41,23 @@
 (call_expression
   function: (identifier) @relation.call.target) @relation.call
 
+;; Member call: obj.method() — captures object + method separately
+(call_expression
+  function: (member_expression
+    object: (identifier) @relation.call.object
+    property: (property_identifier) @relation.call.method)) @relation.call
+
+;; Nested member call: this.obj.method() or a.b.method()
+(call_expression
+  function: (member_expression
+    object: (member_expression
+      property: (property_identifier) @relation.call.object)
+    property: (property_identifier) @relation.call.method)) @relation.call
+
+;; Constructor: new ClassName()
+(new_expression
+  constructor: (identifier) @relation.call.new) @relation.call
+
 ;; ============================================================
 ;; EXPORT CAPTURES — captures export visibility
 ;; ============================================================
