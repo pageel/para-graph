@@ -167,11 +167,12 @@ async function installHook(wsRoot: string): Promise<void> {
   }
 
   // Inject hook
-  // Gemini settings.json uses a `hooks` array at the top level
-  const existingHooks = (settings.hooks ?? []) as Record<string, unknown>[];
+  // Gemini CLI v0.41+ settings.json uses a `hooks` object with event keys
+  const existingHooksObj = (settings.hooks ?? {}) as Record<string, unknown>;
+  const beforeToolHooks = (existingHooksObj.beforeTool ?? []) as Record<string, unknown>[];
 
   // Remove any existing para-graph hook (update case)
-  const filteredHooks = existingHooks.filter(
+  const filteredHooks = beforeToolHooks.filter(
     (h) => {
       const cmd = (h as { hooks?: Array<{ command?: string }> }).hooks?.[0]?.command ?? '';
       return !cmd.includes('para-graph');
@@ -179,7 +180,8 @@ async function installHook(wsRoot: string): Promise<void> {
   );
 
   filteredHooks.push(hookTemplate);
-  settings.hooks = filteredHooks;
+  existingHooksObj.beforeTool = filteredHooks;
+  settings.hooks = existingHooksObj;
 
   // Write settings
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
@@ -246,19 +248,21 @@ async function removeHookFromSettings(settingsPath: string): Promise<void> {
   }
 
   const settings = JSON.parse(readFileSync(settingsPath, 'utf-8'));
-  const hooks = (settings.hooks ?? []) as Record<string, unknown>[];
+  const existingHooksObj = (settings.hooks ?? {}) as Record<string, unknown>;
+  const beforeToolHooks = (existingHooksObj.beforeTool ?? []) as Record<string, unknown>[];
 
-  const filtered = hooks.filter((h) => {
+  const filtered = beforeToolHooks.filter((h) => {
     const cmd = (h as { hooks?: Array<{ command?: string }> }).hooks?.[0]?.command ?? '';
     return !cmd.includes('para-graph');
   });
 
-  if (filtered.length === hooks.length) {
+  if (filtered.length === beforeToolHooks.length) {
     console.log('[para-graph] No para-graph hook found in settings.json.');
     return;
   }
 
-  settings.hooks = filtered;
+  existingHooksObj.beforeTool = filtered;
+  settings.hooks = existingHooksObj;
   writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n', 'utf-8');
   console.log(`[para-graph] Removed para-graph hook from ${settingsPath}.`);
 }
