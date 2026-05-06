@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-05-06
+
+### Added
+- **Deep CALLS Capture** — Member call edges (`obj.method()`) with object+method pairing via Tree-sitter SSEC patterns. Supports direct member (`obj.method()`), nested member (`this.obj.method()`), and constructor calls (`new ClassName()`).
+- **Edge Confidence Schema** — `confidence` field on `GraphEdge` interface (`EXTRACTED` | `INFERRED` | `AMBIGUOUS`). All Tree-sitter edges auto-tagged `EXTRACTED`. Agent-injected edges get `INFERRED`.
+- **Topology Calculator** — `fanIn()`, `fanOut()`, `getTopologyProfile()` methods on `CodeGraph` for runtime role heuristics (controller/service/utility/leaf).
+- **God Nodes Detection** — `detectGodNodes(topN)` identifies most-connected real entities, filtering synthetic file nodes and `?unresolved` edges. Inspired by Graphify (Clean Room).
+- **Python Deep CALLS** — Upgraded Python attribute calls from target-only to object+method captures. Added nested attribute call pattern.
+
 ## [0.8.6] - 2026-05-05
 
 ### Added
