@@ -9,8 +9,8 @@
  *   para-graph build <target-dir> [output-dir] [--import]
  */
 
-import { resolve } from 'node:path';
-import { existsSync } from 'node:fs';
+import { resolve, join } from 'node:path';
+import { existsSync, unlinkSync } from 'node:fs';
 import { walkDirectory } from '../parser/file-walker.js';
 import { TreeSitterParser } from '../parser/tree-sitter-parser.js';
 import { CodeGraph } from '../graph/code-graph.js';
@@ -93,5 +93,13 @@ export function runBuild(options: BuildOptions): void {
 
   // Step 7: Export
   exportToJsonl(graph, outputDir);
+
+  // Step 8: Reset hook reminder lock (so Agent gets re-nudged with fresh graph)
+  const lockFile = join(outputDir, '.gemini_reminded');
+  if (existsSync(lockFile)) {
+    unlinkSync(lockFile);
+    console.log('[para-graph] Reset hook reminder (graph updated).');
+  }
+
   console.log(`[para-graph] Done. Output at: ${outputDir}`);
 }
