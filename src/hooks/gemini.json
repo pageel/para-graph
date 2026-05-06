@@ -1,0 +1,9 @@
+{
+  "matcher": "view_file|list_dir|grep_search",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "sh -c 'GRAPH=\".beads/graph/metadata.json\"; LOCK=\".beads/graph/.gemini_reminded\"; if [ -f \"$GRAPH\" ] && [ ! -f \"$LOCK\" ]; then touch \"$LOCK\" && cat <<HOOKEOF\n{\"decision\":\"allow\",\"additionalContext\":\"[para-graph] Knowledge graph is available for this project. Prioritize using mcp_para-graph_graph_query or mcp_para-graph_graph_context_bundle to understand architecture before reading raw files.\"}\nHOOKEOF\nelse echo \"{\\\"decision\\\":\\\"allow\\\"}\"; fi'"
+    }
+  ]
+}

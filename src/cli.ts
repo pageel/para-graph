@@ -5,10 +5,11 @@
  * Usage:
  *   para-graph build <target-dir> [output-dir] [--import]
  *   para-graph serve <workspace-root>
+ *   para-graph hooks [install|uninstall|status]
  *   para-graph --help
  *
  * Architecture:
- *   cli.ts (this file) → routes to commands/build.ts or commands/serve.ts
+ *   cli.ts (this file) → routes to commands/build.ts, serve.ts, inject.ts, hooks.ts
  *   Each command module exports a pure function — no self-execution.
  */
 
@@ -17,6 +18,7 @@ import { createRequire } from 'node:module';
 import { runBuild } from './commands/build.js';
 import { runServe } from './commands/serve.js';
 import { runInject } from './commands/inject.js';
+import { runHooks } from './commands/hooks.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -29,12 +31,14 @@ Usage:
   para-graph build <target-dir> [output-dir] [--import]   Scan code and export graph (manual paths)
   para-graph serve [workspace-root]                       Start MCP server (stdio)
   para-graph inject <path> [--project <name>] [--dry-run]  Inject graph context into Markdown
+  para-graph hooks [install|uninstall|status]              Manage BeforeTool hooks
   para-graph --help                                       Show this help
 
 Commands:
   build    Analyze source code and generate a structural graph (JSONL).
   serve    Start the MCP server exposing graph data to AI Agents.
   inject   Inject Living Docs / Blast Radius context into Markdown files.
+  hooks    Install/uninstall/status BeforeTool hooks for AI Agent nudging.
 
 Flags (build):
   --import    Load existing graph, preserve semantic data on re-scan.
@@ -140,6 +144,15 @@ function main(): void {
         dryRun,
       }).catch((err) => {
         console.error('[para-graph] Injection error:', err);
+        process.exit(1);
+      });
+      break;
+    }
+
+    case 'hooks': {
+      const subcommand = args[1] ?? 'status';
+      runHooks({ subcommand }).catch((err) => {
+        console.error('[para-graph] Hooks error:', err);
         process.exit(1);
       });
       break;
