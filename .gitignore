@@ -31,3 +31,6 @@ test/.test-output/
 Thumbs.db
 *.tar.gz
 *.tgz
+
+# Graph output (E2E test artifacts)
+.beads/
