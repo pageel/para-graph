@@ -11,7 +11,8 @@ source: custom
 
 Available actions:
 - `build`: Extract AST and build the `.jsonl` graph files from source code.
-- `enrich`: Perform semantic enrichment on the existing graph using the MCP server.
+- `compact`: Maintain Compact Memory by finding and enriching the most critical unenriched God Nodes.
+- `enrich`: Perform semantic enrichment on specific nodes using the MCP server.
 
 ## 0. Agent Indices Pre-flight
 
@@ -122,13 +123,27 @@ After a successful build, the Agent SHOULD actively prompt the user if they want
 **Example suggestion:**
 > "I have finished building the Graph. There are some core architecture nodes (Classes, Functions) that have not been semantically analyzed yet. Would you like me to use MCP to scan these nodes and perform data enrichment?"
 
-If the user agrees, the Agent MUST execute the Enrichment Workflow defined in `.agents/skills/para-graph/SKILL.md` (§2) using the `enrich` action.
+If the user agrees, the Agent MUST execute the `compact` action to build the Compact Memory.
+
+---
+
+## Action: compact
+
+Use this action to actively maintain the "Compact Memory" of the project by finding and enriching the most critical structural nodes (God Nodes).
+
+**Execution Steps:**
+1. Call `graph_god_nodes(unenrichedOnly: true, topN: 3)` (or the number requested by the user) to identify the most critical hubs that have not been enriched.
+2. For each God Node returned:
+   - Read the source code to understand its purpose (use `graph_context_bundle` or `view_file`).
+   - Call `graph_enrich` to write a concise summary, complexity, and domain concepts.
+3. Read the generated `.beads/graph/enrichment-log.md` file using `view_file`.
+4. Report the Audit Log and the `totalEnriched` status back to the user.
 
 ---
 
 ## Action: enrich
 
-Use this action to semantically enrich the existing graph nodes (classes, exported functions, missing edges) to improve graph intelligence.
+Use this action to semantically enrich specific existing graph nodes (classes, exported functions, missing edges) requested by the user.
 
 The Agent MUST load `.agents/skills/para-graph/SKILL.md` and rigorously follow the **Enrichment Workflow (§2)**.
 The Agent will interact directly with the `mcp_para-graph_*` tools. No bash scripts are required for this action.
