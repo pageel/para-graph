@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.1] - 2026-05-07
+
+### Added
+- **Enrichment Tracker (P-Tracker)** — `EnrichmentStats` interface tracks `totalEnriched`, `lastEnrichedAt`, `recentNodes` (max 5). Persisted to `metadata.json` for cross-session resume.
+- **`enrichNode()` method** — Encapsulates semantic update + stats tracking with deduplication. Re-enriching an existing node does NOT double-count.
+- **`graph_god_nodes` MCP tool** — Returns top-N most connected (God) nodes sorted by degree. Supports `unenrichedOnly` filter to prioritize enrichment candidates.
+- **Enrichment Audit Logger** — Auto-appends enrichment records to `.beads/graph/enrichment-log.md` in Markdown table format. Sanitizes `|` and `\n` characters.
+- **Typed `GraphMetadata`** — Formalized `metadata.json` schema with `version`, `generatedAt`, `projectName`, and optional `enrichment` block.
+
+### Changed
+- `graph_enrich` now calls `GraphStore.saveGraph()` after enrichment (prevents data loss on RAM-only state).
+- `GraphStore` loads/restores `enrichmentStats` from `metadata.json` on graph initialization (backward compatible).
+- `graph_enrich` response now includes `enrichmentStats` for Agent awareness.
+
 ## [0.11.0] - 2026-05-07
 
 ### Added
