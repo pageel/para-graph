@@ -169,6 +169,12 @@ export class TreeSitterParser {
     let currentClassName: string | null = null;
     let currentClassEndRow: number = -1;
 
+    // Track the current function/method/variable scope for CALLS edge sourceId
+    // Wrapper captures (@entity.function, @entity.method, @entity.variable) set the
+    // scope boundary (endRow), then .name captures set the scope ID.
+    let currentScopeId: string | null = null;
+    let currentScopeEndRow: number = -1;
+
     // State machine for member call pairing (object + method)
     let pendingCallObject: string | null = null;
     let pendingCallLine: number | null = null;
@@ -211,12 +217,17 @@ export class TreeSitterParser {
           break;
         }
 
-        // --- Entity: Function ---
+        // --- Entity: Function (wrapper — sets scope boundary) ---
+        case 'entity.function': {
+          currentScopeEndRow = node.endPosition.row;
+          break;
+        }
         case 'entity.function.name': {
           const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
           const signature = (lines[startLine - 1] ?? '').trim();
+          const entityId = `${filePath}::${node.text}`;
           graph.addNode({
-            id: `${filePath}::${node.text}`,
+            id: entityId,
             type: NodeType.FUNCTION,
             name: node.text,
             filePath,
@@ -225,6 +236,7 @@ export class TreeSitterParser {
             exportType,
             signature,
           });
+          currentScopeId = entityId;
           break;
         }
 
@@ -245,7 +257,11 @@ export class TreeSitterParser {
           break;
         }
 
-        // --- Entity: Method (inside class) ---
+        // --- Entity: Method (wrapper — sets scope boundary) ---
+        case 'entity.method': {
+          currentScopeEndRow = node.endPosition.row;
+          break;
+        }
         case 'entity.method.name': {
           // Associate method with current class if within class body
           const className = (node.startPosition.row <= currentClassEndRow)
@@ -269,15 +285,21 @@ export class TreeSitterParser {
             exportType: ExportType.NONE,
             signature,
           });
+          currentScopeId = methodId;
           break;
         }
 
-        // --- Entity: Variable (arrow function) ---
+        // --- Entity: Variable (wrapper — sets scope boundary for arrow fns) ---
+        case 'entity.variable': {
+          currentScopeEndRow = node.endPosition.row;
+          break;
+        }
         case 'entity.variable.name': {
           const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
           const signature = (lines[startLine - 1] ?? '').trim();
+          const entityId = `${filePath}::${node.text}`;
           graph.addNode({
-            id: `${filePath}::${node.text}`,
+            id: entityId,
             type: NodeType.FUNCTION,
             name: node.text,
             filePath,
@@ -286,6 +308,7 @@ export class TreeSitterParser {
             exportType,
             signature,
           });
+          currentScopeId = entityId;
           break;
         }
 
@@ -306,8 +329,9 @@ export class TreeSitterParser {
 
         // --- Relation: Call ---
         case 'relation.call.target': {
+          const inScope = currentScopeId && node.startPosition.row <= currentScopeEndRow;
           const edge: GraphEdge = {
-            sourceId: filePath,
+            sourceId: inScope ? currentScopeId! : filePath,
             targetId: node.text,
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
@@ -328,12 +352,14 @@ export class TreeSitterParser {
         case 'relation.call.method': {
           const obj = pendingCallObject ?? '?unresolved';
           const confidence: EdgeConfidence = obj === '?unresolved' ? 'AMBIGUOUS' : 'EXTRACTED';
+          const callLine = pendingCallLine ?? startLine;
+          const inScope = currentScopeId && node.startPosition.row <= currentScopeEndRow;
           const edge: GraphEdge = {
-            sourceId: filePath,
+            sourceId: inScope ? currentScopeId! : filePath,
             targetId: `${obj}::${node.text}`,
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
-            sourceLine: pendingCallLine ?? startLine,
+            sourceLine: callLine,
             confidence,
           };
           graph.addEdge(edge);
@@ -344,8 +370,9 @@ export class TreeSitterParser {
 
         // --- Relation: Constructor Call (new ClassName) ---
         case 'relation.call.new': {
+          const inScope = currentScopeId && node.startPosition.row <= currentScopeEndRow;
           const edge: GraphEdge = {
-            sourceId: filePath,
+            sourceId: inScope ? currentScopeId! : filePath,
             targetId: `${node.text}::constructor`,
             relation: EdgeRelation.CALLS,
             sourceFile: filePath,
@@ -357,7 +384,7 @@ export class TreeSitterParser {
         }
 
         default:
-          // Ignore wrapper captures (@entity.class, @entity.function, etc.)
+          // Ignore other captures (@relation.import, @relation.call wrappers, etc.)
           break;
       }
     }
