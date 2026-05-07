@@ -18,7 +18,8 @@ import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection } fro
 import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
-import { resolveSourceDir } from '../graph/store/pathResolver.js';
+import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.js';
+import { appendEnrichmentLog } from '../graph/logger.js';
 
 /**
  * Validate SemanticAttributes structure.
@@ -108,14 +109,6 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
     async ({ projectName, nodeId, summary, complexity, domainConcepts }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
-      const node = graph.getNode(nodeId);
-
-      if (!node) {
-        return {
-          content: [{ type: 'text' as const, text: JSON.stringify({ success: false, error: `Node not found: ${nodeId}` }) }],
-          isError: true,
-        };
-      }
 
       // Build semantic attributes
       const semantic: SemanticAttributes = {
@@ -135,17 +128,30 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         };
       }
 
-      // Update node
-      node.semantic = semantic;
-      graph.updateNode(node);
-      
-      // Save all entities back to file (this also updates cache)
-      GraphStore.saveEntities(workspaceRoot, projectName, graph.getAllNodes());
+      // Use enrichNode for tracking + deduplication (P-Tracker v0.11.1)
+      const success = graph.enrichNode(nodeId, semantic);
+      if (!success) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ success: false, error: `Node not found: ${nodeId}` }) }],
+          isError: true,
+        };
+      }
 
+      // Persist graph + metadata (prevents data loss — Deep Review fix)
+      GraphStore.saveGraph(workspaceRoot, projectName);
+
+      // Audit log (P-Tracker v0.11.1)
+      const graphDir = resolveGraphDir(workspaceRoot, projectName);
+      const enrichedNode = graph.getNode(nodeId)!;
+      appendEnrichmentLog(graphDir, nodeId, enrichedNode.name, complexity, summary);
       return {
         content: [{
           type: 'text' as const,
-          text: JSON.stringify({ success: true, updatedNode: node }, null, 2),
+          text: JSON.stringify({
+            success: true,
+            updatedNode: enrichedNode,
+            enrichmentStats: graph.enrichmentStats,
+          }, null, 2),
         }],
       };
     },
@@ -281,6 +287,75 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
         isError: result.errors.length > 0 && result.added === 0,
+      };
+    },
+  );
+
+  // --- graph_god_nodes: Get top-N most connected nodes (P-Tracker v0.11.1) ---
+  server.tool(
+    'graph_god_nodes',
+    'Get the most connected (God) nodes in the graph — helps Agent prioritize which nodes to enrich first',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      topN: z.number().optional().describe('Number of top nodes to return (default: 10, max: 50)'),
+      unenrichedOnly: z.boolean().optional().describe('If true, only return nodes that have NOT been enriched yet'),
+    },
+    async ({ projectName, topN, unenrichedOnly }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const allNodes = graph.getAllNodes();
+      const allEdges = graph.getAllEdges();
+
+      // Build degree map (fan-in + fan-out of CALLS edges, exclude ?unresolved)
+      const degreeMap = new Map<string, { fanIn: number; fanOut: number }>();
+      for (const node of allNodes) {
+        if (node.type === 'file') continue;
+        degreeMap.set(node.id, { fanIn: 0, fanOut: 0 });
+      }
+      for (const edge of allEdges) {
+        if (edge.relation !== EdgeRelation.CALLS) continue;
+        if (edge.sourceId.startsWith('?unresolved') || edge.targetId.startsWith('?unresolved')) continue;
+        const src = degreeMap.get(edge.sourceId);
+        if (src) src.fanOut++;
+        const tgt = degreeMap.get(edge.targetId);
+        if (tgt) tgt.fanIn++;
+      }
+
+      // Build profiles
+      let profiles = Array.from(degreeMap.entries()).map(([id, { fanIn, fanOut }]) => {
+        const node = graph.getNode(id)!;
+        return {
+          id,
+          name: node.name,
+          type: node.type,
+          filePath: node.filePath,
+          degree: fanIn + fanOut,
+          fanIn,
+          fanOut,
+          enriched: !!node.semantic,
+        };
+      });
+
+      // Filter unenriched if requested
+      if (unenrichedOnly) {
+        profiles = profiles.filter(p => !p.enriched);
+      }
+
+      // Sort by degree descending, take topN
+      const effectiveTopN = Math.min(topN ?? 10, 50);
+      const result = profiles
+        .filter(p => p.degree > 0)
+        .sort((a, b) => b.degree - a.degree)
+        .slice(0, effectiveTopN);
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify({
+            godNodes: result,
+            enrichmentStats: graph.enrichmentStats,
+            totalNodes: allNodes.filter(n => n.type !== 'file').length,
+          }, null, 2),
+        }],
       };
     },
   );

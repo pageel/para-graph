@@ -184,3 +184,40 @@ export interface AddEdgesResult {
   /** Errors for edges that could not be added (invalid node IDs) */
   errors: Array<{ sourceId: string; targetId: string; reason: string }>;
 }
+
+// --- Enrichment Tracking Types (P-Tracker: v0.11.1) ---
+
+/**
+ * Tracks enrichment progress across the graph.
+ * Persisted to metadata.json so the Agent can resume enrichment
+ * across sessions without re-scanning the full graph.
+ */
+export interface EnrichmentStats {
+  /** Total number of unique nodes that have been enriched */
+  totalEnriched: number;
+  /** ISO 8601 timestamp of the last enrichment operation */
+  lastEnrichedAt: string | null;
+  /** IDs of the 5 most recently enriched nodes (newest first) */
+  recentNodes: string[];
+}
+
+/**
+ * Typed schema for `.beads/graph/metadata.json`.
+ * Previously untyped — now formalized to ensure Exporter/Importer consistency.
+ */
+export interface GraphMetadata {
+  /** Version of para-graph that generated this graph */
+  version: string;
+  /** ISO 8601 timestamp of when the graph was built/last updated */
+  generatedAt: string;
+  /** Total number of nodes in the graph */
+  nodeCount: number;
+  /** Total number of edges in the graph */
+  edgeCount: number;
+  /** Number of unique source files parsed */
+  fileCount: number;
+  /** Name of the project this graph belongs to */
+  projectName: string;
+  /** Enrichment progress tracking — undefined if no enrichment has occurred */
+  enrichment?: EnrichmentStats;
+}

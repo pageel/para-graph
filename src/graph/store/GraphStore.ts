@@ -2,7 +2,7 @@ import { resolve, join } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { ProjectGraph } from './ProjectGraph.js';
 import { resolveGraphDir } from './pathResolver.js';
-import type { GraphNode, GraphEdge, AddEdgesResult } from '../models.js';
+import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata } from '../models.js';
 
 export class GraphStore {
   private static readonly MAX_CAPACITY = 3;
@@ -67,6 +67,19 @@ export class GraphStore {
       }
     }
 
+    // Load enrichment stats from metadata.json (P-Tracker v0.11.1)
+    const metadataPath = join(graphDir, 'metadata.json');
+    if (existsSync(metadataPath)) {
+      try {
+        const raw = JSON.parse(readFileSync(metadataPath, 'utf-8')) as GraphMetadata;
+        if (raw.enrichment) {
+          graph.setEnrichmentStats(raw.enrichment);
+        }
+      } catch {
+        // Backward compat — old metadata.json without enrichment field is fine
+      }
+    }
+
     return graph;
   }
 
@@ -115,5 +128,39 @@ export class GraphStore {
     const relationsPath = join(graphDir, 'relations.jsonl');
     const content = edges.map(e => JSON.stringify(e)).join('\n') + '\n';
     writeFileSync(relationsPath, content, 'utf-8');
+  }
+
+  /**
+   * Save enrichment metadata to metadata.json (P-Tracker v0.11.1).
+   * Merges enrichmentStats into the existing metadata structure.
+   */
+  public static saveMetadata(workspaceRoot: string, projectName: string): void {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
+    const metadataPath = join(graphDir, 'metadata.json');
+    const stats = graph.getStats();
+    const enrichment = graph.enrichmentStats;
+
+    const metadata: GraphMetadata = {
+      version: '0.11.1',
+      generatedAt: new Date().toISOString(),
+      nodeCount: stats.nodeCount,
+      edgeCount: stats.edgeCount,
+      fileCount: stats.fileCount,
+      projectName,
+      ...(enrichment.totalEnriched > 0 ? { enrichment } : {}),
+    };
+    writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + '\n', 'utf-8');
+  }
+
+  /**
+   * Save the full graph (entities + relations + metadata) to disk.
+   * Used after enrichment to ensure semantic data is not lost.
+   */
+  public static saveGraph(workspaceRoot: string, projectName: string): void {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    this.saveEntities(workspaceRoot, projectName, graph.getAllNodes());
+    this.saveRelations(workspaceRoot, projectName, graph.getAllEdges());
+    this.saveMetadata(workspaceRoot, projectName);
   }
 }

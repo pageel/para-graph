@@ -5,7 +5,7 @@
  * dual indexing for fast lookup by ID and by file path.
  */
 
-import type { GraphNode, GraphEdge } from './models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, EnrichmentStats } from './models.js';
 import { EdgeRelation, NodeType } from './models.js';
 
 export class CodeGraph {
@@ -17,6 +17,53 @@ export class CodeGraph {
 
   /** Secondary index: file path → list of nodes in that file */
   private nodesByFile: Map<string, GraphNode[]> = new Map();
+
+  /** Enrichment progress tracking (P-Tracker v0.11.1) */
+  private _enrichmentStats: EnrichmentStats = {
+    totalEnriched: 0,
+    lastEnrichedAt: null,
+    recentNodes: [],
+  };
+
+  /** Get current enrichment stats (read-only copy) */
+  get enrichmentStats(): EnrichmentStats {
+    return { ...this._enrichmentStats, recentNodes: [...this._enrichmentStats.recentNodes] };
+  }
+
+  /** Restore enrichment stats from persisted metadata (used by GraphStore on load) */
+  setEnrichmentStats(stats: EnrichmentStats): void {
+    this._enrichmentStats = { ...stats, recentNodes: [...stats.recentNodes] };
+  }
+
+  /**
+   * Enrich a node with semantic attributes and update tracking stats.
+   * Deduplication: If node already has `semantic`, this is a re-enrichment —
+   * do NOT increment totalEnriched. Always update lastEnrichedAt and recentNodes.
+   *
+   * @param nodeId - ID of the node to enrich
+   * @param semantic - Semantic attributes to set
+   * @returns true if node was found and enriched, false if node not found
+   */
+  enrichNode(nodeId: string, semantic: SemanticAttributes): boolean {
+    const node = this.nodeMap.get(nodeId);
+    if (!node) return false;
+
+    const isFirstEnrich = !node.semantic;
+    node.semantic = semantic;
+
+    // Update stats
+    if (isFirstEnrich) {
+      this._enrichmentStats.totalEnriched++;
+    }
+    this._enrichmentStats.lastEnrichedAt = semantic.enrichedAt;
+
+    // Update recentNodes — move to front, keep max 5
+    const recent = this._enrichmentStats.recentNodes.filter(id => id !== nodeId);
+    recent.unshift(nodeId);
+    this._enrichmentStats.recentNodes = recent.slice(0, 5);
+
+    return true;
+  }
 
   /**
    * Add a node to the graph.
