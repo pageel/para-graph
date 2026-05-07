@@ -16,6 +16,7 @@ import { TreeSitterParser } from '../parser/tree-sitter-parser.js';
 import { CodeGraph } from '../graph/code-graph.js';
 import { exportToJsonl } from '../graph/jsonl-exporter.js';
 import { importFromJsonl } from '../graph/jsonl-importer.js';
+import { resolveEdges } from '../graph/edge-resolver.js';
 import type { GraphNode } from '../graph/models.js';
 
 export interface BuildOptions {
@@ -80,6 +81,12 @@ export function runBuild(options: BuildOptions): void {
       }
     }
     console.log(`[para-graph] Preserved semantic data on ${preserved} node(s)`);
+  }
+
+  // Step 5.5: Resolve bare targetId in CALLS edges
+  const resolverResult = resolveEdges(graph);
+  if (resolverResult.total > 0) {
+    console.log(`[para-graph] EdgeResolver: ${resolverResult.resolved}/${resolverResult.total} resolved (${resolverResult.rate}%)`);
   }
 
   // Step 6: Show stats
