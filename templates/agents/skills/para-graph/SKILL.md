@@ -248,3 +248,5 @@ When para-graph is NOT available (no `.beads/graph/`), workflows fall back to:
 - **Re-scan safety** — if user re-runs para-graph CLI, remind them to use `--import` flag to preserve enrichment data
 - **Router is data, not code** — §3 provides instructions for Agent to follow, not executable logic. No circular dependency risk.
 - **Sidecar skills MUST NOT duplicate** — if a workflow needs graph logic, it references §3.3.X. Never copy-paste graph pipeline inline.
+- **Decoupled Distribution (v0.12.0+)** — Tarball contains only the Engine (`dist/`). AI Intelligence (this SKILL.md, workflows, rules) is fetched from GitHub via `post_install()` hook or `./para install-tool para-graph --sync`. Template changes no longer require an engine release — push to `main` branch and run `--sync`.
+

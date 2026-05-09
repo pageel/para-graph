@@ -38,5 +38,67 @@ pre_install() {
 }
 
 post_install() {
-  echo "  📊 para-graph: install hooks executed successfully."
+  # Decoupled Distribution (v0.12.0+):
+  # Tarball no longer bundles templates/. Fetch AI Intelligence from GitHub.
+  # This hook runs AFTER install_agents() — which prints "Source not found"
+  # warnings because templates/ is absent. We fetch and install correctly here.
+
+  if [ -d "$TOOL_INSTALL_DIR/templates" ]; then
+    # Legacy tarball with bundled templates — nothing to do
+    echo "  📊 para-graph: install hooks executed successfully."
+    return 0
+  fi
+
+  echo "  📊 para-graph: fetching AI Intelligence from GitHub..."
+
+  # Guard: ensure fetch function is available in scope
+  if ! type fetch_templates_from_git >/dev/null 2>&1; then
+    echo "  ⚠️  fetch_templates_from_git not available (para-workspace < 1.8.5?)."
+    echo "     Run: ./para install-tool para-graph --sync"
+    return 0
+  fi
+
+  # Create temp directory for downloads
+  local sync_temp
+  sync_temp="$(mktemp -d)"
+
+  if fetch_templates_from_git "$MANIFEST_FILE" "$sync_temp"; then
+    # Re-parse manifest to populate AGENT_* arrays
+    # (already populated by install-tool.sh, but re-parse to be safe)
+    if type parse_manifest_agents >/dev/null 2>&1; then
+      parse_manifest_agents
+    fi
+
+    # Install agents from fetched templates (same pattern as --sync mode)
+    local i=0
+    while [ $i -lt ${#AGENT_SOURCES[@]} ]; do
+      local asource="${AGENT_SOURCES[$i]}"
+      local atype="${AGENT_TYPES[$i]}"
+      local atarget="${AGENT_TARGETS[$i]}"
+      local src_path="$sync_temp/$asource"
+      local dst_dir="$AGENTS_DIR/$atype"
+      local dst_path="$dst_dir/$atarget"
+
+      if [ -e "$src_path" ]; then
+        mkdir -p "$dst_dir"
+        if [ -d "$src_path" ]; then
+          [ -d "$dst_path" ] && rm -rf "$dst_path"
+          cp -r "$src_path" "$dst_path"
+        elif [ -f "$src_path" ]; then
+          cp "$src_path" "$dst_path"
+        fi
+        echo "  ✅ $atype/$atarget installed from GitHub."
+      fi
+      i=$((i + 1))
+    done
+  else
+    echo ""
+    echo "  ⚠️  Could not fetch AI Intelligence (no network or GitHub unreachable)."
+    echo "     Core tool is installed and fully functional."
+    echo "     Fetch intelligence later: ./para install-tool para-graph --sync"
+    echo ""
+  fi
+
+  # Cleanup temp directory
+  rm -rf "$sync_temp"
 }

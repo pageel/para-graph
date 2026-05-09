@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-05-09
+
+### Changed
+- **Decoupled Intelligence Distribution** — Tarball no longer bundles `templates/` directory. AI Intelligence (workflows, skills, rules) is now fetched on-demand from GitHub via `post_install()` hook or `./para install-tool para-graph --sync`.
+- **`install-hooks.sh` auto-sync** — `post_install()` detects missing templates and attempts `fetch_templates_from_git()` automatically during installation. Falls back gracefully when offline.
+- **`package.json` `files` array** — Removed `"templates/"` from npm pack scope to align with decoupled distribution.
+
+### Notes
+- During `--update` install, initial `⚠️ Source not found` warnings from `install_agents` are expected (templates absent in tarball). The `post_install()` hook immediately re-installs agents correctly from GitHub.
+- `tool.manifest.yml` still declares the `agents:` block — it serves as the declaration for `--sync` to know what to fetch.
+- Users can update AI Intelligence independently via `./para install-tool para-graph --sync` without waiting for a new engine release.
+
 ## [0.11.1] - 2026-05-07
 
 ### Added
