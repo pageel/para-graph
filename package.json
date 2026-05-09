@@ -25,7 +25,7 @@
   "scripts": {
     "test": "vitest run",
     "dev": "tsx src/cli.ts",
-    "build": "tsc -p tsconfig.build.json && rm -rf dist/queries && cp -r src/queries dist/queries && mkdir -p dist/hooks && cp src/hooks/gemini.json dist/hooks/"
+    "build": "tsc -p tsconfig.build.json && node -e \"const fs=require('fs');fs.rmSync('dist/queries',{recursive:true,force:true});fs.cpSync('src/queries','dist/queries',{recursive:true});fs.mkdirSync('dist/hooks',{recursive:true});fs.cpSync('src/hooks/gemini.json','dist/hooks/gemini.json');\""
   },
   "repository": {
     "type": "git",
