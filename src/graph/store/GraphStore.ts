@@ -1,5 +1,5 @@
 import { resolve, join } from 'node:path';
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { ProjectGraph } from './ProjectGraph.js';
 import { resolveGraphDir } from './pathResolver.js';
 import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata, MemoryEvent, SemanticSlice } from '../models.js';
@@ -195,24 +195,28 @@ export class GraphStore {
     const graph = this.getGraph(workspaceRoot, projectName);
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const eventsPath = join(graphDir, 'memory-events.jsonl');
+    const tmpPath = eventsPath + '.tmp';
     const events = graph.getAllMemoryEvents();
     if (events.length > 0) {
       const content = events.map(e => JSON.stringify(e)).join('\n') + '\n';
-      writeFileSync(eventsPath, content, 'utf-8');
+      writeFileSync(tmpPath, content, 'utf-8');
+      renameSync(tmpPath, eventsPath);
     }
   }
 
   /**
-   * Save all semantic slices to memory-slices.jsonl (P11)
+   * Save all semantic slices to memory-slices.jsonl (P11) with atomic write
    */
   public static saveMemorySlices(workspaceRoot: string, projectName: string): void {
     const graph = this.getGraph(workspaceRoot, projectName);
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const slicesPath = join(graphDir, 'memory-slices.jsonl');
+    const tmpPath = slicesPath + '.tmp';
     const slices = graph.getMemorySlices();
     if (slices.length > 0) {
       const content = slices.map(s => JSON.stringify(s)).join('\n') + '\n';
-      writeFileSync(slicesPath, content, 'utf-8');
+      writeFileSync(tmpPath, content, 'utf-8');
+      renameSync(tmpPath, slicesPath);
     }
   }
 }

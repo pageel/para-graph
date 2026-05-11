@@ -21,6 +21,7 @@ import { EdgeRelation } from '../graph/models.js';
 import { GraphStore } from '../graph/store/GraphStore.js';
 import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.js';
 import { appendEnrichmentLog } from '../graph/logger.js';
+import { CurationWorker } from '../graph/curation-worker.js';
 
 /**
  * Validate SemanticAttributes structure.
@@ -444,6 +445,27 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       
       return {
         content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
+      };
+    },
+  );
+
+  // --- memory_curate: Curate raw events into slices (P11) ---
+  server.tool(
+    'memory_curate',
+    'Curate raw memory events into semantic slices (P11)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+    },
+    async ({ projectName }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const result = CurationWorker.curate(graph);
+      
+      if (result.slicesCreated > 0) {
+        GraphStore.saveMemorySlices(workspaceRoot, projectName);
+      }
+      
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
       };
     },
   );

@@ -19,6 +19,7 @@ import { runBuild } from './commands/build.js';
 import { runServe } from './commands/serve.js';
 import { runInject } from './commands/inject.js';
 import { runHooks } from './commands/hooks.js';
+import { runMem } from './commands/mem.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -39,6 +40,7 @@ Commands:
   serve    Start the MCP server exposing graph data to AI Agents.
   inject   Inject Living Docs / Blast Radius context into Markdown files.
   hooks    Install/uninstall/status BeforeTool hooks for AI Agent nudging.
+  mem      Curate session memory events into semantic slices.
 
 Flags (build):
   --import    Load existing graph, preserve semantic data on re-scan.
@@ -155,6 +157,24 @@ function main(): void {
         console.error('[para-graph] Hooks error:', err);
         process.exit(1);
       });
+      break;
+    }
+
+    case 'mem': {
+      const projectName = args[1];
+      if (!projectName) {
+        console.error('Error: mem requires <project-name> argument.');
+        console.error('Usage: para-graph mem <project-name>');
+        process.exit(1);
+      }
+      
+      const wsRoot = findWorkspaceRoot();
+      if (!wsRoot) {
+        console.error('Error: Could not auto-detect workspace root.');
+        process.exit(1);
+      }
+      
+      runMem(projectName, wsRoot);
       break;
     }
 
