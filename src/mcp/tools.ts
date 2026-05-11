@@ -214,7 +214,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     {
       projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the entity to get context for'),
-      previewOnly: z.boolean().optional().describe('If true, skips source code read to save tokens (P11)'),
+      previewOnly: z.boolean().optional().describe('If true, skips source code read to save tokens'),
     },
     async ({ projectName, nodeId, previewOnly }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
@@ -367,7 +367,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // --- graph_expand_node: Get only the source code for a specific node (P11) ---
   server.tool(
     'graph_expand_node',
-    'Get only the source code for a specific node (P11)',
+    'Get only the source code for a specific node',
     {
       projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the entity to expand'),
@@ -392,7 +392,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // --- memory_push: Push a memory event to the project MemoryStore (P11) ---
   server.tool(
     'memory_push',
-    'Push a memory event to the project MemoryStore (P11)',
+    'Push a memory event to the project MemoryStore',
     {
       projectName: z.string().describe('Name of the PARA project'),
       kind: z.string().describe('Category of event'),
@@ -433,7 +433,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // --- memory_search: Full-text search over events (P11) ---
   server.tool(
     'memory_search',
-    'Search for memory events by keyword (P11)',
+    'Search for memory events by keyword',
     {
       projectName: z.string().describe('Name of the PARA project'),
       query: z.string().describe('Search term'),
@@ -452,7 +452,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // --- memory_curate: Curate raw events into slices (P11) ---
   server.tool(
     'memory_curate',
-    'Curate raw memory events into semantic slices (P11)',
+    'Curate raw memory events into semantic slices',
     {
       projectName: z.string().describe('Name of the PARA project'),
     },
