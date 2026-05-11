@@ -51,9 +51,19 @@
 ;; Method calls — member access
 ;; e.g. $this->validate(...)
 (member_call_expression
-  name: (name) @relation.call.target) @relation.call
+  object: (_) @relation.call.object
+  name: (name) @relation.call.method) @relation.call
 
 ;; Static method calls
 ;; e.g. User::find(1)
 (scoped_call_expression
-  name: (name) @relation.call.target) @relation.call
+  scope: (_) @relation.call.object
+  name: (name) @relation.call.method) @relation.call
+
+;; Object creation
+;; e.g. new Class()
+(object_creation_expression
+  [
+    (name) @relation.call.new
+    (qualified_name) @relation.call.new
+  ]) @relation.call

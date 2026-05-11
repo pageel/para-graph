@@ -22,6 +22,10 @@ class UserController extends Controller implements Authenticatable
     {
         $user = User::find($id);
         $this->authorize('view', $user);
+        
+        $logger = new Logger();
+        $logger->info('User viewed')->send();
+
         return response()->json($user);
     }
 

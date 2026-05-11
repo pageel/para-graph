@@ -46,7 +46,17 @@
   function: (identifier) @relation.call.target) @relation.call
 
 ;; Call expressions — selector (qualified) calls
-;; e.g. http.ListenAndServe(...)
+;; e.g. http.ListenAndServe(...) or user.Save()
 (call_expression
   function: (selector_expression
-    field: (field_identifier) @relation.call.target)) @relation.call
+    operand: (_) @relation.call.object
+    field: (field_identifier) @relation.call.method)) @relation.call
+
+;; Struct initialization (Object creation)
+;; e.g. User{Name: "Alice"} or &User{}
+(composite_literal
+  type: [
+    (type_identifier) @relation.call.new
+    (pointer_type (type_identifier) @relation.call.new)
+    (selector_expression field: (field_identifier) @relation.call.new)
+  ]) @relation.call
