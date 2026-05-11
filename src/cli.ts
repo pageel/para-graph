@@ -94,6 +94,17 @@ function main(): void {
           console.log(`[para-graph] Resolved project "${projectName}" in workspace: ${wsRoot}`);
         }
         // If wsRoot not found, fall through to use targetDir as-is (backward compatible)
+      } else {
+        const normalizedTarget = targetDir.replace(/\\/g, '/');
+        const projectMatch = normalizedTarget.match(/(?:\/|^)Projects\/([^/]+)\/repo/);
+        if (projectMatch) {
+          projectName = projectMatch[1];
+        } else {
+          const resourceMatch = normalizedTarget.match(/(?:\/|^)Resources\/references\/(.+?)(?:\/repo)?$/);
+          if (resourceMatch) {
+            projectName = `@resources/${resourceMatch[1]}`;
+          }
+        }
       }
 
       runBuild({
