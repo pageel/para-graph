@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.0] - 2026-05-11
+
+### Added
+- **Compact Memory Engine** — Integrated `MemoryStore` mapping generic entities (e.g., memory chunks) to `.beads/graph/memory-slices.jsonl`.
+- **CurationWorker** — Implemented heuristic clustering algorithms (`para-graph mem`) for semantic memory consolidation.
+- **MCP Tools for Memory** — Added `memory_curate` and `memory_summary` resource endpoints for intelligent memory retrieval.
+- **Developer DX** — Added `dev:test-install` script to streamline decoupled environment testing directly with `para install-tool --local`.
+
+### Changed
+- **PHP SCM Upgrades** — Added support for deep method chaining (`$obj->a()->b()`) and object instantiation patterns.
+- **Go SCM Upgrades** — Added support for method selector expressions and struct initializers.
+- **Install Hooks Strategy** — Unified `post_install()` developer testing to rely purely on Git-synced templates. No template overriding is allowed during `--local` install, preventing "Dogfooding Traps".
+
 ## [0.12.0] - 2026-05-09
 
 ### Changed

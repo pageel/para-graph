@@ -10,7 +10,8 @@ source: custom
 > **Constraint:** Read `.para-workspace.yml` at the workspace root to get the user's preferred language from `preferences.language` (e.g., `vi` for Vietnamese). **All output and reports MUST be translated to this language.**
 
 Available actions:
-- `build`: Extract AST and build the `.jsonl` graph files from source code.
+- `build`: Extract AST and build the `.jsonl` graph files from source code. Supports `--memory` flag.
+- `mem`: Trigger the CurationWorker to consolidate and cluster Semantic Memory (`memory-events.jsonl` → `memory-slices.jsonl`).
 - `compact`: Maintain Compact Memory by finding and enriching the most critical unenriched God Nodes.
 - `enrich`: Perform semantic enrichment on specific nodes using the MCP server.
 
@@ -94,7 +95,12 @@ fi
 
 # Scan source code and dump Graph Memory.
 # We ALWAYS use --import by default to preserve AI semantic enrichment and agent-injected edges (v0.7.0+) from previous scans.
-node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR" --import
+if [[ "$*" == *"--memory"* ]]; then
+  node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR" --import
+  node "$CLI_PATH" mem "$SOURCE_DIR"
+else
+  node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR" --import
+fi
 ```
 
 ### 3. Verification & Report
@@ -124,6 +130,33 @@ After a successful build, the Agent SHOULD actively prompt the user if they want
 > "I have finished building the Graph. There are some core architecture nodes (Classes, Functions) that have not been semantically analyzed yet. Would you like me to use MCP to scan these nodes and perform data enrichment?"
 
 If the user agrees, the Agent MUST execute the `compact` action to build the Compact Memory.
+
+---
+
+## Action: mem
+
+Use this action to trigger the CurationWorker to process raw memory events (`memory-events.jsonl`) into consolidated memory slices (`memory-slices.jsonl`).
+
+```bash
+TARGET="[target]"
+if [[ "$TARGET" == @resources/* ]]; then
+  SOURCE_DIR="Resources/references/${TARGET#@resources/}"
+else
+  SOURCE_DIR="Projects/$TARGET/repo"
+fi
+
+# Dynamic CLI path resolution (dev mode vs installed mode)
+if [ -f "Projects/para-graph/repo/dist/cli.js" ]; then
+  CLI_PATH="Projects/para-graph/repo/dist/cli.js"
+elif [ -f ".para/tools/graph/dist/cli.js" ]; then
+  CLI_PATH=".para/tools/graph/dist/cli.js"
+else
+  echo "❌ para-graph CLI not found."
+  exit 1
+fi
+
+node "$CLI_PATH" mem "$SOURCE_DIR"
+```
 
 ---
 

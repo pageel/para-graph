@@ -334,7 +334,7 @@ export class AstStore {
    * @returns ContextBundle with source, callers, callees, imports, tests
    * @throws Error if nodeId is not found in the graph
    */
-  public getContextBundle(nodeId: string, rootDir: string): ContextBundle {
+  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false): ContextBundle {
     const target = this.nodesById.get(nodeId);
     if (!target) {
       throw new Error(`Node not found: ${nodeId}`);
@@ -345,27 +345,30 @@ export class AstStore {
     // 1. Read source code from actual file
     let sourceCode: string | null = null;
     let truncated = false;
-    const filePath = join(rootDir, target.filePath);
-    if (existsSync(filePath)) {
-      try {
-        const fileContent = readFileSync(filePath, 'utf-8');
-        const lines = fileContent.split('\n');
-        const start = Math.max(0, target.startLine - 1); // 1-indexed to 0-indexed
-        const end = Math.min(lines.length, target.endLine);
-        const entityLines = lines.slice(start, end);
+    
+    if (!previewOnly) {
+      const filePath = join(rootDir, target.filePath);
+      if (existsSync(filePath)) {
+        try {
+          const fileContent = readFileSync(filePath, 'utf-8');
+          const lines = fileContent.split('\n');
+          const start = Math.max(0, target.startLine - 1); // 1-indexed to 0-indexed
+          const end = Math.min(lines.length, target.endLine);
+          const entityLines = lines.slice(start, end);
 
-        if (entityLines.length > AstStore.CONTEXT_MAX_LINES) {
-          sourceCode = entityLines.slice(0, AstStore.CONTEXT_MAX_LINES).join('\n');
-          truncated = true;
-          warnings.push(`Source code truncated: ${entityLines.length} lines → ${AstStore.CONTEXT_MAX_LINES} lines`);
-        } else {
-          sourceCode = entityLines.join('\n');
+          if (entityLines.length > AstStore.CONTEXT_MAX_LINES) {
+            sourceCode = entityLines.slice(0, AstStore.CONTEXT_MAX_LINES).join('\n');
+            truncated = true;
+            warnings.push(`Source code truncated: ${entityLines.length} lines → ${AstStore.CONTEXT_MAX_LINES} lines`);
+          } else {
+            sourceCode = entityLines.join('\n');
+          }
+        } catch (err) {
+          warnings.push(`Failed to read source file: ${(err as Error).message}`);
         }
-      } catch (err) {
-        warnings.push(`Failed to read source file: ${(err as Error).message}`);
+      } else {
+        warnings.push(`Source file not found: ${target.filePath} (graph may be stale)`);
       }
-    } else {
-      warnings.push(`Source file not found: ${target.filePath} (graph may be stale)`);
     }
 
     // 2. Callers: nodes that CALL this entity (incoming CALLS edges)

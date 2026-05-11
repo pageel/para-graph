@@ -2,12 +2,12 @@
 name: para-graph
 description: >
   Centralized Graph Intelligence Router for PARA Workspace.
-  Provides standardized graph enrichment workflow (§2), workflow integration
-  snippets for /plan, /docs, /brainstorm, /spec (§3), and graceful fallback
+  Provides standardized graph enrichment workflow (§2), memory curation workflow (§3), workflow integration
+  snippets for /plan, /docs, /brainstorm, /spec (§4), and graceful fallback
   when para-graph is not installed. Load this skill when working with code
   graphs, semantic enrichment, or any workflow that benefits from codebase
   structure awareness.
-version: "2.1.0"
+version: "2.2.0"
 ---
 
 # Skill: para-graph — Graph Intelligence Router
@@ -107,20 +107,52 @@ graph_add_edges(
 
 Use `graph_query` to confirm enriched nodes have the `semantic` field populated, and use `graph_edges` to verify your injected edges were added successfully.
 
-## §3. Workflow Integration Router
+## §3. Memory Workflow (Compact Memory)
+
+This section guides the use of `para-graph` MCP tools for memory extraction and consolidation.
+
+### Step 1: Push Raw Memory (`memory_push`)
+When encountering important project decisions, context, or rules, push it to memory:
+```
+memory_push(
+  projectPath: "Projects/para-graph",
+  content: "The CurationWorker uses heuristic clustering to map..."
+)
+```
+**Lossless Restatement Guidelines**: Never use pronouns (it, this, that). Restate the subject explicitly so that the memory slice remains contextually independent when retrieved later. Example: "SimpleMem uses K-Means" instead of "It uses K-Means".
+
+### Step 2: Retrieve Context (`memory_search`)
+When starting a new session or encountering an ambiguous topic, search existing memory:
+```
+memory_search(
+  projectPath: "Projects/para-graph",
+  query: "CurationWorker clustering"
+)
+```
+**Pyramid Retriever Guidelines**: If `memory_search` returns a summary node, the system might only return the summary text (`previewOnly` mode) to save tokens. You should then query that specific node ID again (or read its referenced files) to expand its full details if needed.
+
+### Step 3: Curate Memory (`memory_curate`)
+When memory becomes fragmented, use the curation tool to summarize and cluster related slices:
+```
+memory_curate(
+  projectPath: "Projects/para-graph"
+)
+```
+
+## §4. Workflow Integration Router
 
 > **Purpose:** Centralized graph intelligence snippets for sidecar skills.
 > Sidecar skills (plan, docs, brainstorm, spec) reference this section
 > instead of duplicating graph logic inline.
 
-### §3.1 Availability Detection
+### §4.1 Availability Detection
 
 Agent MUST check graph availability BEFORE using any graph tools:
 
 ```
 CHECK: does `.beads/graph/metadata.json` exist for the active project?
-→ YES: graph available → proceed with graph pipeline (§3.2)
-→ NO:  graph NOT available → use graceful fallback (§3.4)
+→ YES: graph available → proceed with graph pipeline (§4.2)
+→ NO:  graph NOT available → use graceful fallback (§4.4)
 ```
 
 **Detection command:**
@@ -133,7 +165,7 @@ test -f "Projects/<target>/repo/.beads/graph/metadata.json" \
 
 > ℹ️ Graph data may live in `repo/.beads/`, project-level `.beads/`, or `Resources/references/` for external resources.
 
-### §3.2 Standard Pipeline Steps
+### §4.2 Standard Pipeline Steps
 
 Reusable pipeline that workflows call when graph is available:
 
@@ -146,14 +178,14 @@ Reusable pipeline that workflows call when graph is available:
 | E    | `graph_edges(projectName, nodeId)`                                       | Understand relationships                                     |
 | F    | `graph_impact_analysis(projectName, nodeId, direction?)`                 | Assess change blast radius                                   |
 
-> **Not all steps are needed for every workflow.** Each §3.3 snippet specifies which steps to use.
+> **Not all steps are needed for every workflow.** Each §4.3 snippet specifies which steps to use.
 
-### §3.3 Integration Snippets
+### §4.3 Integration Snippets
 
-> **Convention:** Sidecar skills reference these snippets by ID (e.g., "See `para-graph §3.3.1`").
+> **Convention:** Sidecar skills reference these snippets by ID (e.g., "See `para-graph §4.3.1`").
 > Agent reads the snippet content, then executes inline within the workflow.
 
-#### §3.3.1 For `/plan` — Architecture Context Gathering
+#### §4.3.1 For `/plan` — Architecture Context Gathering
 
 **When:** Phase 0 of any detail plan for a project with code.
 **Steps:** A → B → D → F
@@ -168,7 +200,7 @@ Reusable pipeline that workflows call when graph is available:
 >    If no graph → skip these steps entirely. Plan proceeds with source-only context.
 ```
 
-#### §3.3.2 For `/docs` — Content Enrichment Pipeline
+#### §4.3.2 For `/docs` — Content Enrichment Pipeline
 
 **When:** Phase 0 of docs-only plan (detail-plan-docs.md template).
 **Steps:** A → B → C → D → E
@@ -194,7 +226,7 @@ Mode B (source-only): 1. `view_file` — target component files 2. Read imports,
 Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 ```
 
-#### §3.3.3 For `/brainstorm` — Codebase Understanding
+#### §4.3.3 For `/brainstorm` — Codebase Understanding
 
 **When:** Brainstorm about code architecture, refactoring, or feature design.
 **Steps:** A → B → D → E → F
@@ -210,7 +242,7 @@ Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 >    If no graph → use `view_file` + `grep_search` for source-only context.
 ```
 
-#### §3.3.4 For `/spec` — Requirements Traceability
+#### §4.3.4 For `/spec` — Requirements Traceability
 
 **When:** Writing specification for a feature that touches existing code.
 **Steps:** A → B → D → F
@@ -225,7 +257,7 @@ Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 >    If no graph → manually list affected files via grep/find.
 ```
 
-### §3.4 Graceful Fallback (Source-Only Mode)
+### §4.4 Graceful Fallback (Source-Only Mode)
 
 When para-graph is NOT available (no `.beads/graph/`), workflows fall back to:
 
@@ -240,13 +272,13 @@ When para-graph is NOT available (no `.beads/graph/`), workflows fall back to:
 > **Key principle:** Graph intelligence enhances workflow quality but is NEVER required.
 > All workflows MUST work correctly without para-graph installed.
 
-## §4. Constraints
+## §5. Constraints
 
 - **Do NOT auto-enrich the entire graph** — ask user how many nodes to enrich
 - **Quality over quantity** — 5 well-enriched nodes > 50 shallow enrichments
 - **enrichedBy is always "agent"** — the tool sets this automatically
 - **Re-scan safety** — if user re-runs para-graph CLI, remind them to use `--import` flag to preserve enrichment data
-- **Router is data, not code** — §3 provides instructions for Agent to follow, not executable logic. No circular dependency risk.
-- **Sidecar skills MUST NOT duplicate** — if a workflow needs graph logic, it references §3.3.X. Never copy-paste graph pipeline inline.
+- **Router is data, not code** — §4 provides instructions for Agent to follow, not executable logic. No circular dependency risk.
+- **Sidecar skills MUST NOT duplicate** — if a workflow needs graph logic, it references §4.3.X. Never copy-paste graph pipeline inline.
 - **Decoupled Distribution (v0.12.0+)** — Tarball contains only the Engine (`dist/`). AI Intelligence (this SKILL.md, workflows, rules) is fetched from GitHub via `post_install()` hook or `./para install-tool para-graph --sync`. Template changes no longer require an engine release — push to `main` branch and run `--sync`.
 
