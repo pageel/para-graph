@@ -8,18 +8,24 @@ import type {
   AddEdgesResult,
   SemanticAttributes,
   EnrichmentStats,
+  MemoryEvent,
+  SemanticSlice,
 } from '../models.js';
 import { AstStore } from './AstStore.js';
+import { MemoryStore } from './MemoryStore.js';
 
 export class ProjectGraph {
   public readonly projectName: string;
   private readonly astStore: AstStore;
-  private readonly memoryStore: any = null; // Placeholder for Phase 2
+  private readonly memoryStore: MemoryStore;
 
   constructor(projectName: string) {
     this.projectName = projectName;
     this.astStore = new AstStore(projectName);
+    this.memoryStore = new MemoryStore(projectName);
   }
+
+  // --- AstStore Delegation ---
 
   get enrichmentStats(): EnrichmentStats {
     return this.astStore.enrichmentStats;
@@ -81,7 +87,51 @@ export class ProjectGraph {
     return this.astStore.traverseReverse(nodeId, depth, direction);
   }
 
-  public getContextBundle(nodeId: string, rootDir: string): ContextBundle {
-    return this.astStore.getContextBundle(nodeId, rootDir);
+  // --- MemoryStore Delegation ---
+
+  public pushMemoryEvent(event: MemoryEvent): void {
+    this.memoryStore.pushEvent(event);
+  }
+
+  public searchMemory(query: string, limit?: number): MemoryEvent[] {
+    return this.memoryStore.searchEvents(query, limit);
+  }
+
+  public getMemorySlices(): SemanticSlice[] {
+    return this.memoryStore.getSlices();
+  }
+
+  public addMemorySlice(slice: SemanticSlice): void {
+    this.memoryStore.addSlice(slice);
+  }
+
+  public getAllMemoryEvents(): MemoryEvent[] {
+    return this.memoryStore.getAllEvents();
+  }
+
+  // --- Facade Orchestration ---
+
+  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false): ContextBundle {
+    const bundle = this.astStore.getContextBundle(nodeId, rootDir, previewOnly);
+    
+    // Find related memory slices
+    const relatedMemory: SemanticSlice[] = [];
+    const callers = new Set(bundle.callers.map(c => c.id));
+    const callees = new Set(bundle.callees.map(c => c.id));
+    
+    for (const slice of this.memoryStore.getSlices()) {
+      const isRelated = slice.nodeIds.some(id => 
+        id === nodeId || callers.has(id) || callees.has(id)
+      );
+      if (isRelated) {
+        relatedMemory.push(slice);
+      }
+    }
+    
+    if (relatedMemory.length > 0) {
+      bundle.relatedMemory = relatedMemory;
+    }
+    
+    return bundle;
   }
 }

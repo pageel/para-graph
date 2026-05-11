@@ -12,6 +12,7 @@
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection } from '../graph/models.js';
@@ -103,7 +104,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     {
       projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the node to enrich'),
-      summary: z.string().describe('Human-readable summary of what this code entity does'),
+      summary: z.string().describe('Human-readable summary of what this code entity does. MUST NOT use pronouns (Lossless Restatement).'),
       complexity: z.enum(['low', 'medium', 'high']).describe('Estimated complexity level'),
       domainConcepts: z.array(z.string()).describe('Domain concepts this entity relates to'),
     },
@@ -212,15 +213,16 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     {
       projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the entity to get context for'),
+      previewOnly: z.boolean().optional().describe('If true, skips source code read to save tokens (P11)'),
     },
-    async ({ projectName, nodeId }) => {
+    async ({ projectName, nodeId, previewOnly }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
 
       // Resolve rootDir using namespace-aware path resolver
       const rootDir = resolveSourceDir(workspaceRoot, projectName);
 
       try {
-        const bundle = graph.getContextBundle(nodeId, rootDir);
+        const bundle = graph.getContextBundle(nodeId, rootDir, previewOnly);
 
         const response = {
           target: {
@@ -234,6 +236,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           },
           sourceCode: bundle.sourceCode,
           truncated: bundle.truncated,
+          relatedMemory: bundle.relatedMemory,
           callers: bundle.callers.map(n => ({ id: n.id, name: n.name, type: n.type, filePath: n.filePath })),
           callees: bundle.callees.map(n => ({ id: n.id, name: n.name, type: n.type, filePath: n.filePath })),
           imports: bundle.imports,
@@ -356,6 +359,91 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
             totalNodes: allNodes.filter(n => n.type !== 'file').length,
           }, null, 2),
         }],
+      };
+    },
+  );
+
+  // --- graph_expand_node: Get only the source code for a specific node (P11) ---
+  server.tool(
+    'graph_expand_node',
+    'Get only the source code for a specific node (P11)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      nodeId: z.string().describe('ID of the entity to expand'),
+    },
+    async ({ projectName, nodeId }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const rootDir = resolveSourceDir(workspaceRoot, projectName);
+      try {
+        const bundle = graph.getContextBundle(nodeId, rootDir, false);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ sourceCode: bundle.sourceCode, truncated: bundle.truncated }, null, 2) }],
+        };
+      } catch (err) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: (err as Error).message }) }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  // --- memory_push: Push a memory event to the project MemoryStore (P11) ---
+  server.tool(
+    'memory_push',
+    'Push a memory event to the project MemoryStore (P11)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      kind: z.string().describe('Category of event'),
+      content: z.string().describe('Summary or content of the event'),
+      sessionId: z.string().describe('Session or run ID'),
+      metadata: z.record(z.string(), z.any()).optional().describe('Additional structured data'),
+    },
+    async ({ projectName, kind, content, sessionId, metadata }) => {
+      if (content.length > 10240) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ success: false, error: 'Content exceeds 10KB limit' }) }],
+          isError: true,
+        };
+      }
+      
+      const safeContent = content.replace(/\0/g, '').replaceAll('\\\\', '/');
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const eventId = randomUUID();
+      
+      const event = {
+        id: eventId,
+        kind,
+        sessionId,
+        content: safeContent,
+        metadata,
+        timestamp: new Date().toISOString(),
+      };
+      
+      graph.pushMemoryEvent(event);
+      GraphStore.saveMemoryEvents(workspaceRoot, projectName);
+      
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, eventId }, null, 2) }],
+      };
+    },
+  );
+
+  // --- memory_search: Full-text search over events (P11) ---
+  server.tool(
+    'memory_search',
+    'Search for memory events by keyword (P11)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      query: z.string().describe('Search term'),
+      limit: z.number().optional().describe('Maximum number of results (default 50)'),
+    },
+    async ({ projectName, query, limit }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const results = graph.searchMemory(query, limit ?? 50);
+      
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
       };
     },
   );

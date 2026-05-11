@@ -69,7 +69,7 @@ graph_enrich(
 
 **Field guidelines:**
 
-- `summary`: 1-2 sentences describing **what** (not **how**)
+- `summary`: 1-2 sentences describing **what** (not **how**). MUST NOT use pronouns like "it", "this class", "this function" (Lossless Restatement).
 - `complexity`: `low` (< 20 lines, simple logic), `medium` (20-50 lines), `high` (> 50 lines or complex logic)
 - `domainConcepts`: 2-5 domain-level keywords, not implementation details
 

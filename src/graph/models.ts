@@ -168,6 +168,8 @@ export interface ContextBundle {
   relatedTests: GraphNode[];
   /** Warnings encountered during bundle assembly (e.g., file not found) */
   warnings: string[];
+  /** Related memory slices (P11) */
+  relatedMemory?: SemanticSlice[];
 }
 
 // --- Edge Injection Types (P7: Agentic Edge Resolution) ---

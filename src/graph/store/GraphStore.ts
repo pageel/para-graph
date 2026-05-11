@@ -2,7 +2,7 @@ import { resolve, join } from 'node:path';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { ProjectGraph } from './ProjectGraph.js';
 import { resolveGraphDir } from './pathResolver.js';
-import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata } from '../models.js';
+import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata, MemoryEvent, SemanticSlice } from '../models.js';
 
 export class GraphStore {
   private static readonly MAX_CAPACITY = 3;
@@ -77,6 +77,28 @@ export class GraphStore {
         }
       } catch {
         // Backward compat — old metadata.json without enrichment field is fine
+      }
+    }
+
+    // Load memory events (P11)
+    const memoryEventsPath = join(graphDir, 'memory-events.jsonl');
+    if (existsSync(memoryEventsPath)) {
+      const content = readFileSync(memoryEventsPath, 'utf-8').trim();
+      if (content.length > 0) {
+        content.split(/\r?\n/).forEach(line => {
+          graph.pushMemoryEvent(JSON.parse(line) as MemoryEvent);
+        });
+      }
+    }
+
+    // Load memory slices (P11)
+    const memorySlicesPath = join(graphDir, 'memory-slices.jsonl');
+    if (existsSync(memorySlicesPath)) {
+      const content = readFileSync(memorySlicesPath, 'utf-8').trim();
+      if (content.length > 0) {
+        content.split(/\r?\n/).forEach(line => {
+          graph.addMemorySlice(JSON.parse(line) as SemanticSlice);
+        });
       }
     }
 
@@ -162,5 +184,35 @@ export class GraphStore {
     this.saveEntities(workspaceRoot, projectName, graph.getAllNodes());
     this.saveRelations(workspaceRoot, projectName, graph.getAllEdges());
     this.saveMetadata(workspaceRoot, projectName);
+    this.saveMemoryEvents(workspaceRoot, projectName);
+    this.saveMemorySlices(workspaceRoot, projectName);
+  }
+
+  /**
+   * Save all memory events to memory-events.jsonl (P11)
+   */
+  public static saveMemoryEvents(workspaceRoot: string, projectName: string): void {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
+    const eventsPath = join(graphDir, 'memory-events.jsonl');
+    const events = graph.getAllMemoryEvents();
+    if (events.length > 0) {
+      const content = events.map(e => JSON.stringify(e)).join('\n') + '\n';
+      writeFileSync(eventsPath, content, 'utf-8');
+    }
+  }
+
+  /**
+   * Save all semantic slices to memory-slices.jsonl (P11)
+   */
+  public static saveMemorySlices(workspaceRoot: string, projectName: string): void {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
+    const slicesPath = join(graphDir, 'memory-slices.jsonl');
+    const slices = graph.getMemorySlices();
+    if (slices.length > 0) {
+      const content = slices.map(s => JSON.stringify(s)).join('\n') + '\n';
+      writeFileSync(slicesPath, content, 'utf-8');
+    }
   }
 }
