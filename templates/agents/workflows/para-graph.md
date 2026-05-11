@@ -98,7 +98,7 @@ fi
 # Use --clean to wipe the graph.
 if [[ "$*" == *"--memory"* ]]; then
   node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR"
-  node "$CLI_PATH" mem "$SOURCE_DIR"
+  node "$CLI_PATH" mem "$TARGET"
 else
   node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR"
 fi
@@ -156,7 +156,7 @@ else
   exit 1
 fi
 
-node "$CLI_PATH" mem "$SOURCE_DIR"
+node "$CLI_PATH" mem "$TARGET"
 ```
 
 ---
