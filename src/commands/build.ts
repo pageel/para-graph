@@ -22,7 +22,8 @@ import type { GraphNode } from '../graph/models.js';
 export interface BuildOptions {
   targetDir: string;
   outputDir: string;
-  useImport: boolean;
+  useClean: boolean;
+  projectName: string;
 }
 
 /**
@@ -37,17 +38,25 @@ export function runBuild(options: BuildOptions): void {
     process.exit(1);
   }
 
-  // Step 1: Load existing graph if --import flag is set (H2-1)
+  // Step 1: Default to loading existing graph unless --clean is set (H2-1)
   let existingNodes: Map<string, GraphNode> = new Map();
-  if (options.useImport && existsSync(outputDir)) {
+  let existingStats = undefined;
+  if (!options.useClean && existsSync(outputDir)) {
     console.log(`[para-graph] Importing existing graph from: ${outputDir}`);
     const existing = importFromJsonl(outputDir);
+    if (existing.enrichmentStats) {
+      existingStats = existing.enrichmentStats;
+    }
     for (const node of existing.getAllNodes()) {
       if (node.semantic) {
         existingNodes.set(node.id, node);
       }
     }
-    console.log(`[para-graph] Found ${existingNodes.size} enriched node(s) to preserve`);
+    if (existingNodes.size > 0) {
+      console.log(`[para-graph] Found ${existingNodes.size} enriched node(s) to preserve`);
+    }
+  } else if (options.useClean) {
+    console.log(`[para-graph] Clean mode enabled. Existing graph will be overwritten.`);
   }
 
   console.log(`[para-graph] Scanning: ${targetDir}`);
@@ -82,6 +91,11 @@ export function runBuild(options: BuildOptions): void {
     }
     console.log(`[para-graph] Preserved semantic data on ${preserved} node(s)`);
   }
+  
+  // Step 5.2: Preserve global enrichment stats
+  if (existingStats && existingStats.totalEnriched > 0) {
+    graph.setEnrichmentStats(existingStats);
+  }
 
   // Step 5.5: Resolve bare targetId in CALLS edges
   const resolverResult = resolveEdges(graph);
@@ -99,7 +113,7 @@ export function runBuild(options: BuildOptions): void {
   }
 
   // Step 7: Export
-  exportToJsonl(graph, outputDir);
+  exportToJsonl(graph, outputDir, options.projectName);
 
   // Step 8: Reset hook reminder lock (so Agent gets re-nudged with fresh graph)
   const lockFile = join(outputDir, '.gemini_reminded');

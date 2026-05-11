@@ -29,7 +29,7 @@ const HELP_TEXT = `para-graph — Structural code analysis tool with MCP server.
 
 Usage:
   para-graph build <project-name>                         Auto-detect workspace, scan project
-  para-graph build <target-dir> [output-dir] [--import]   Scan code and export graph (manual paths)
+  para-graph build <target-dir> [output-dir] [--clean]    Scan code and export graph (manual paths)
   para-graph serve [workspace-root]                       Start MCP server (stdio)
   para-graph inject <path> [--project <name>] [--dry-run]  Inject graph context into Markdown
   para-graph hooks [install|uninstall|status]              Manage BeforeTool hooks
@@ -43,11 +43,11 @@ Commands:
   mem      Curate session memory events into semantic slices.
 
 Flags (build):
-  --import    Load existing graph, preserve semantic data on re-scan.
+  --clean     Do not load existing graph, overwrite and scan from scratch.
 
 Examples:
   para-graph build para-graph                    Shorthand: auto-detect workspace
-  para-graph build ./src ./output --import       Manual: explicit paths
+  para-graph build ./src ./output --clean        Manual: explicit paths
   para-graph serve /path/to/workspace            Explicit workspace root
   para-graph serve                               Auto-detect workspace root
 `;
@@ -70,24 +70,25 @@ function main(): void {
     case 'build': {
       const subArgs = args.slice(1);
       const positional = subArgs.filter((a) => !a.startsWith('--'));
-      const useImport = subArgs.includes('--import');
+      const useClean = subArgs.includes('--clean');
 
       if (positional.length === 0) {
         console.error('Error: build requires <target-dir> or <project-name> argument.');
         console.error('Usage: para-graph build <project-name>');
-        console.error('       para-graph build <target-dir> [output-dir] [--import]');
+        console.error('       para-graph build <target-dir> [output-dir] [--clean]');
         process.exit(1);
       }
 
       let targetDir = positional[0];
       let outputDir = positional[1] ?? './output';
+      let projectName = 'unknown';
 
       // Project-name shorthand: if input looks like a project name (no path separators)
       // and we can find a workspace root, resolve to standard PARA paths.
       if (isProjectName(targetDir)) {
+        projectName = targetDir;
         const wsRoot = findWorkspaceRoot();
         if (wsRoot) {
-          const projectName = targetDir;
           targetDir = join(wsRoot, 'Projects', projectName, 'repo');
           outputDir = positional[1] ?? join(wsRoot, 'Projects', projectName, '.beads', 'graph');
           console.log(`[para-graph] Resolved project "${projectName}" in workspace: ${wsRoot}`);
@@ -98,7 +99,8 @@ function main(): void {
       runBuild({
         targetDir,
         outputDir,
-        useImport,
+        useClean,
+        projectName,
       });
       break;
     }
