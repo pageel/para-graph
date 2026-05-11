@@ -50,7 +50,7 @@ export class GraphStore {
     if (existsSync(entitiesPath)) {
       const content = readFileSync(entitiesPath, 'utf-8').trim();
       if (content.length > 0) {
-        content.split('\n').forEach(line => {
+        content.split(/\r?\n/).forEach(line => {
           graph.addNode(JSON.parse(line) as GraphNode);
         });
       }
@@ -61,7 +61,7 @@ export class GraphStore {
     if (existsSync(relationsPath)) {
       const content = readFileSync(relationsPath, 'utf-8').trim();
       if (content.length > 0) {
-        content.split('\n').forEach(line => {
+        content.split(/\r?\n/).forEach(line => {
           graph.addEdge(JSON.parse(line) as GraphEdge);
         });
       }

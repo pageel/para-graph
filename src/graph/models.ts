@@ -221,3 +221,40 @@ export interface GraphMetadata {
   /** Enrichment progress tracking — undefined if no enrichment has occurred */
   enrichment?: EnrichmentStats;
 }
+
+// --- Memory Engine Types (P11: Compact Memory) ---
+
+/** Type of memory event */
+export type MemoryEventKind = 'conversation' | 'tool_use' | 'decision' | 'observation' | 'error';
+
+/** Raw event pushed from the agent session */
+export interface MemoryEvent {
+  /** Unique event ID */
+  id: string;
+  /** Category of event */
+  kind: string;
+  /** Session or run ID where this event occurred */
+  sessionId: string;
+  /** Summary or content of the event */
+  content: string;
+  /** Additional structured data */
+  metadata?: Record<string, any>;
+  /** ISO timestamp */
+  timestamp: string;
+}
+
+/** A semantically clustered slice of memory */
+export interface SemanticSlice {
+  /** Unique slice ID */
+  id: string;
+  /** High-level topic (e.g., "Auth refactor") */
+  topic: string;
+  /** Detailed summary of the events in this slice */
+  summary: string;
+  /** IDs of graph nodes related to this slice */
+  nodeIds: string[];
+  /** IDs of raw events that form this slice */
+  eventIds: string[];
+  /** ISO timestamp */
+  createdAt: string;
+}
