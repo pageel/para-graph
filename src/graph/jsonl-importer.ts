@@ -56,5 +56,19 @@ export function importFromJsonl(inputDir: string): CodeGraph {
     }
   }
 
+  // Load metadata to preserve enrichment stats
+  const metadataPath = join(resolved, 'metadata.json');
+  if (existsSync(metadataPath)) {
+    try {
+      const metadataStr = readFileSync(metadataPath, 'utf-8');
+      const metadata = JSON.parse(metadataStr);
+      if (metadata && metadata.enrichment) {
+        graph.setEnrichmentStats(metadata.enrichment);
+      }
+    } catch (err) {
+      // Ignore if metadata is invalid or missing enrichment field
+    }
+  }
+
   return graph;
 }
