@@ -24,7 +24,8 @@
   "scripts": {
     "test": "vitest run",
     "dev": "tsx src/cli.ts",
-    "build": "tsc -p tsconfig.build.json && node -e \"const fs=require('fs');fs.rmSync('dist/queries',{recursive:true,force:true});fs.cpSync('src/queries','dist/queries',{recursive:true});fs.mkdirSync('dist/hooks',{recursive:true});fs.cpSync('src/hooks/gemini.json','dist/hooks/gemini.json');\""
+    "build": "tsc -p tsconfig.build.json && node -e \"const fs=require('fs');fs.rmSync('dist/queries',{recursive:true,force:true});fs.cpSync('src/queries','dist/queries',{recursive:true});fs.mkdirSync('dist/hooks',{recursive:true});fs.cpSync('src/hooks/gemini.json','dist/hooks/gemini.json');\"",
+    "dev:test-install": "npm run build && tar -czf test.tar.gz dist/ package.json tool.manifest.yml install-hooks.sh && ../../para install-tool para-graph --local ./test.tar.gz"
   },
   "repository": {
     "type": "git",
