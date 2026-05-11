@@ -5,9 +5,9 @@
  * - graph_query:           Filter and search graph nodes
  * - graph_edges:           Get edges from/to a specific node
  * - graph_enrich:          Write semantic enrichment data to a node
- * - graph_impact_analysis: Analyze impact of changing a code entity (P6)
- * - graph_context_bundle:  Get comprehensive context for a code entity (P6)
- * - graph_add_edges:       Batch inject edges for agentic edge resolution (P7)
+ * - graph_impact_analysis: Analyze impact of changing a code entity
+ * - graph_context_bundle:  Get comprehensive context for a code entity
+ * - graph_add_edges:       Batch inject edges for agentic edge resolution
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -159,7 +159,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- graph_impact_analysis: Analyze impact of changing a code entity (P6) ---
+  // --- graph_impact_analysis: Analyze impact of changing a code entity ---
   server.tool(
     'graph_impact_analysis',
     'Analyze the impact of changing a code entity — returns all upstream/downstream affected nodes',
@@ -207,7 +207,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- graph_context_bundle: Get comprehensive context for a code entity (P6) ---
+  // --- graph_context_bundle: Get comprehensive context for a code entity ---
   server.tool(
     'graph_context_bundle',
     'Get a comprehensive context bundle for a code entity — includes source code, callers, callees, imports, and related tests',
@@ -257,7 +257,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- graph_add_edges: Batch inject edges for agentic edge resolution (P7) ---
+  // --- graph_add_edges: Batch inject edges for agentic edge resolution ---
   server.tool(
     'graph_add_edges',
     'Batch inject edges (CALLS, IMPORTS_FROM) into the graph — for agentic edge resolution of languages with weak AST linking (e.g., Bash)',
@@ -295,7 +295,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- graph_god_nodes: Get top-N most connected nodes (P-Tracker v0.11.1) ---
+  // --- graph_god_nodes: Get top-N most connected nodes ---
   server.tool(
     'graph_god_nodes',
     'Get the most connected (God) nodes in the graph — helps Agent prioritize which nodes to enrich first',
@@ -364,7 +364,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- graph_expand_node: Get only the source code for a specific node (P11) ---
+  // --- graph_expand_node: Get only the source code for a specific node ---
   server.tool(
     'graph_expand_node',
     'Get only the source code for a specific node',
@@ -389,7 +389,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- memory_push: Push a memory event to the project MemoryStore (P11) ---
+  // --- memory_push: Push a memory event to the project MemoryStore ---
   server.tool(
     'memory_push',
     'Push a memory event to the project MemoryStore',
@@ -430,7 +430,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- memory_search: Full-text search over events (P11) ---
+  // --- memory_search: Full-text search over events ---
   server.tool(
     'memory_search',
     'Search for memory events by keyword',
@@ -449,7 +449,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
-  // --- memory_curate: Curate raw events into slices (P11) ---
+  // --- memory_curate: Curate raw events into slices ---
   server.tool(
     'memory_curate',
     'Curate raw memory events into semantic slices',
