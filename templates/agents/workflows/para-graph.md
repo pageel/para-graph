@@ -94,12 +94,13 @@ else
 fi
 
 # Scan source code and dump Graph Memory.
-# We ALWAYS use --import by default to preserve AI semantic enrichment and agent-injected edges (v0.7.0+) from previous scans.
+# (v0.13.1+) By default, the build process preserves AI semantic enrichment and agent-injected edges.
+# Use --clean to wipe the graph.
 if [[ "$*" == *"--memory"* ]]; then
-  node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR" --import
+  node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR"
   node "$CLI_PATH" mem "$SOURCE_DIR"
 else
-  node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR" --import
+  node "$CLI_PATH" build "$SOURCE_DIR" "$OUT_DIR"
 fi
 ```
 
