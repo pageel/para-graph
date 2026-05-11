@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.13.0-brightgreen.svg" alt="Version 0.13.0">
+    <img src="https://img.shields.io/badge/version-0.13.1-brightgreen.svg" alt="Version 0.13.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -99,7 +99,7 @@ npx para-graph build ./src ./output
 para-graph build <project-name>
 
 # Scan source code and export graph (manual paths)
-para-graph build <target-dir> [output-dir] [--import]
+para-graph build <target-dir> [output-dir] [--clean]
 
 # Inject Graph Data & Validate Drift in Markdown Docs/Plans
 para-graph inject <target-dir>
@@ -145,7 +145,7 @@ para-graph hooks uninstall
 para-graph build my-project                  # Shorthand (recommended)
 para-graph build ./src                       # Output to ./output/
 para-graph build ./src ./my-graph            # Custom output directory
-para-graph build ./src ./out --import        # Preserve semantic data on re-scan
+para-graph build ./src ./out --clean        # Wipe existing graph, scan from scratch
 ```
 
 | Argument | Required | Default | Description |
@@ -153,7 +153,7 @@ para-graph build ./src ./out --import        # Preserve semantic data on re-scan
 | `project-name` | ✅ (or target-dir) | — | Name of project in workspace (auto-resolves repo/ and .beads/graph/) |
 | `target-dir` | ✅ (or project-name)| — | Directory containing supported source files |
 | `output-dir` | — | `./output` | Where to write the graph output |
-| `--import` | — | — | Load existing graph, preserve semantic enrichment data |
+| `--clean` | — | — | Do not load existing graph, overwrite and scan from scratch |
 
 ### Serve Command
 

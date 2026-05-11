@@ -1,6 +1,6 @@
 {
   "name": "para-graph",
-  "version": "0.13.0",
+  "version": "0.13.1",
   "description": "Hybrid Code-Knowledge Graph tool for PARA Workspace",
   "main": "./dist/cli.js",
   "types": "./dist/cli.d.ts",
@@ -28,7 +28,7 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.build.json && node -e \"const fs=require('fs');fs.rmSync('dist/queries',{recursive:true,force:true});fs.cpSync('src/queries','dist/queries',{recursive:true});fs.mkdirSync('dist/hooks',{recursive:true});fs.cpSync('src/hooks/gemini.json','dist/hooks/gemini.json');\"",
     "dev:test-install": "npm run build && tar -czf test.tar.gz dist/ package.json tool.manifest.yml install-hooks.sh && cd ../../../ && ./para install-tool para-graph --local=Projects/para-graph/repo/test.tar.gz --update --no-agents --no-mcp",
-    "release:pack": "npm run build && tar -czf para-graph-v0.13.0.tar.gz dist/ package.json tool.manifest.yml install-hooks.sh"
+    "release:pack": "npm run build && tar -czf para-graph-v0.13.1.tar.gz dist/ package.json tool.manifest.yml install-hooks.sh"
   },
   "repository": {
     "type": "git",

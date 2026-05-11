@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.1] - 2026-05-11
+
+### Changed
+- **Default Graph Persistence** — `para-graph build` now implicitly preserves existing graph metadata (semantic enrichment) without requiring the `--import` flag. This prevents accidental data loss (BUG-03).
+- **Clean Mode** — Replaced `--import` with `--clean` flag. Use `--clean` to explicitly wipe the existing graph and perform a hard reset.
+- **Project Name Propagation** — Fixed `projectName` displaying as `unknown` in `metadata.json`. The CLI now correctly extracts and passes the project name to the JSONL exporter.
+
 ## [0.13.0] - 2026-05-11
 
 ### Added
