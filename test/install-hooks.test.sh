@@ -23,10 +23,12 @@ parse_manifest_agents() {
 # Mock npm command
 export NPM_CALLED=0
 export NPM_ARGS=""
+export NPM_CWD=""
 npm() {
   NPM_CALLED=1
   NPM_ARGS="$*"
-  echo "Mock: npm $NPM_ARGS"
+  NPM_CWD="$PWD"
+  echo "Mock: npm $NPM_ARGS at $NPM_CWD"
 }
 
 # Ensure temporary dirs exist to bypass legacy tarball guard
@@ -40,12 +42,12 @@ post_install
 
 # Assertions
 if [ "$NPM_CALLED" -eq 1 ]; then
-  if [[ "$NPM_ARGS" == "install --omit=dev" ]]; then
-    echo "✅ PASS: npm install --omit=dev was called."
-    exit 0
-  else
+  if [[ "$NPM_ARGS" != "install --prefix $TOOL_INSTALL_DIR --omit=dev" ]]; then
     echo "❌ FAIL: npm was called with wrong args: $NPM_ARGS"
     exit 1
+  else
+    echo "✅ PASS: npm install --prefix was called correctly."
+    exit 0
   fi
 else
   echo "❌ FAIL: npm was not called."

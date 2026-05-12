@@ -104,7 +104,7 @@ post_install() {
 
   # Fix: Ensure dependencies are installed in production
   echo "  📦 para-graph: installing production dependencies..."
-  if ! npm install --omit=dev; then
+  if ! npm install --prefix "$TOOL_INSTALL_DIR" --omit=dev; then
     echo "  ⚠️  Failed to install dependencies via npm."
   fi
 }
