@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.13.2] - 2026-05-12
+
+### Added
+- `graph_expand_node`: Added `incomplete: true` flag and hint for source code <= 1 line.
+- `graph_god_nodes`: Now exposes `enrichableNodeCount` and `totalInGraph` for clarity.
+- `metadata.json`: Now includes `enrichableNodeCount` stat.
+
+### Fixed
+- AST bounds resolution: Changed tree-sitter coordinate extraction to use wrapper block start/end instead of entity name tags, preventing function/class body truncation.
+- `getContextBundle`: Now excludes test fixtures from callees by default.
+
 ## [0.13.1] - 2026-05-11
 
 ### Changed
