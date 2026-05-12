@@ -69,6 +69,8 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 
 ## 🚀 Quick Start
 
+> **Prerequisite:** Make sure you have Node.js (>= 18.0.0) and `npm` installed on your system.
+
 ```bash
 # Clone
 git clone https://github.com/pageel/para-graph.git
