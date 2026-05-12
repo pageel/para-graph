@@ -169,6 +169,9 @@ export class TreeSitterParser {
     let currentClassName: string | null = null;
     let currentClassEndRow: number = -1;
 
+    // Track interface context
+    let currentInterfaceEndRow: number = -1;
+
     // Track the current function/method/variable scope for CALLS edge sourceId
     // Wrapper captures (@entity.function, @entity.method, @entity.variable) set the
     // scope boundary (endRow), then .name captures set the scope ID.
@@ -210,7 +213,7 @@ export class TreeSitterParser {
             name: node.text,
             filePath,
             startLine,
-            endLine,
+            endLine: currentClassEndRow !== -1 ? currentClassEndRow + 1 : endLine,
             exportType,
             signature,
           });
@@ -232,7 +235,7 @@ export class TreeSitterParser {
             name: node.text,
             filePath,
             startLine,
-            endLine,
+            endLine: currentScopeEndRow !== -1 ? currentScopeEndRow + 1 : endLine,
             exportType,
             signature,
           });
@@ -241,6 +244,10 @@ export class TreeSitterParser {
         }
 
         // --- Entity: Interface ---
+        case 'entity.interface': {
+          currentInterfaceEndRow = node.endPosition.row;
+          break;
+        }
         case 'entity.interface.name': {
           const exportType = this.detectExportFromRanges(node.startPosition.row, exportRanges);
           const signature = (lines[startLine - 1] ?? '').trim();
@@ -250,7 +257,7 @@ export class TreeSitterParser {
             name: node.text,
             filePath,
             startLine,
-            endLine,
+            endLine: currentInterfaceEndRow !== -1 ? currentInterfaceEndRow + 1 : endLine,
             exportType,
             signature,
           });
@@ -281,7 +288,7 @@ export class TreeSitterParser {
             name: methodName,
             filePath,
             startLine,
-            endLine,
+            endLine: currentScopeEndRow !== -1 ? currentScopeEndRow + 1 : endLine,
             exportType: ExportType.NONE,
             signature,
           });
@@ -304,7 +311,7 @@ export class TreeSitterParser {
             name: node.text,
             filePath,
             startLine,
-            endLine,
+            endLine: currentScopeEndRow !== -1 ? currentScopeEndRow + 1 : endLine,
             exportType,
             signature,
           });
