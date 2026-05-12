@@ -40,6 +40,9 @@ graph_query(namePattern: "parse")      → Nodes matching "parse"
 
 ### Step 2: Identify Important Nodes
 
+Use MCP tool `graph_god_nodes` to find the most connected nodes in the graph. This tool also returns `enrichableNodeCount` (excluding files) and `totalInGraph` (including files).
+> **Note:** `enrichableNodeCount` is the true target for enrichment completion, as `nodeCount` (or `totalInGraph`) includes `file` nodes which are not meant to be enriched.
+
 Prioritize enrichment by importance:
 
 1. **Classes** — Architectural backbone
@@ -52,6 +55,7 @@ Prioritize enrichment by importance:
 For each node to enrich, read the source file directly:
 
 - Use `filePath` + `startLine`/`endLine` to locate the exact code
+- **Fallback (v0.13.2+):** If you use `expand_node` or `graph_context_bundle` and it returns an `incomplete: true` flag or `sourceCode` that is suspiciously short (< 3 lines) for a function/class, it is likely due to an AST bounds truncation issue. In this case, you MUST use `view_file` on the source file to read the actual code context manually.
 - Understand context: what the function does, what the class is responsible for
 
 ### Step 4: Write Enrichment
