@@ -220,6 +220,8 @@ export interface GraphMetadata {
   fileCount: number;
   /** Name of the project this graph belongs to */
   projectName: string;
+  /** Number of nodes that can be enriched (excluding file nodes) */
+  enrichableNodeCount?: number;
   /** Enrichment progress tracking — undefined if no enrichment has occurred */
   enrichment?: EnrichmentStats;
 }

@@ -49,6 +49,7 @@ export function exportToJsonl(graph: CodeGraph, outputDir: string, projectName: 
   // Export metadata (typed as GraphMetadata — P-Tracker v0.11.1)
   const metadataPath = join(resolved, 'metadata.json');
   const enrichment = graph.enrichmentStats;
+  const enrichableNodeCount = nodes.filter(n => n.type !== 'file').length;
   const metadata: GraphMetadata = {
     version: '0.11.1',
     generatedAt: new Date().toISOString(),
@@ -56,6 +57,7 @@ export function exportToJsonl(graph: CodeGraph, outputDir: string, projectName: 
     edgeCount: stats.edgeCount,
     fileCount: stats.fileCount,
     projectName,
+    enrichableNodeCount,
     ...(enrichment.totalEnriched > 0 ? { enrichment } : {}),
   };
   writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + '\n', 'utf-8');
