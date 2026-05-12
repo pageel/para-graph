@@ -357,7 +357,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           text: JSON.stringify({
             godNodes: result,
             enrichmentStats: graph.enrichmentStats,
-            totalNodes: allNodes.filter(n => n.type !== 'file').length,
+            enrichableNodeCount: allNodes.filter(n => n.type !== 'file').length,
+            totalInGraph: allNodes.length,
           }, null, 2),
         }],
       };

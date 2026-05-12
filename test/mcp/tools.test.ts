@@ -44,3 +44,44 @@ describe('MCP Tools: graph_expand_node', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('MCP Tools: graph_god_nodes', () => {
+  it('should return enrichableNodeCount and totalInGraph', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const godNodesHandler = handlers['graph_god_nodes'];
+    expect(godNodesHandler).toBeDefined();
+
+    const nodes = [
+      { id: 'file1', type: 'file' },
+      { id: 'node1', type: 'function', semantic: {} }, // Enriched
+      { id: 'node2', type: 'function' }, // Unenriched
+      { id: 'node3', type: 'class' } // Unenriched
+    ];
+    const mockGraph = {
+      getAllNodes: vi.fn().mockReturnValue(nodes),
+      getNode: vi.fn().mockImplementation((id: string) => nodes.find(n => n.id === id)),
+      getAllEdges: vi.fn().mockReturnValue([
+        { sourceId: 'node1', targetId: 'node2', relation: 'CALLS' },
+        { sourceId: 'node2', targetId: 'node3', relation: 'CALLS' }
+      ]),
+      enrichmentStats: { totalEnriched: 1 }
+    };
+    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+
+    const result = await godNodesHandler({ projectName: 'test', topN: 10 });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(content.totalInGraph).toBe(4);
+    expect(content.enrichableNodeCount).toBe(3); // 4 total - 1 file
+    expect(content.enrichmentStats.totalEnriched).toBe(1);
+    
+    vi.restoreAllMocks();
+  });
+});
