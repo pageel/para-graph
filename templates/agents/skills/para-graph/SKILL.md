@@ -278,8 +278,8 @@ When para-graph is NOT available (no `.beads/graph/`), workflows fall back to:
 
 ## §5. Constraints
 
-- **Do NOT auto-enrich the entire graph** — ask user how many nodes to enrich
-- **Quality over quantity** — 5 well-enriched nodes > 50 shallow enrichments
+- **The 20% Rule (Compact Memory)** — Do NOT auto-enrich the entire graph. You MUST aim to keep only 10-20% of total nodes enriched (focusing strictly on God Nodes and Core Entities) to optimize token context and prevent semantic drift.
+- **Quality over quantity** — 5 well-enriched architectural nodes > 50 shallow enrichments of utility functions.
 - **enrichedBy is always "agent"** — the tool sets this automatically
 - **Re-scan safety** — if user re-runs para-graph CLI, remind them to use `--import` flag to preserve enrichment data
 - **Router is data, not code** — §4 provides instructions for Agent to follow, not executable logic. No circular dependency risk.
