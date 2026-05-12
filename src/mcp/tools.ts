@@ -377,8 +377,12 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       const rootDir = resolveSourceDir(workspaceRoot, projectName);
       try {
         const bundle = graph.getContextBundle(nodeId, rootDir, false);
+        const lines = bundle.sourceCode?.split('\n') || [];
+        const incomplete = lines.length <= 1;
+        const hint = incomplete ? "AST bounds issue detected. Please use 'view_file' on the source file to read the actual code context manually." : undefined;
+        
         return {
-          content: [{ type: 'text' as const, text: JSON.stringify({ sourceCode: bundle.sourceCode, truncated: bundle.truncated }, null, 2) }],
+          content: [{ type: 'text' as const, text: JSON.stringify({ sourceCode: bundle.sourceCode, truncated: bundle.truncated, incomplete, hint }, null, 2) }],
         };
       } catch (err) {
         return {
