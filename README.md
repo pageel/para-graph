@@ -167,6 +167,17 @@ para-graph serve /path/to/workspace
 para-graph serve
 ```
 
+## 🧠 Graph Enrichment Strategy (The 20% Rule)
+
+**para-graph** supports AI-driven semantic enrichment, but you should **NOT** enrich 100% of the graph nodes. We strictly recommend the **20% Rule (Compact Memory Rule)**:
+
+1. **Focus on God Nodes**: Only enrich the top 10-20% of structural nodes that orchestrate logic (high degree/fan-in/fan-out) and core domain entities.
+2. **Signal-to-Noise Ratio**: Simple getters, setters, utilities, and test fixtures should rely entirely on Tree-sitter AST and their names. Enriching them bloats the context window and wastes tokens.
+3. **Semantic Drift Protection**: By only enriching core architectural hubs (which change less frequently), you reduce the maintenance burden of keeping semantic summaries synced with the source code.
+4. **Graph-based Inference**: The AI can naturally infer the purpose of small utility functions by observing the `CALLS` edges connected to a well-enriched God Node.
+
+> **💡 Best Practice:** When using the `/para-graph` workflow's `compact` action, the system is hardcoded to find and enrich the top 3 God Nodes incrementally per run. Do not attempt to batch-enrich the entire project.
+
 ## 🤖 MCP Server Setup
 
 To connect `para-graph` to an AI Agent editor (like Claude Desktop, Cursor, or Google Antigravity), you need to configure their respective MCP settings.
