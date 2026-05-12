@@ -65,4 +65,27 @@ describe('ProjectGraph Query Engine', () => {
     expect(edgesB.length).toBe(1);
     expect(edgesB[0].sourceId).toBe('src/A.ts::A');
   });
+
+  it('should exclude test fixtures from callees by default in getContextBundle', () => {
+    // Add a test fixture node
+    const fixtureNode: GraphNode = {
+      id: 'test/fixtures/dummy.ts::dummy', type: NodeType.FUNCTION, name: 'dummy',
+      filePath: 'test/fixtures/dummy.ts', startLine: 1, endLine: 5, exportType: ExportType.NAMED, signature: 'function dummy() {}'
+    };
+    graph.addNode(fixtureNode);
+
+    // Add a call from A to dummy
+    const edgeToFixture: GraphEdge = {
+      sourceId: 'src/A.ts::A', targetId: 'test/fixtures/dummy.ts::dummy', relation: EdgeRelation.CALLS, sourceFile: 'src/A.ts', sourceLine: 8
+    };
+    graph.addEdge(edgeToFixture);
+
+    // Default: exclude test fixtures
+    const bundle1 = graph.getContextBundle('src/A.ts::A', '/fake', true);
+    expect(bundle1.callees.find(c => c.id === 'test/fixtures/dummy.ts::dummy')).toBeUndefined();
+
+    // With flag true: include test fixtures
+    const bundle2 = graph.getContextBundle('src/A.ts::A', '/fake', true, true);
+    expect(bundle2.callees.find(c => c.id === 'test/fixtures/dummy.ts::dummy')).toBeDefined();
+  });
 });

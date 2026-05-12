@@ -334,7 +334,7 @@ export class AstStore {
    * @returns ContextBundle with source, callers, callees, imports, tests
    * @throws Error if nodeId is not found in the graph
    */
-  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false): ContextBundle {
+  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false, includeTestFixtures: boolean = false): ContextBundle {
     const target = this.nodesById.get(nodeId);
     if (!target) {
       throw new Error(`Node not found: ${nodeId}`);
@@ -387,7 +387,12 @@ export class AstStore {
     for (const edge of outgoingEdges) {
       if (edge.relation === EdgeRelation.CALLS) {
         const callee = this.nodesById.get(edge.targetId);
-        if (callee) callees.push(callee);
+        if (callee) {
+          if (!includeTestFixtures && callee.filePath.startsWith('test/fixtures/')) {
+            continue;
+          }
+          callees.push(callee);
+        }
       }
     }
 

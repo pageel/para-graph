@@ -111,8 +111,8 @@ export class ProjectGraph {
 
   // --- Facade Orchestration ---
 
-  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false): ContextBundle {
-    const bundle = this.astStore.getContextBundle(nodeId, rootDir, previewOnly);
+  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false, includeTestFixtures: boolean = false): ContextBundle {
+    const bundle = this.astStore.getContextBundle(nodeId, rootDir, previewOnly, includeTestFixtures);
     
     // Find related memory slices
     const relatedMemory: SemanticSlice[] = [];
