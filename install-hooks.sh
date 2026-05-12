@@ -101,4 +101,10 @@ post_install() {
 
   # Cleanup temp directory
   rm -rf "$sync_temp"
+
+  # Fix: Ensure dependencies are installed in production
+  echo "  📦 para-graph: installing production dependencies..."
+  if ! npm install --omit=dev; then
+    echo "  ⚠️  Failed to install dependencies via npm."
+  fi
 }
