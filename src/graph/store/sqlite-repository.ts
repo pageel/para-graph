@@ -9,13 +9,15 @@ export class SqliteGraphRepository {
       INSERT OR REPLACE INTO nodes (id, name, type, semantic, created_at, updated_at)
       VALUES (?, ?, ?, ?, ?, ?)
     `);
+    
+    const now = Date.now();
     stmt.run(
       node.id,
       node.name,
       node.type,
       node.semantic ? JSON.stringify(node.semantic) : null,
-      node.createdAt || node.created_at,
-      node.updatedAt || node.updated_at
+      node.createdAt || node.created_at || now,
+      node.updatedAt || node.updated_at || now
     );
   }
 
