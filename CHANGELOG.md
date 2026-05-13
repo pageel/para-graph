@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.0] - 2026-05-13
+
+### Changed
+- **Storage Engine Migration** — Migrated the graph persistence backend from JSONL to SQLite (`better-sqlite3`), introducing `SqliteManager` and `SqliteGraphRepository`.
+- **FTS5 Search** — Replaced regex-based memory search with SQLite FTS5 for significantly faster, scalable semantic retrieval. 
+- **Atomic Operations** — Upgraded JSONL legacy writes to use atomic `.tmp` renames and transaction-based imports to ensure data integrity during system faults.
+- **Auto-Conversion** — `GraphStore` now seamlessly auto-converts legacy `entities.jsonl` data to SQLite in the background using `setImmediate`.
+- **Dual-Write Threshold** — Added a 5,000-node limit to JSONL dual-writes; large graphs will now strictly rely on SQLite to reduce disk I/O.
+- **Refactoring** — Removed redundant in-memory array scanning and logic in `ProjectGraph.getContextBundle()` in favor of direct repository calls.
+
 ## [0.13.3] - 2026-05-12
 
 ### Fixed

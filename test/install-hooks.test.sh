@@ -7,7 +7,7 @@ export TOOL_INSTALL_DIR="/tmp/workspace/.para/tools/para-graph"
 export AGENTS_DIR="/tmp/workspace/.agents"
 export MANIFEST_FILE="/tmp/workspace/tool.manifest.yml"
 export TOOL_NAME="para-graph"
-export TOOL_VERSION="0.13.3"
+export TOOL_VERSION="0.14.0"
 
 # Mock fetch_templates_from_git to simulate successful fetch
 fetch_templates_from_git() {
