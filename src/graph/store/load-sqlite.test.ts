@@ -13,6 +13,7 @@ describe('load-sqlite Dual Backend Adapter', () => {
       versions: { ...process.versions, node: '20.0.0' }
     });
 
+    // @ts-ignore: dynamic CJS import doesn't have types
     const loadSqlite = (await import('./load-sqlite.cjs')).default;
     const Database = loadSqlite();
 
@@ -34,6 +35,7 @@ describe('load-sqlite Dual Backend Adapter', () => {
       versions: { ...process.versions, node: '24.0.0' }
     });
 
+    // @ts-ignore: dynamic CJS import doesn't have types
     const loadSqlite = (await import('./load-sqlite.cjs')).default;
     const DatabaseSync = loadSqlite();
 
