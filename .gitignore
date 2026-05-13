@@ -19,6 +19,8 @@ credentials.json
 
 # Test artifacts
 test/.test-output/
+.test-tmp-*/
+Projects/
 *.log
 
 # IDE & Editor
