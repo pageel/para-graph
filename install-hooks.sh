@@ -118,4 +118,16 @@ post_install() {
   if ! npm install --prefix "$TOOL_INSTALL_DIR" --omit=dev; then
     echo "  ⚠️  Failed to install dependencies via npm."
   fi
+
+  # SQLite Dynamic Dependency Fallback for Node < 22
+  if command -v node >/dev/null 2>&1; then
+    local node_version
+    node_version=$(node -v | sed 's/v//' | cut -d'.' -f1)
+    if [ "$node_version" -lt 22 ]; then
+      echo "  📦 para-graph: Node < 22 detected, installing native SQLite adapter fallback..."
+      if ! npm install --prefix "$TOOL_INSTALL_DIR" better-sqlite3@^11.10.0 --no-save; then
+        echo "  ⚠️  Failed to install better-sqlite3 fallback."
+      fi
+    fi
+  fi
 }

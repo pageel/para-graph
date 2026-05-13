@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.10.1-brightgreen.svg" alt="Version 0.10.1">
+    <img src="https://img.shields.io/badge/version-0.15.1-brightgreen.svg" alt="Version 0.15.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -66,6 +66,9 @@ Công cụ sử dụng [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 
 <a name="bat-dau-nhanh"></a>
 ## 🚀 Bắt đầu nhanh
+
+> **Điều kiện tiên quyết:** Đảm bảo bạn đã cài đặt Node.js (>= 18.0.0) và `npm`.
+> *Lưu ý: Thư viện `better-sqlite3` sẽ được tự động cài đặt động chỉ trên môi trường Node < 22 để bỏ qua bước biên dịch native C++ trên các phiên bản Node mới.*
 
 ```bash
 # Clone

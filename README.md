@@ -11,9 +11,8 @@
     <a href="docs/locales/vi-VN.md"><b>🇻🇳 Tiếng Việt</b></a>
   </p>
 
-  <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.15.0-brightgreen.svg" alt="Version 0.15.0">
+    <img src="https://img.shields.io/badge/version-0.15.1-brightgreen.svg" alt="Version 0.15.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -70,6 +69,7 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 ## 🚀 Quick Start
 
 > **Prerequisite:** Make sure you have Node.js (>= 18.0.0) and `npm` installed on your system.
+> *Notice: `better-sqlite3` is dynamically installed during setup only for Node < 22 environments to skip native compilation on modern Node versions.*
 
 ```bash
 # Clone

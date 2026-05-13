@@ -1,6 +1,6 @@
 {
   "name": "para-graph",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Hybrid Code-Knowledge Graph tool for PARA Workspace",
   "main": "./dist/cli.js",
   "types": "./dist/cli.d.ts",
@@ -28,7 +28,7 @@
     "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.build.json && node -e \"const fs=require('fs');fs.rmSync('dist/queries',{recursive:true,force:true});fs.cpSync('src/queries','dist/queries',{recursive:true});fs.mkdirSync('dist/hooks',{recursive:true});fs.cpSync('src/hooks/gemini.json','dist/hooks/gemini.json');fs.cpSync('src/graph/store/load-sqlite.cjs','dist/graph/store/load-sqlite.cjs');\"",
     "dev:test-install": "npm run build && tar -czf test.tar.gz dist/ package.json package-lock.json tool.manifest.yml install-hooks.sh && cd ../../../ && ./para install-tool para-graph --local=Projects/para-graph/repo/test.tar.gz --update --no-agents --no-mcp",
-    "release:pack": "npm run build && tar -czf para-graph-v0.15.0.tar.gz dist/ package.json package-lock.json tool.manifest.yml install-hooks.sh"
+    "release:pack": "npm run build && tar -czf para-graph-v0.15.1.tar.gz dist/ package.json package-lock.json tool.manifest.yml install-hooks.sh"
   },
   "repository": {
     "type": "git",
@@ -45,6 +45,7 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^25.6.0",
+    "better-sqlite3": "^11.10.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
     "vitest": "^4.1.4"
@@ -57,8 +58,5 @@
     "tree-sitter-php": "^0.23.12",
     "tree-sitter-python": "^0.21.0",
     "tree-sitter-typescript": "^0.23.2"
-  },
-  "optionalDependencies": {
-    "better-sqlite3": "^11.10.0"
   }
 }

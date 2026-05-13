@@ -7,7 +7,7 @@ export TOOL_INSTALL_DIR="/tmp/workspace/.para/tools/para-graph"
 export AGENTS_DIR="/tmp/workspace/.agents"
 export MANIFEST_FILE="/tmp/workspace/tool.manifest.yml"
 export TOOL_NAME="para-graph"
-export TOOL_VERSION="0.15.0"
+export TOOL_VERSION="0.15.1"
 
 # Mock fetch_templates_from_git to simulate successful fetch
 fetch_templates_from_git() {
@@ -21,14 +21,21 @@ parse_manifest_agents() {
 }
 
 # Mock npm command
-export NPM_CALLED=0
-export NPM_ARGS=""
-export NPM_CWD=""
+export NPM_LOG="$WORKSPACE_ROOT/npm.log"
+rm -f "$NPM_LOG"
 npm() {
-  NPM_CALLED=1
-  NPM_ARGS="$*"
-  NPM_CWD="$PWD"
-  echo "Mock: npm $NPM_ARGS at $NPM_CWD"
+  echo "install $*" >> "$NPM_LOG"
+  echo "Mock: npm $* at $PWD"
+}
+
+# Mock node command
+export MOCK_NODE_VERSION="24"
+node() {
+  if [ "$1" = "-v" ]; then
+    echo "v$MOCK_NODE_VERSION.2.0"
+  else
+    command node "$@"
+  fi
 }
 
 # Ensure temporary dirs exist to bypass legacy tarball guard
@@ -37,19 +44,28 @@ mkdir -p "$TOOL_INSTALL_DIR"
 # Source the hook script
 source ./install-hooks.sh
 
-# Execute post_install
+# Test 1: Node >= 22 (Should not install better-sqlite3)
+export MOCK_NODE_VERSION="24"
+rm -f "$NPM_LOG"
 post_install
 
-# Assertions
-if [ "$NPM_CALLED" -eq 1 ]; then
-  if [[ "$NPM_ARGS" != "install --prefix $TOOL_INSTALL_DIR --omit=dev" ]]; then
-    echo "❌ FAIL: npm was called with wrong args: $NPM_ARGS"
-    exit 1
-  else
-    echo "✅ PASS: npm install --prefix was called correctly."
-    exit 0
-  fi
+if grep -q "better-sqlite3" "$NPM_LOG"; then
+  echo "❌ FAIL: better-sqlite3 was installed on Node 24."
+  exit 1
 else
-  echo "❌ FAIL: npm was not called."
+  echo "✅ PASS: better-sqlite3 was NOT installed on Node 24."
+fi
+
+# Test 2: Node < 22 (Should install better-sqlite3)
+export MOCK_NODE_VERSION="20"
+rm -f "$NPM_LOG"
+post_install
+
+if grep -q "better-sqlite3" "$NPM_LOG"; then
+  echo "✅ PASS: better-sqlite3 was correctly installed on Node 20."
+else
+  echo "❌ FAIL: better-sqlite3 was NOT installed on Node 20."
   exit 1
 fi
+
+exit 0
