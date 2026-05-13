@@ -57,12 +57,15 @@ export class GraphStore {
       console.warn(`[GraphStore] SQLite initialization failed, falling back to in-memory:`, e);
     }
 
+    let rawEntities: string[] = [];
+
     // Load entities
     const entitiesPath = join(graphDir, 'entities.jsonl');
     if (existsSync(entitiesPath)) {
       const content = readFileSync(entitiesPath, 'utf-8').trim();
       if (content.length > 0) {
-        content.split(/\r?\n/).forEach(line => {
+        rawEntities = content.split(/\r?\n/);
+        rawEntities.forEach(line => {
           graph.addNode(JSON.parse(line) as GraphNode);
         });
       }
@@ -112,6 +115,23 @@ export class GraphStore {
           graph.addMemorySlice(JSON.parse(line) as SemanticSlice);
         });
       }
+    }
+
+    // Background sync to SQLite (Self-Healing / Auto-Convert)
+    if (graph.repository && rawEntities.length > 0) {
+      setTimeout(() => {
+        try {
+          const db = (graph.repository as any).manager.getConnection();
+          const insertAll = db.transaction(() => {
+            rawEntities.forEach(line => {
+              graph.repository!.insertNode(JSON.parse(line));
+            });
+          });
+          insertAll();
+        } catch (e) {
+          console.error(`[GraphStore] Error auto-converting JSONL to SQLite for project ${projectName}:`, e);
+        }
+      }, 0);
     }
 
     return graph;

@@ -2,22 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { GraphStore } from '../../../src/graph/store/GraphStore.js';
 import * as fs from 'node:fs';
 
-vi.mock('better-sqlite3', () => {
-  return {
-    default: class MockDatabase {
-      constructor(public path: string) {}
-      close() {}
-      exec() {}
-      prepare(sql: string) {
-        return {
-          run: vi.fn(),
-          iterate: vi.fn().mockReturnValue([]),
-          get: vi.fn()
-        };
-      }
-    }
-  };
-});
 
 import Database from 'better-sqlite3';
 import { SqliteManager } from '../../../src/graph/store/sqlite-manager.js';
@@ -36,5 +20,49 @@ describe('GraphStore Refactoring', () => {
     expect(graph.repository).toBeDefined();
     
     vi.restoreAllMocks();
+  });
+
+  it('should auto-convert large JSONL to DB in background without blocking', async () => {
+    const testProject = 'jsonl-convert-test';
+    const workspaceRoot = process.cwd();
+    const graphDir = require('node:path').join(workspaceRoot, 'Projects', testProject, '.beads', 'graph');
+    
+    // Setup directory
+    if (!fs.existsSync(graphDir)) fs.mkdirSync(graphDir, { recursive: true });
+    
+    GraphStore.flushGraph(testProject);
+    const entitiesPath = require('node:path').join(graphDir, 'entities.jsonl');
+    
+    // Create duplicate IDs to test self-healing (INSERT OR REPLACE)
+    const nodes = [
+      { id: 'n1', name: 'Node 1', type: 'class', created_at: 100, updated_at: 100 },
+      { id: 'n2', name: 'Node 2', type: 'class', created_at: 100, updated_at: 100 },
+      { id: 'n1', name: 'Node 1 Updated', type: 'class', created_at: 200, updated_at: 200 }
+    ];
+    
+    const jsonl = nodes.map(n => JSON.stringify(n)).join('\n') + '\n';
+    fs.writeFileSync(entitiesPath, jsonl, 'utf-8');
+    
+    const dbPath = require('node:path').join(graphDir, `${testProject}.db`);
+    if (fs.existsSync(dbPath)) fs.rmSync(dbPath);
+    
+    const start = Date.now();
+    const graph = GraphStore.getGraph(workspaceRoot, testProject);
+    const end = Date.now();
+    
+    // Expect the function to return quickly (asynchronous DB insert)
+    expect(end - start).toBeLessThan(100); 
+    
+    // Wait for the background transaction to complete
+    await new Promise(r => setTimeout(r, 100));
+    
+    expect(graph.repository).toBeDefined();
+    const nodesInDb = Array.from(graph.repository!.getAllNodes());
+    
+    expect(nodesInDb.length).toBe(2);
+    expect(nodesInDb.find(n => n.id === 'n1')?.name).toBe('Node 1 Updated');
+    
+    if (fs.existsSync(entitiesPath)) fs.rmSync(entitiesPath);
+    if (fs.existsSync(dbPath)) fs.rmSync(dbPath);
   });
 });
