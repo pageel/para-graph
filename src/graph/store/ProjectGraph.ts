@@ -13,11 +13,13 @@ import type {
 } from '../models.js';
 import { AstStore } from './AstStore.js';
 import { MemoryStore } from './MemoryStore.js';
+import type { SqliteGraphRepository } from './sqlite-repository.js';
 
 export class ProjectGraph {
   public readonly projectName: string;
   private readonly astStore: AstStore;
   private readonly memoryStore: MemoryStore;
+  public repository?: SqliteGraphRepository;
 
   constructor(projectName: string) {
     this.projectName = projectName;
@@ -119,12 +121,20 @@ export class ProjectGraph {
     const callers = new Set(bundle.callers.map(c => c.id));
     const callees = new Set(bundle.callees.map(c => c.id));
     
-    for (const slice of this.memoryStore.getSlices()) {
-      const isRelated = slice.nodeIds.some(id => 
-        id === nodeId || callers.has(id) || callees.has(id)
-      );
-      if (isRelated) {
+    const nodeIds = [nodeId, ...Array.from(callers), ...Array.from(callees)];
+    
+    if (this.repository) {
+      for (const slice of this.repository.getRelatedSlices(nodeIds)) {
         relatedMemory.push(slice);
+      }
+    } else {
+      for (const slice of this.memoryStore.getSlices()) {
+        const isRelated = slice.nodeIds.some(id => 
+          id === nodeId || callers.has(id) || callees.has(id)
+        );
+        if (isRelated) {
+          relatedMemory.push(slice);
+        }
       }
     }
     

@@ -34,4 +34,29 @@ export class SqliteGraphRepository {
       };
     }
   }
+
+  public *getRelatedSlices(nodeIds: string[]): IterableIterator<any> {
+    if (!nodeIds || nodeIds.length === 0) return;
+    
+    const db = this.manager.getConnection();
+    const placeholders = nodeIds.map(() => '?').join(',');
+    
+    const stmt = db.prepare(`
+      SELECT DISTINCT s.*
+      FROM memory_slices s, json_each(s.node_ids) AS n
+      WHERE n.value IN (${placeholders})
+    `);
+    
+    for (const row of stmt.iterate(...nodeIds)) {
+      const slice = row as any;
+      yield {
+        id: slice.id,
+        topic: slice.topic,
+        summary: slice.summary,
+        nodeIds: JSON.parse(slice.node_ids),
+        eventIds: JSON.parse(slice.event_ids),
+        createdAt: slice.created_at
+      };
+    }
+  }
 }
