@@ -37,11 +37,11 @@ pre_install() {
   # Task 0.2: Node LTS guard for native addon compatibility (better-sqlite3)
   local node_version
   node_version=$(node -v | sed 's/v//' | cut -d'.' -f1)
-  if [ "$node_version" != "18" ] && [ "$node_version" != "20" ] && [ "$node_version" != "22" ]; then
-    echo "  ❌  Installation blocked: Node.js LTS (18, 20, or 22) is required."
+  if [ "$node_version" -lt 18 ] || [ $((node_version % 2)) -ne 0 ]; then
+    echo "  ❌  Installation blocked: Node.js LTS (18, 20, 22, 24+) is required."
     echo "      You are using Node.js v$node_version. This project relies on 'better-sqlite3'"
     echo "      which requires node-gyp C++ compilation best supported on LTS releases."
-    echo "      Please switch to Node.js 18, 20, or 22."
+    echo "      Please switch to an even-numbered Node.js release (>= 18)."
     return 1
   fi
 
