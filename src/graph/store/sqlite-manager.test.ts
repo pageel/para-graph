@@ -25,14 +25,19 @@ SqliteManager.DatabaseConstructor = Database;
 
 describe('SqliteManager', () => {
   const testDbPath = path.join(process.cwd(), '.beads', 'graph', 'test-graph.db');
+  let activeManager: SqliteManager | null = null;
 
   beforeEach(() => {
+    activeManager = null;
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
   });
 
   afterEach(() => {
+    if (activeManager) {
+      try { activeManager.close(); } catch(e) {}
+    }
     if (fs.existsSync(testDbPath)) {
       fs.unlinkSync(testDbPath);
     }
@@ -40,6 +45,7 @@ describe('SqliteManager', () => {
 
   it('should lazy load the database connection', () => {
     const manager = new SqliteManager('test-project', testDbPath);
+    activeManager = manager;
     
     // DB file should not be created just by instantiating the manager
     expect(fs.existsSync(testDbPath)).toBe(false);
@@ -54,6 +60,7 @@ describe('SqliteManager', () => {
 
   it('should return the same connection on subsequent calls', () => {
     const manager = new SqliteManager('test-project', testDbPath);
+    activeManager = manager;
     const db1 = manager.getConnection();
     const db2 = manager.getConnection();
     
@@ -63,6 +70,7 @@ describe('SqliteManager', () => {
 
   it('should resolve default path if no path is provided', () => {
     const manager = new SqliteManager('my-test-project');
+    activeManager = manager;
     const defaultPath = path.join(process.cwd(), '.beads', 'graph', 'my-test-project.db');
     
     try {
@@ -74,6 +82,7 @@ describe('SqliteManager', () => {
 
   it('should initialize schema with correct tables and FTS5 triggers', () => {
     const manager = new SqliteManager('test-project', testDbPath);
+    activeManager = manager;
     manager.initSchema();
     const db = manager.getConnection() as any;
     
