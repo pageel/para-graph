@@ -17,12 +17,16 @@ vi.mock('better-sqlite3', () => {
         return {
           run: mockRun,
           iterate: mockIterate,
-          get: mockGet
+          get: mockGet,
+          all: vi.fn()
         };
       }
     }
   };
 });
+
+import Database from 'better-sqlite3';
+SqliteManager.DatabaseConstructor = Database;
 
 describe('SqliteGraphRepository', () => {
   it('should serialize semantic field to JSON on insert', () => {

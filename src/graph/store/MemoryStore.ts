@@ -9,8 +9,14 @@ export class MemoryStore {
   private eventsList: MemoryEvent[] = [];
   private slicesList: SemanticSlice[] = [];
 
+  private sqliteManager: any = null;
+
   constructor(projectName: string) {
     this.projectName = projectName;
+  }
+
+  public setSqliteManager(manager: any): void {
+    this.sqliteManager = manager;
   }
 
   /** Add an event to the memory store */
@@ -23,8 +29,39 @@ export class MemoryStore {
     }
   }
 
+  /** Sanitize query string for FTS5 syntax */
+  public static sanitizeFtsQuery(query: string): string {
+    const escaped = query.replace(/"/g, '""');
+    return `"${escaped}"*`;
+  }
+
   /** Full-text search over events */
   public searchEvents(query: string, limit: number = 50): MemoryEvent[] {
+    if (this.sqliteManager) {
+      try {
+        const db = this.sqliteManager.getConnection();
+        const sanitized = MemoryStore.sanitizeFtsQuery(query);
+        const stmt = db.prepare(`
+          SELECT * FROM fts_memory_events
+          WHERE fts_memory_events MATCH ?
+          ORDER BY rank
+          LIMIT ?
+        `);
+        const rows = stmt.all(sanitized, limit);
+        return rows.map((row: any) => ({
+          id: row.id,
+          sessionId: row.session_id,
+          kind: row.kind,
+          content: row.content,
+          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+          timestamp: new Date(row.timestamp).toISOString() // Or keep it if we store ISO string
+        }));
+      } catch (e) {
+        // Fallback on SQLite error
+      }
+    }
+
+    // Fallback to array loop
     const q = query.toLowerCase();
     const results: MemoryEvent[] = [];
     

@@ -59,6 +59,6 @@
     "tree-sitter-typescript": "^0.23.2"
   },
   "optionalDependencies": {
-    "better-sqlite3": "^11.1.2"
+    "better-sqlite3": "^11.10.0"
   }
 }

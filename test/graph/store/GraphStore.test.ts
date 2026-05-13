@@ -19,6 +19,10 @@ vi.mock('better-sqlite3', () => {
   };
 });
 
+import Database from 'better-sqlite3';
+import { SqliteManager } from '../../../src/graph/store/sqlite-manager.js';
+SqliteManager.DatabaseConstructor = Database;
+
 describe('GraphStore Refactoring', () => {
   it('should initialize SqliteGraphRepository when loading a graph', () => {
     // Clear cache

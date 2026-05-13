@@ -1,10 +1,12 @@
-import Database from 'better-sqlite3';
+import { createRequire } from 'module';
 import path from 'path';
 import fs from 'fs';
 
+const require = createRequire(import.meta.url);
+
 export class SqliteManager {
   private dbPath: string;
-  private db: Database.Database | null = null;
+  private db: any | null = null;
 
   constructor(projectName: string, customPath?: string) {
     if (customPath) {
@@ -72,12 +74,11 @@ export class SqliteManager {
     db.exec(`
       CREATE TABLE IF NOT EXISTS memory_slices (
         id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
+        topic TEXT NOT NULL,
         summary TEXT NOT NULL,
-        created_at INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        start_time INTEGER NOT NULL,
-        end_time INTEGER NOT NULL
+        node_ids TEXT NOT NULL,
+        event_ids TEXT NOT NULL,
+        created_at INTEGER NOT NULL
       )
     `);
 
@@ -121,13 +122,21 @@ export class SqliteManager {
     `);
   }
 
-  public getConnection(): Database.Database {
+  public static DatabaseConstructor: any = null;
+
+  public getConnection(): any {
     if (!this.db) {
       const dir = path.dirname(this.dbPath);
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      this.db = new Database(this.dbPath);
+      try {
+        const loadSqlite = require('./load-sqlite.cjs');
+        const Database = SqliteManager.DatabaseConstructor || loadSqlite();
+        this.db = new Database(this.dbPath);
+      } catch (e: any) {
+        throw new Error('better-sqlite3 is not available. Error: ' + e.message);
+      }
     }
     return this.db;
   }

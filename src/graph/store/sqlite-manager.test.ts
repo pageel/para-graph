@@ -20,6 +20,9 @@ vi.mock('better-sqlite3', () => {
   };
 });
 
+import Database from 'better-sqlite3';
+SqliteManager.DatabaseConstructor = Database;
+
 describe('SqliteManager', () => {
   const testDbPath = path.join(process.cwd(), '.beads', 'graph', 'test-graph.db');
 
