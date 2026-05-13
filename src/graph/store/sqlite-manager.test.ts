@@ -6,10 +6,14 @@ import path from 'path';
 vi.mock('better-sqlite3', () => {
   return {
     default: class MockDatabase {
+      public executedQueries: string[] = [];
       constructor(public path: string) {
         if (path !== ':memory:') {
           fs.writeFileSync(path, '');
         }
+      }
+      exec(sql: string) {
+        this.executedQueries.push(sql);
       }
       close() {}
     }
@@ -63,5 +67,35 @@ describe('SqliteManager', () => {
     } finally {
       manager.close();
     }
+  });
+
+  it('should initialize schema with correct tables and FTS5 triggers', () => {
+    const manager = new SqliteManager('test-project', testDbPath);
+    manager.initSchema();
+    const db = manager.getConnection() as any;
+    
+    expect(db.executedQueries.length).toBeGreaterThan(0);
+    
+    const allSql = db.executedQueries.join('\n');
+    
+    // Check nodes table
+    expect(allSql).toContain('CREATE TABLE IF NOT EXISTS nodes');
+    expect(allSql).toContain('semantic TEXT DEFAULT NULL');
+    
+    // Check edges table
+    expect(allSql).toContain('CREATE TABLE IF NOT EXISTS edges');
+    
+    // Check memory events table
+    expect(allSql).toContain('CREATE TABLE IF NOT EXISTS memory_events');
+    
+    // Check FTS5 virtual table
+    expect(allSql).toContain('CREATE VIRTUAL TABLE IF NOT EXISTS fts_memory_events USING fts5');
+    
+    // Check Triggers for sync
+    expect(allSql).toContain('CREATE TRIGGER IF NOT EXISTS memory_events_ai AFTER INSERT ON memory_events');
+    expect(allSql).toContain('CREATE TRIGGER IF NOT EXISTS memory_events_ad AFTER DELETE ON memory_events');
+    expect(allSql).toContain('CREATE TRIGGER IF NOT EXISTS memory_events_au AFTER UPDATE ON memory_events');
+    
+    manager.close();
   });
 });
