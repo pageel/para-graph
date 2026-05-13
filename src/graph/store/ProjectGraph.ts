@@ -27,6 +27,13 @@ export class ProjectGraph {
     this.memoryStore = new MemoryStore(projectName);
   }
 
+  /** Close SQLite connection to release file handles and unblock event loop */
+  public close(): void {
+    if (this.repository) {
+      (this.repository as any).manager.close();
+    }
+  }
+
   // --- AstStore Delegation ---
 
   get enrichmentStats(): EnrichmentStats {
@@ -126,15 +133,6 @@ export class ProjectGraph {
     if (this.repository) {
       for (const slice of this.repository.getRelatedSlices(nodeIds)) {
         relatedMemory.push(slice);
-      }
-    } else {
-      for (const slice of this.memoryStore.getSlices()) {
-        const isRelated = slice.nodeIds.some(id => 
-          id === nodeId || callers.has(id) || callees.has(id)
-        );
-        if (isRelated) {
-          relatedMemory.push(slice);
-        }
       }
     }
     

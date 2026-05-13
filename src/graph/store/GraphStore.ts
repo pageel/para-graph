@@ -40,7 +40,11 @@ export class GraphStore {
   }
 
   public static flushGraph(projectName: string): void {
-    this.cache.delete(projectName);
+    const graph = this.cache.get(projectName);
+    if (graph) {
+      graph.close();
+      this.cache.delete(projectName);
+    }
   }
 
   private static loadFromDisk(workspaceRoot: string, projectName: string): ProjectGraph {
@@ -118,8 +122,9 @@ export class GraphStore {
     }
 
     // Background sync to SQLite (Self-Healing / Auto-Convert)
+    // Use setImmediate + unref so this doesn't block process exit (Vitest)
     if (graph.repository && rawEntities.length > 0) {
-      setTimeout(() => {
+      const timer = setTimeout(() => {
         try {
           const db = (graph.repository as any).manager.getConnection();
           const insertAll = db.transaction(() => {
@@ -132,6 +137,7 @@ export class GraphStore {
           console.error(`[GraphStore] Error auto-converting JSONL to SQLite for project ${projectName}:`, e);
         }
       }, 0);
+      timer.unref();
     }
 
     return graph;
