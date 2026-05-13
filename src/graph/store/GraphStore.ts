@@ -140,8 +140,20 @@ export class GraphStore {
   public static saveEntities(workspaceRoot: string, projectName: string, entities: GraphNode[]): void {
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const entitiesPath = join(graphDir, 'entities.jsonl');
-    const content = entities.map(n => JSON.stringify(n)).join('\n') + '\n';
-    writeFileSync(entitiesPath, content, 'utf-8');
+    
+    // Stop dual-write if nodes > 5000 to save I/O
+    if (entities.length <= 5000) {
+      const content = entities.map(n => JSON.stringify(n)).join('\n') + '\n';
+      const tmpPath = entitiesPath + '.tmp';
+      writeFileSync(tmpPath, content, 'utf-8');
+      renameSync(tmpPath, entitiesPath);
+    } else {
+      if (existsSync(entitiesPath)) {
+        try {
+          require('node:fs').rmSync(entitiesPath);
+        } catch (e) {}
+      }
+    }
     
     // Also update the cache if it exists
     if (this.cache.has(projectName)) {
@@ -180,8 +192,20 @@ export class GraphStore {
   public static saveRelations(workspaceRoot: string, projectName: string, edges: GraphEdge[]): void {
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const relationsPath = join(graphDir, 'relations.jsonl');
-    const content = edges.map(e => JSON.stringify(e)).join('\n') + '\n';
-    writeFileSync(relationsPath, content, 'utf-8');
+    
+    // Stop dual-write if edges > 5000 to save I/O
+    if (edges.length <= 5000) {
+      const content = edges.map(e => JSON.stringify(e)).join('\n') + '\n';
+      const tmpPath = relationsPath + '.tmp';
+      writeFileSync(tmpPath, content, 'utf-8');
+      renameSync(tmpPath, relationsPath);
+    } else {
+      if (existsSync(relationsPath)) {
+        try {
+          require('node:fs').rmSync(relationsPath);
+        } catch (e) {}
+      }
+    }
   }
 
   /**

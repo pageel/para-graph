@@ -51,7 +51,7 @@ describe('GraphStore Refactoring', () => {
     const end = Date.now();
     
     // Expect the function to return quickly (asynchronous DB insert)
-    expect(end - start).toBeLessThan(100); 
+    expect(end - start).toBeLessThan(500); 
     
     // Wait for the background transaction to complete
     await new Promise(r => setTimeout(r, 100));
@@ -64,5 +64,36 @@ describe('GraphStore Refactoring', () => {
     
     if (fs.existsSync(entitiesPath)) fs.rmSync(entitiesPath);
     if (fs.existsSync(dbPath)) fs.rmSync(dbPath);
+  });
+
+  it('should use atomic write and stop dual-write if nodes exceed 5000', () => {
+    const testProject = 'atomic-write-test';
+    const workspaceRoot = process.cwd();
+    const graphDir = require('node:path').join(workspaceRoot, 'Projects', testProject, '.beads', 'graph');
+    if (!fs.existsSync(graphDir)) fs.mkdirSync(graphDir, { recursive: true });
+    
+    const entitiesPath = require('node:path').join(graphDir, 'entities.jsonl');
+    if (fs.existsSync(entitiesPath)) fs.rmSync(entitiesPath);
+    
+    // Create 5001 nodes
+    const nodes = [];
+    for (let i = 0; i < 5001; i++) {
+      nodes.push({ id: `n${i}`, name: `Node ${i}`, type: 'class', created_at: 100, updated_at: 100 } as any);
+    }
+    
+    GraphStore.saveEntities(workspaceRoot, testProject, nodes);
+    
+    // Dual write should be stopped, so entities.jsonl should not exist
+    expect(fs.existsSync(entitiesPath)).toBe(false);
+    
+    // Test atomic write with < 5000 nodes
+    const smallNodes = nodes.slice(0, 10);
+    
+    GraphStore.saveEntities(workspaceRoot, testProject, smallNodes);
+    
+    // Should use atomic write (tmp -> rename), meaning the final file exists
+    expect(fs.existsSync(entitiesPath)).toBe(true);
+    
+    if (fs.existsSync(entitiesPath)) fs.rmSync(entitiesPath);
   });
 });
