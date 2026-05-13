@@ -2,6 +2,8 @@ import { resolve, join } from 'node:path';
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
 import { ProjectGraph } from './ProjectGraph.js';
 import { resolveGraphDir } from './pathResolver.js';
+import { SqliteManager } from './sqlite-manager.js';
+import { SqliteGraphRepository } from './sqlite-repository.js';
 import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata, MemoryEvent, SemanticSlice } from '../models.js';
 
 export class GraphStore {
@@ -44,6 +46,16 @@ export class GraphStore {
   private static loadFromDisk(workspaceRoot: string, projectName: string): ProjectGraph {
     const graph = new ProjectGraph(projectName);
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
+
+    // Initialize SQLite storage
+    try {
+      const dbPath = join(graphDir, `${projectName}.db`);
+      const manager = new SqliteManager(projectName, dbPath);
+      manager.initSchema();
+      graph.repository = new SqliteGraphRepository(manager);
+    } catch (e) {
+      console.warn(`[GraphStore] SQLite initialization failed, falling back to in-memory:`, e);
+    }
 
     // Load entities
     const entitiesPath = join(graphDir, 'entities.jsonl');
