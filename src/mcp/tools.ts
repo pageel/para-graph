@@ -444,8 +444,9 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       query: z.string().describe('Search term'),
       limit: z.number().optional().describe('Maximum number of results (default 50)'),
       since: z.string().optional().describe('Filter events newer than this ISO 8601 timestamp (e.g. 2026-05-01T00:00:00Z)'),
+      includeArchived: z.boolean().optional().describe('If true, returns both active and archived events (default false)'),
     },
-    async ({ projectName, query, limit, since }) => {
+    async ({ projectName, query, limit, since, includeArchived }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
       let sinceTimestamp: number | undefined;
       if (since !== undefined) {
@@ -457,7 +458,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           };
         }
       }
-      const results = graph.searchMemory(query, limit ?? 50, sinceTimestamp);
+      const results = graph.searchMemory(query, limit ?? 50, sinceTimestamp, includeArchived);
       
       return {
         content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
@@ -478,7 +479,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       const result = CurationWorker.curate(workspaceRoot, graph, {
         nodes: graphStats.nodeCount,
         edges: graphStats.edgeCount,
-        unresolved: graphStats.unresolvedCount
+        unresolved: (graphStats as any).unresolvedCount || 0
       });
       
       if (result.slicesCreated > 0) {

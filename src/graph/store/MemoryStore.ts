@@ -35,13 +35,15 @@ export class MemoryStore {
     return `"${escaped}"*`;
   }
 
-  public searchEvents(query: string, limit: number = 50, since?: number): MemoryEvent[] {
+  public searchEvents(query: string, limit: number = 50, since?: number, includeArchived: boolean = false): MemoryEvent[] {
     if (this.sqliteManager) {
       try {
         const db = this.sqliteManager.getConnection();
         const sanitized = MemoryStore.sanitizeFtsQuery(query);
         let stmt;
         let rows;
+        const archiveFilter = includeArchived ? '' : 'AND m.archived = 0';
+        
         if (since !== undefined) {
           stmt = db.prepare(`
             SELECT m.* 
@@ -49,7 +51,7 @@ export class MemoryStore {
             JOIN fts_memory_events f ON m.rowid = f.rowid
             WHERE f.fts_memory_events MATCH ?
               AND m.timestamp >= ?
-              AND m.archived = 0
+              ${archiveFilter}
             ORDER BY m.weight DESC, f.rank
             LIMIT ?
           `);
@@ -60,7 +62,7 @@ export class MemoryStore {
             FROM memory_events m
             JOIN fts_memory_events f ON m.rowid = f.rowid
             WHERE f.fts_memory_events MATCH ?
-              AND m.archived = 0
+              ${archiveFilter}
             ORDER BY m.weight DESC, f.rank
             LIMIT ?
           `);
@@ -87,7 +89,7 @@ export class MemoryStore {
     
     for (const event of this.eventsList) {
       if (results.length >= limit) break;
-      if (event.archived) continue;
+      if (!includeArchived && event.archived) continue;
       
       if (since !== undefined) {
         const eventTime = new Date(event.timestamp).getTime();

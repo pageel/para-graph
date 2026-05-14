@@ -102,8 +102,8 @@ export class ProjectGraph {
     this.memoryStore.pushEvent(event);
   }
 
-  public searchMemory(query: string, limit?: number, since?: number): MemoryEvent[] {
-    return this.memoryStore.searchEvents(query, limit, since);
+  public searchMemory(query: string, limit?: number, since?: number, includeArchived?: boolean): MemoryEvent[] {
+    return this.memoryStore.searchEvents(query, limit, since, includeArchived);
   }
 
   public getMemorySlices(): SemanticSlice[] {
