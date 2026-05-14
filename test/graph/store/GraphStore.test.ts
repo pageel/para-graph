@@ -96,4 +96,35 @@ describe('GraphStore Refactoring', () => {
     
     if (fs.existsSync(entitiesPath)) fs.rmSync(entitiesPath);
   });
+  it('should insert and persist a project snapshot', () => {
+    const testProject = 'snapshot-test';
+    const workspaceRoot = process.cwd();
+    
+    // Clear graph before
+    GraphStore.flushGraph(testProject);
+    const graph = GraphStore.getGraph(workspaceRoot, testProject);
+    
+    // Add mock nodes and edges
+    graph.addNode({ id: 'n1', name: 'N1', type: 'class', created_at: 100, updated_at: 100 } as any);
+    graph.addEdge({ sourceId: 'n1', targetId: 'n2', relation: 'CALLS' } as any);
+    
+    // Call insertSnapshot
+    const snapshot = GraphStore.insertSnapshot(workspaceRoot, testProject, 5);
+    
+    expect(snapshot).toBeDefined();
+    expect(snapshot.projectName).toBe(testProject);
+    expect(snapshot.nodesCount).toBe(1);
+    expect(snapshot.edgesCount).toBe(1);
+    expect(snapshot.unresolvedCount).toBe(5);
+    expect(snapshot.id).toBeDefined();
+    expect(snapshot.timestamp).toBeGreaterThan(0);
+    
+    // Verify it was persisted to SQLite
+    const db = (graph.repository as any).manager.getConnection();
+    const row = db.prepare('SELECT * FROM project_snapshots WHERE id = ?').get(snapshot.id);
+    expect(row).toBeDefined();
+    expect(row.nodes_count).toBe(1);
+    expect(row.edges_count).toBe(1);
+    expect(row.unresolved_count).toBe(5);
+  });
 });

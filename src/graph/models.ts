@@ -262,3 +262,20 @@ export interface SemanticSlice {
   /** ISO timestamp */
   createdAt: string;
 }
+
+/** A snapshot of project metrics at a point in time (D4) */
+export interface ProjectSnapshot {
+  /** Unique snapshot ID (crypto.randomUUID) */
+  id: string;
+  /** Project name */
+  projectName: string;
+  /** Unix timestamp ms */
+  timestamp: number;
+  /** Number of nodes */
+  nodesCount: number;
+  /** Number of edges */
+  edgesCount: number;
+  /** Number of unresolved nodes */
+  unresolvedCount: number;
+}
+

@@ -1,10 +1,11 @@
 import { resolve, join } from 'node:path';
 import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 import { ProjectGraph } from './ProjectGraph.js';
 import { resolveGraphDir } from './pathResolver.js';
 import { SqliteManager } from './sqlite-manager.js';
 import { SqliteGraphRepository } from './sqlite-repository.js';
-import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata, MemoryEvent, SemanticSlice } from '../models.js';
+import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata, MemoryEvent, SemanticSlice, ProjectSnapshot } from '../models.js';
 
 export class GraphStore {
   private static readonly MAX_CAPACITY = 3;
@@ -281,4 +282,37 @@ export class GraphStore {
       renameSync(tmpPath, slicesPath);
     }
   }
+
+  /**
+   * Calculate project metrics and insert a new snapshot into SQLite.
+   */
+  public static insertSnapshot(workspaceRoot: string, projectName: string, unresolvedCount: number): ProjectSnapshot {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    const stats = graph.getStats();
+    
+    const snapshot: ProjectSnapshot = {
+      id: randomUUID(),
+      projectName,
+      timestamp: Date.now(),
+      nodesCount: stats.nodeCount,
+      edgesCount: stats.edgeCount,
+      unresolvedCount
+    };
+
+    if (graph.repository) {
+      try {
+        const db = (graph.repository as any).manager.getConnection();
+        const stmt = db.prepare(`
+          INSERT INTO project_snapshots (id, project_name, timestamp, nodes_count, edges_count, unresolved_count)
+          VALUES (?, ?, ?, ?, ?, ?)
+        `);
+        stmt.run(snapshot.id, snapshot.projectName, snapshot.timestamp, snapshot.nodesCount, snapshot.edgesCount, snapshot.unresolvedCount);
+      } catch (e) {
+        console.error(`[GraphStore] Failed to insert project snapshot:`, e);
+      }
+    }
+
+    return snapshot;
+  }
 }
+
