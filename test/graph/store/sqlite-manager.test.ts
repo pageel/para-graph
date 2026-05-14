@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { SqliteManager } from '../../../src/graph/store/sqlite-manager';
+import { SqliteManager } from '../../../src/graph/store/sqlite-manager.js';
 import Database from 'better-sqlite3';
 
 SqliteManager.DatabaseConstructor = Database;
