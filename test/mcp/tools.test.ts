@@ -87,7 +87,7 @@ describe('MCP Tools: graph_god_nodes', () => {
 });
 
 describe('MCP Tools: memory_search', () => {
-  it('should parse sinceDays and pass sinceTimestamp to searchEvents', async () => {
+  it('should parse since string to timestamp and pass to searchEvents', async () => {
     const handlers: Record<string, any> = {};
     const mockServer = {
       tool: (name: string, desc: string, schema: any, handler: any) => {
@@ -97,21 +97,22 @@ describe('MCP Tools: memory_search', () => {
 
     registerTools(mockServer as any, '/workspace');
     const memorySearchHandler = handlers['memory_search'];
-    expect(memorySearchHandler).toBeDefined();
 
     const mockGraph = {
       searchMemory: vi.fn().mockReturnValue([])
     };
     vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
     
-    // Mock Date.now() for predictable timestamp
-    const now = 1700000000000;
-    vi.spyOn(Date, 'now').mockReturnValue(now);
+    const isoString = '2026-05-01T00:00:00Z';
+    await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, since: isoString });
 
-    await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, sinceDays: 7 });
-
-    const expectedSince = now - (7 * 24 * 60 * 60 * 1000);
+    const expectedSince = new Date(isoString).getTime();
     expect(mockGraph.searchMemory).toHaveBeenCalledWith('foo', 10, expectedSince);
+    
+    // Test invalid ISO string
+    const resultInvalid = await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, since: 'not-a-date' });
+    expect(resultInvalid.isError).toBe(true);
+    expect(resultInvalid.content[0].text).toContain('Invalid ISO 8601 timestamp');
     
     vi.restoreAllMocks();
   });

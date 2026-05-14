@@ -443,13 +443,19 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       projectName: z.string().describe('Name of the PARA project'),
       query: z.string().describe('Search term'),
       limit: z.number().optional().describe('Maximum number of results (default 50)'),
-      sinceDays: z.number().optional().describe('Filter events newer than X days'),
+      since: z.string().optional().describe('Filter events newer than this ISO 8601 timestamp (e.g. 2026-05-01T00:00:00Z)'),
     },
-    async ({ projectName, query, limit, sinceDays }) => {
+    async ({ projectName, query, limit, since }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
       let sinceTimestamp: number | undefined;
-      if (sinceDays !== undefined) {
-        sinceTimestamp = Date.now() - (sinceDays * 24 * 60 * 60 * 1000);
+      if (since !== undefined) {
+        sinceTimestamp = new Date(since).getTime();
+        if (isNaN(sinceTimestamp)) {
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Invalid ISO 8601 timestamp for since parameter' }) }],
+            isError: true,
+          };
+        }
       }
       const results = graph.searchMemory(query, limit ?? 50, sinceTimestamp);
       
