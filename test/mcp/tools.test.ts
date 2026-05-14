@@ -85,3 +85,34 @@ describe('MCP Tools: graph_god_nodes', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('MCP Tools: memory_search', () => {
+  it('should parse sinceDays and pass sinceTimestamp to searchEvents', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const memorySearchHandler = handlers['memory_search'];
+    expect(memorySearchHandler).toBeDefined();
+
+    const mockGraph = {
+      searchMemory: vi.fn().mockReturnValue([])
+    };
+    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+    
+    // Mock Date.now() for predictable timestamp
+    const now = 1700000000000;
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+
+    await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, sinceDays: 7 });
+
+    const expectedSince = now - (7 * 24 * 60 * 60 * 1000);
+    expect(mockGraph.searchMemory).toHaveBeenCalledWith('foo', 10, expectedSince);
+    
+    vi.restoreAllMocks();
+  });
+});

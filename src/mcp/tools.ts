@@ -443,10 +443,15 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       projectName: z.string().describe('Name of the PARA project'),
       query: z.string().describe('Search term'),
       limit: z.number().optional().describe('Maximum number of results (default 50)'),
+      sinceDays: z.number().optional().describe('Filter events newer than X days'),
     },
-    async ({ projectName, query, limit }) => {
+    async ({ projectName, query, limit, sinceDays }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
-      const results = graph.searchMemory(query, limit ?? 50);
+      let sinceTimestamp: number | undefined;
+      if (sinceDays !== undefined) {
+        sinceTimestamp = Date.now() - (sinceDays * 24 * 60 * 60 * 1000);
+      }
+      const results = graph.searchMemory(query, limit ?? 50, sinceTimestamp);
       
       return {
         content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
