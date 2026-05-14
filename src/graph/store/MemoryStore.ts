@@ -35,26 +35,46 @@ export class MemoryStore {
     return `"${escaped}"*`;
   }
 
-  /** Full-text search over events */
-  public searchEvents(query: string, limit: number = 50): MemoryEvent[] {
+  public searchEvents(query: string, limit: number = 50, since?: number): MemoryEvent[] {
     if (this.sqliteManager) {
       try {
         const db = this.sqliteManager.getConnection();
         const sanitized = MemoryStore.sanitizeFtsQuery(query);
-        const stmt = db.prepare(`
-          SELECT * FROM fts_memory_events
-          WHERE fts_memory_events MATCH ?
-          ORDER BY rank
-          LIMIT ?
-        `);
-        const rows = stmt.all(sanitized, limit);
+        let stmt;
+        let rows;
+        if (since !== undefined) {
+          stmt = db.prepare(`
+            SELECT m.* 
+            FROM memory_events m
+            JOIN fts_memory_events f ON m.rowid = f.rowid
+            WHERE f.fts_memory_events MATCH ?
+              AND m.timestamp >= ?
+              AND m.archived = 0
+            ORDER BY m.weight DESC, f.rank
+            LIMIT ?
+          `);
+          rows = stmt.all(sanitized, since, limit);
+        } else {
+          stmt = db.prepare(`
+            SELECT m.* 
+            FROM memory_events m
+            JOIN fts_memory_events f ON m.rowid = f.rowid
+            WHERE f.fts_memory_events MATCH ?
+              AND m.archived = 0
+            ORDER BY m.weight DESC, f.rank
+            LIMIT ?
+          `);
+          rows = stmt.all(sanitized, limit);
+        }
         return rows.map((row: any) => ({
           id: row.id,
           sessionId: row.session_id,
           kind: row.kind,
           content: row.content,
           metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-          timestamp: new Date(row.timestamp).toISOString() // Or keep it if we store ISO string
+          timestamp: new Date(row.timestamp).toISOString(),
+          weight: row.weight,
+          archived: row.archived === 1
         }));
       } catch (e) {
         // Fallback on SQLite error
@@ -67,6 +87,13 @@ export class MemoryStore {
     
     for (const event of this.eventsList) {
       if (results.length >= limit) break;
+      if (event.archived) continue;
+      
+      if (since !== undefined) {
+        const eventTime = new Date(event.timestamp).getTime();
+        if (eventTime < since) continue;
+      }
+      
       if (
         event.content.toLowerCase().includes(q) ||
         event.kind.toLowerCase().includes(q) ||
