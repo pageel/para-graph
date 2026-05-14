@@ -82,6 +82,21 @@ export class SqliteManager {
       )
     `);
 
+    // Project snapshots table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_snapshots (
+        id TEXT PRIMARY KEY,
+        project_name TEXT NOT NULL,
+        timestamp INTEGER NOT NULL,
+        nodes_count INTEGER NOT NULL,
+        edges_count INTEGER NOT NULL,
+        unresolved_count INTEGER NOT NULL
+      )
+    `);
+    db.exec(`
+      CREATE INDEX IF NOT EXISTS idx_snapshots_project ON project_snapshots(project_name)
+    `);
+
     // 2. Create FTS5 virtual table
     db.exec(`
       CREATE VIRTUAL TABLE IF NOT EXISTS fts_memory_events USING fts5(
