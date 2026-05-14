@@ -106,4 +106,51 @@ describe('MemoryStore FTS5 Integration', () => {
     expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining('timestamp >= ?'));
     expect(prepareMock().all).toHaveBeenCalledWith(expect.stringContaining('"hit"*'), since, 50);
   });
+
+  it('should archive old ephemeral and durable events, but keep permanent ones', () => {
+    const store = new MemoryStore('test-project');
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    
+    // Ephemeral event > 90 days old (should archive)
+    const e1 = { id: 'e1', sessionId: 's1', kind: 'observation', content: 'e1', timestamp: new Date(now - 91 * dayMs).toISOString(), weight: 1.0, archived: false };
+    // Ephemeral event < 90 days old (should keep)
+    const e2 = { id: 'e2', sessionId: 's1', kind: 'observation', content: 'e2', timestamp: new Date(now - 80 * dayMs).toISOString(), weight: 1.0, archived: false };
+    // Durable event > 180 days old (should archive)
+    const e3 = { id: 'e3', sessionId: 's1', kind: 'decision', content: 'e3', timestamp: new Date(now - 181 * dayMs).toISOString(), weight: 2.0, archived: false };
+    // Durable event < 180 days old (should keep)
+    const e4 = { id: 'e4', sessionId: 's1', kind: 'decision', content: 'e4', timestamp: new Date(now - 170 * dayMs).toISOString(), weight: 2.5, archived: false };
+    // Permanent event > 1000 days old (should keep)
+    const e5 = { id: 'e5', sessionId: 's1', kind: 'decision', content: 'e5', timestamp: new Date(now - 1000 * dayMs).toISOString(), weight: 3.0, archived: false };
+    
+    store.pushEvent(e1);
+    store.pushEvent(e2);
+    store.pushEvent(e3);
+    store.pushEvent(e4);
+    store.pushEvent(e5);
+
+    // Mock SQLite
+    let sqlQueries: {query: string, params: any[]}[] = [];
+    const mockDb = {
+      prepare: (sql: string) => ({
+        run: (...params: any[]) => {
+          sqlQueries.push({ query: sql, params });
+        }
+      })
+    };
+    store.setSqliteManager({ getConnection: () => mockDb });
+
+    const result = store.archiveOldEvents();
+
+    expect(result.archivedCount).toBe(2);
+    expect(e1.archived).toBe(true);
+    expect(e2.archived).toBe(false);
+    expect(e3.archived).toBe(true);
+    expect(e4.archived).toBe(false);
+    expect(e5.archived).toBe(false);
+
+    // Check SQLite calls
+    expect(sqlQueries[0].query).toContain('WHERE weight < 2.0 AND timestamp < ? AND archived = 0');
+    expect(sqlQueries[1].query).toContain('WHERE weight >= 2.0 AND weight < 3.0 AND timestamp < ? AND archived = 0');
+  });
 });

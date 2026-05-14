@@ -125,4 +125,59 @@ export class MemoryStore {
   public getAllEvents(): MemoryEvent[] {
     return this.eventsList;
   }
+
+  /**
+   * Run cold archive policy on events:
+   * - ephemeral (weight < 2.0): > 90 days
+   * - durable (2.0 <= weight < 3.0): > 180 days
+   * - permanent (weight >= 3.0): never
+   */
+  public archiveOldEvents(): { archivedCount: number } {
+    const now = Date.now();
+    const dayMs = 24 * 60 * 60 * 1000;
+    let archivedCount = 0;
+
+    const ephemeralCutoff = now - 90 * dayMs;
+    const durableCutoff = now - 180 * dayMs;
+
+    // 1. Update in-memory list
+    for (const event of this.eventsList) {
+      if (event.archived) continue;
+      
+      const ts = new Date(event.timestamp).getTime();
+      const weight = event.weight ?? 1.0;
+
+      if (weight < 2.0 && ts < ephemeralCutoff) {
+        event.archived = true;
+        archivedCount++;
+      } else if (weight >= 2.0 && weight < 3.0 && ts < durableCutoff) {
+        event.archived = true;
+        archivedCount++;
+      }
+    }
+
+    // 2. Update SQLite if available
+    if (this.sqliteManager && archivedCount > 0) {
+      try {
+        const db = this.sqliteManager.getConnection();
+        const updateEphemeral = db.prepare(`
+          UPDATE memory_events 
+          SET archived = 1 
+          WHERE weight < 2.0 AND timestamp < ? AND archived = 0
+        `);
+        const updateDurable = db.prepare(`
+          UPDATE memory_events 
+          SET archived = 1 
+          WHERE weight >= 2.0 AND weight < 3.0 AND timestamp < ? AND archived = 0
+        `);
+        
+        updateEphemeral.run(ephemeralCutoff);
+        updateDurable.run(durableCutoff);
+      } catch (err) {
+        console.warn(`[MemoryStore] Failed to update SQLite for cold archive:`, err);
+      }
+    }
+
+    return { archivedCount };
+  }
 }
