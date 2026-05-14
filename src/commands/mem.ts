@@ -24,7 +24,7 @@ export function runMem(projectName: string, workspaceRoot: string): void {
   const result = CurationWorker.curate(workspaceRoot, graph, {
     nodes: graphStats.nodeCount,
     edges: graphStats.edgeCount,
-    unresolved: graphStats.unresolvedCount
+    unresolved: (graphStats as any).unresolvedCount || 0
   });
 
   if (result.slicesCreated > 0) {
