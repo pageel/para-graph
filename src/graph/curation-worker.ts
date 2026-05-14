@@ -2,9 +2,17 @@ import { randomUUID } from 'node:crypto';
 import type { MemoryEvent, SemanticSlice } from './models.js';
 import type { ProjectGraph } from './store/ProjectGraph.js';
 
+import { GraphStore } from './store/GraphStore.js';
+
 export interface CurationResult {
   slicesCreated: number;
   eventsProcessed: number;
+}
+
+export interface GraphStats {
+  nodes: number;
+  edges: number;
+  unresolved: number;
 }
 
 export class CurationWorker {
@@ -12,7 +20,7 @@ export class CurationWorker {
    * Curate un-grouped memory events into Semantic Slices using heuristics.
    * v1 uses a simple session-based clustering approach.
    */
-  public static curate(graph: ProjectGraph): CurationResult {
+  public static curate(workspaceRoot: string, graph: ProjectGraph, stats?: GraphStats): CurationResult {
     const allEvents = graph.getAllMemoryEvents();
     const existingSlices = graph.getMemorySlices();
 
@@ -77,6 +85,10 @@ export class CurationWorker {
 
       graph.addMemorySlice(slice);
       slicesCreated++;
+    }
+
+    if (stats) {
+      GraphStore.insertSnapshot(workspaceRoot, graph.projectName, stats.unresolved);
     }
 
     return {

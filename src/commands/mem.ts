@@ -20,7 +20,12 @@ export function runMem(projectName: string, workspaceRoot: string): void {
   console.log(`🧠 Curating memory events for project: ${projectName}...`);
 
   const graph = GraphStore.getGraph(workspaceRoot, projectName);
-  const result = CurationWorker.curate(graph);
+  const graphStats = graph.getStats();
+  const result = CurationWorker.curate(workspaceRoot, graph, {
+    nodes: graphStats.nodeCount,
+    edges: graphStats.edgeCount,
+    unresolved: graphStats.unresolvedCount
+  });
 
   if (result.slicesCreated > 0) {
     GraphStore.saveMemorySlices(workspaceRoot, projectName);
