@@ -1,8 +1,11 @@
 import { randomUUID } from 'node:crypto';
+import { writeFileSync, renameSync } from 'node:fs';
+import { join } from 'node:path';
 import type { MemoryEvent, SemanticSlice } from './models.js';
 import type { ProjectGraph } from './store/ProjectGraph.js';
 
 import { GraphStore } from './store/GraphStore.js';
+import { resolveProjectPath } from './store/pathResolver.js';
 
 export interface CurationResult {
   slicesCreated: number;
@@ -89,6 +92,34 @@ export class CurationWorker {
 
     if (stats) {
       GraphStore.insertSnapshot(workspaceRoot, graph.projectName, stats.unresolved);
+    }
+
+    if (slicesCreated > 0 || eventsToProcess.length > 0) {
+      const projectDir = resolveProjectPath(workspaceRoot, graph.projectName);
+      const summaryPath = join(projectDir, 'memory_summary.md');
+      const tempPath = summaryPath + '.tmp';
+
+      const slices = graph.getMemorySlices();
+      let mdContent = `# Memory Summary: ${graph.projectName}\n\n`;
+      mdContent += `> Last curated: ${new Date().toISOString()}\n\n`;
+      mdContent += `## Context Window Summary\n\n`;
+      
+      if (slices.length === 0) {
+        mdContent += `*No memory slices curated yet.*\n`;
+      } else {
+        // Show newest slices first
+        const sortedSlices = [...slices].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        for (const slice of sortedSlices.slice(0, 50)) { // limit to last 50 for brevity
+          mdContent += `- **${slice.topic}** (${slice.eventIds.length} events)\n  ${slice.summary}\n`;
+        }
+      }
+
+      try {
+        writeFileSync(tempPath, mdContent);
+        renameSync(tempPath, summaryPath);
+      } catch (err) {
+        console.warn(`[CurationWorker] Failed to write memory_summary.md for ${graph.projectName}:`, err);
+      }
     }
 
     return {

@@ -38,3 +38,14 @@ export function resolveSourceDir(workspaceRoot: string, projectName: string): st
   
   return projectRoot;
 }
+
+/**
+ * Resolve the project root directory.
+ */
+export function resolveProjectPath(workspaceRoot: string, projectName: string): string {
+  if (projectName.startsWith('@resources/')) {
+    const resourcePath = projectName.slice('@resources/'.length);
+    return resolve(workspaceRoot, 'Resources', 'references', resourcePath);
+  }
+  return resolve(workspaceRoot, 'Projects', projectName);
+}
