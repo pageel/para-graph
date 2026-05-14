@@ -245,6 +245,10 @@ export interface MemoryEvent {
   metadata?: Record<string, any>;
   /** ISO timestamp */
   timestamp: string;
+  /** Importance weight (1.0 default) */
+  weight?: number;
+  /** Soft delete flag */
+  archived?: boolean;
 }
 
 /** A semantically clustered slice of memory */

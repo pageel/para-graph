@@ -135,6 +135,26 @@ export class SqliteManager {
         VALUES (new.rowid, new.id, new.session_id, new.kind, new.content);
       END;
     `);
+
+    // 4. Schema Migrations
+    // v0.16.0: Add weight and archived to memory_events
+    try {
+      db.exec(`ALTER TABLE memory_events ADD COLUMN weight REAL DEFAULT 1.0;`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column name')) {
+        throw e;
+      }
+    }
+    
+    try {
+      db.exec(`ALTER TABLE memory_events ADD COLUMN archived INTEGER DEFAULT 0;`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column name')) {
+        throw e;
+      }
+    }
+    
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_events_archived ON memory_events(archived)`);
   }
 
   public static DatabaseConstructor: any = null;
