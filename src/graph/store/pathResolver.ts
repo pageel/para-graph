@@ -1,4 +1,5 @@
 import { resolve } from 'node:path';
+import { existsSync } from 'node:fs';
 
 /**
  * Resolve the graph storage directory for a project.
@@ -20,11 +21,20 @@ export function resolveGraphDir(workspaceRoot: string, projectName: string): str
  *
  * Standard projects have source in `repo/` subdirectory.
  * External resources ARE the source directory (no `repo/` subfolder).
+ * If `repo/` does not exist for a standard project, it falls back to the project root.
  */
 export function resolveSourceDir(workspaceRoot: string, projectName: string): string {
   if (projectName.startsWith('@resources/')) {
     const resourcePath = projectName.slice('@resources/'.length);
     return resolve(workspaceRoot, 'Resources', 'references', resourcePath);
   }
-  return resolve(workspaceRoot, 'Projects', projectName, 'repo');
+  
+  const projectRoot = resolve(workspaceRoot, 'Projects', projectName);
+  const repoDir = resolve(projectRoot, 'repo');
+  
+  if (existsSync(repoDir)) {
+    return repoDir;
+  }
+  
+  return projectRoot;
 }
