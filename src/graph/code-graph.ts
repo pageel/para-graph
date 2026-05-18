@@ -154,7 +154,7 @@ export class CodeGraph {
     const totalEdges = allEdges.length;
     let unresolvedEdges = 0;
     for (const e of allEdges) {
-      if (e.sourceId.startsWith('?unresolved') || e.targetId.startsWith('?unresolved')) {
+      if (e.sourceId.startsWith('?unresolved') || e.targetId.startsWith('?unresolved') || e.confidence === 'AMBIGUOUS') {
         unresolvedEdges++;
       }
     }
@@ -192,7 +192,8 @@ export class CodeGraph {
     return this.edgeList.filter(e =>
       e.targetId === nodeId &&
       e.relation === EdgeRelation.CALLS &&
-      !e.sourceId.startsWith('?unresolved')
+      !e.sourceId.startsWith('?unresolved') &&
+      e.confidence !== 'AMBIGUOUS'
     ).length;
   }
 
@@ -204,7 +205,8 @@ export class CodeGraph {
     return this.edgeList.filter(e =>
       e.sourceId === nodeId &&
       e.relation === EdgeRelation.CALLS &&
-      !e.targetId.startsWith('?unresolved')
+      !e.targetId.startsWith('?unresolved') &&
+      e.confidence !== 'AMBIGUOUS'
     ).length;
   }
 

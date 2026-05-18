@@ -89,7 +89,7 @@ export class ProjectGraph {
     const totalEdges = allEdges.length;
     let unresolvedEdges = 0;
     for (const e of allEdges) {
-      if (e.sourceId.startsWith('?unresolved') || e.targetId.startsWith('?unresolved')) {
+      if (e.sourceId.startsWith('?unresolved') || e.targetId.startsWith('?unresolved') || e.confidence === 'AMBIGUOUS') {
         unresolvedEdges++;
       }
     }
@@ -196,7 +196,7 @@ export class ProjectGraph {
     
     for (const edge of allEdges) {
       if (edge.relation !== EdgeRelation.CALLS) continue;
-      if (edge.sourceId.startsWith('?unresolved') || edge.targetId.startsWith('?unresolved')) continue;
+      if (edge.sourceId.startsWith('?unresolved') || edge.targetId.startsWith('?unresolved') || edge.confidence === 'AMBIGUOUS') continue;
       const src = degreeMap.get(edge.sourceId);
       if (src) src.fanOut++;
       const tgt = degreeMap.get(edge.targetId);
