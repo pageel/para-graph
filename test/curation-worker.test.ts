@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach, afterAll } from 'vitest';
 import { join } from 'node:path';
-import { existsSync, rmSync, mkdirSync, readFileSync } from 'node:fs';
+import { existsSync, rmSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { CurationWorker } from '../src/graph/curation-worker.js';
 import { ProjectGraph } from '../src/graph/store/ProjectGraph.js';
 
@@ -51,5 +51,27 @@ describe('CurationWorker', () => {
     // Verify incorrect location
     const incorrectPath = join(projectDir, 'memory_summary.md');
     expect(existsSync(incorrectPath)).toBe(false);
+  });
+
+  it('curate should delete legacy memory_summary.md if it exists', () => {
+    const graph = new ProjectGraph(projectName);
+    graph.pushMemoryEvent({
+      id: 'event-2',
+      kind: 'test',
+      sessionId: 'test-session',
+      content: 'test content',
+      timestamp: new Date().toISOString(),
+      weight: 1,
+      metadata: {}
+    });
+
+    // Create a legacy file
+    const legacyPath = join(projectDir, 'memory_summary.md');
+    writeFileSync(legacyPath, 'legacy content');
+
+    CurationWorker.curate(workspaceRoot, graph);
+
+    // Verify it was deleted
+    expect(existsSync(legacyPath)).toBe(false);
   });
 });

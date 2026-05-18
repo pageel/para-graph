@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { writeFileSync, renameSync, mkdirSync } from 'node:fs';
+import { writeFileSync, renameSync, mkdirSync, existsSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MemoryEvent, SemanticSlice } from './models.js';
 import type { ProjectGraph } from './store/ProjectGraph.js';
@@ -119,6 +119,11 @@ export class CurationWorker {
         mkdirSync(graphDir, { recursive: true });
         writeFileSync(tempPath, mdContent);
         renameSync(tempPath, summaryPath);
+
+        const legacyPath = join(projectDir, 'memory_summary.md');
+        if (existsSync(legacyPath)) {
+          unlinkSync(legacyPath);
+        }
       } catch (err) {
         console.warn(`[CurationWorker] Failed to write memory_summary.md for ${graph.projectName}:`, err);
       }
