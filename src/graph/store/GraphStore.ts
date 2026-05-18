@@ -1,5 +1,5 @@
 import { resolve, join } from 'node:path';
-import { readFileSync, writeFileSync, existsSync, renameSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, renameSync, statSync } from 'node:fs';
 import { randomUUID } from 'node:crypto';
 import { ProjectGraph } from './ProjectGraph.js';
 import { resolveGraphDir } from './pathResolver.js';
@@ -10,6 +10,8 @@ import type { GraphNode, GraphEdge, AddEdgesResult, GraphMetadata, MemoryEvent, 
 export class GraphStore {
   private static readonly MAX_CAPACITY = 3;
   private static readonly cache = new Map<string, ProjectGraph>();
+  private static readonly mtimeCache = new Map<string, number>();
+  private static readonly lastCheckTime = new Map<string, number>();
 
   /**
    * Get the graph for a specific project.
@@ -18,11 +20,49 @@ export class GraphStore {
    */
   public static getGraph(workspaceRoot: string, projectName: string): ProjectGraph {
     if (this.cache.has(projectName)) {
-      // Move to end (most recently used)
-      const graph = this.cache.get(projectName)!;
-      this.cache.delete(projectName);
-      this.cache.set(projectName, graph);
-      return graph;
+      // TTL Throttle: Only check disk every 1000ms
+      const now = Date.now();
+      const lastCheck = this.lastCheckTime.get(projectName) || 0;
+      if (now - lastCheck >= 1000) {
+        this.lastCheckTime.set(projectName, now);
+        const graphDir = resolveGraphDir(workspaceRoot, projectName);
+        const entitiesPath = join(graphDir, 'entities.jsonl');
+        
+        if (existsSync(entitiesPath)) {
+          try {
+            const currentMtime = statSync(entitiesPath).mtimeMs;
+            const cachedMtime = this.mtimeCache.get(projectName) || 0;
+            
+            if (currentMtime > cachedMtime) {
+              // File has been updated on disk -> Evict and reload
+              this.flushGraph(projectName);
+              // Fall through to loadFromDisk below
+            } else {
+              // Move to end (most recently used)
+              const graph = this.cache.get(projectName)!;
+              this.cache.delete(projectName);
+              this.cache.set(projectName, graph);
+              return graph;
+            }
+          } catch (e) {
+            // Ignore stat errors, fallback to cache below
+          }
+        }
+        
+        // If we reach here and it's still in cache (wasn't flushed), return it
+        if (this.cache.has(projectName)) {
+          const graph = this.cache.get(projectName)!;
+          this.cache.delete(projectName);
+          this.cache.set(projectName, graph);
+          return graph;
+        }
+      } else {
+        // Within TTL, move to end and return
+        const graph = this.cache.get(projectName)!;
+        this.cache.delete(projectName);
+        this.cache.set(projectName, graph);
+        return graph;
+      }
     }
 
     // Cache Miss -> Load from disk
@@ -32,7 +72,19 @@ export class GraphStore {
     if (this.cache.size >= this.MAX_CAPACITY) {
       const firstKey = this.cache.keys().next().value;
       if (firstKey) {
-        this.cache.delete(firstKey);
+        this.flushGraph(firstKey);
+      }
+    }
+
+    // Set initial mtime on load
+    const graphDir = resolveGraphDir(workspaceRoot, projectName);
+    const entitiesPath = join(graphDir, 'entities.jsonl');
+    if (existsSync(entitiesPath)) {
+      try {
+        this.mtimeCache.set(projectName, statSync(entitiesPath).mtimeMs);
+        this.lastCheckTime.set(projectName, Date.now());
+      } catch (e) {
+        this.mtimeCache.set(projectName, 0);
       }
     }
 
@@ -43,7 +95,12 @@ export class GraphStore {
   public static flushGraph(projectName: string): void {
     const graph = this.cache.get(projectName);
     if (graph) {
-      graph.close();
+      // Async Deferred Close: Wait 5s before closing DB to prevent crashing concurrent MCP queries
+      setTimeout(() => {
+        try {
+          graph.close();
+        } catch (e) {}
+      }, 5000).unref();
       this.cache.delete(projectName);
     }
   }
@@ -169,6 +226,10 @@ export class GraphStore {
         graph.updateNode(entity);
       }
     }
+    
+    // Update mtimeCache directly to avoid OS delay false-positives
+    this.mtimeCache.set(projectName, Date.now());
+    this.lastCheckTime.set(projectName, Date.now());
   }
 
   /**

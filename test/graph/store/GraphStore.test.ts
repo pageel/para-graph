@@ -127,4 +127,48 @@ describe('GraphStore Refactoring', () => {
     expect(row.edges_count).toBe(1);
     expect(row.unresolved_count).toBe(5);
   });
+
+  it('should invalidate cache based on mtime TTL throttle', async () => {
+    const testProject = 'mtime-ttl-test';
+    const workspaceRoot = process.cwd();
+    const graphDir = require('node:path').join(workspaceRoot, 'Projects', testProject, '.beads', 'graph');
+    if (!fs.existsSync(graphDir)) fs.mkdirSync(graphDir, { recursive: true });
+    
+    GraphStore.flushGraph(testProject);
+    const entitiesPath = require('node:path').join(graphDir, 'entities.jsonl');
+    
+    // Create initial file
+    fs.writeFileSync(entitiesPath, '{"id":"n1","name":"N1","type":"class","created_at":1,"updated_at":1}\n', 'utf-8');
+    
+    // Hack TTL to force check
+    (GraphStore as any).lastCheckTime.set(testProject, 0);
+    
+    // First call: Should load from disk and cache
+    const graph1 = GraphStore.getGraph(workspaceRoot, testProject);
+    expect(graph1).toBeDefined();
+    
+    // Inject a node into the returned graph (in-memory only)
+    graph1.addNode({ id: 'in-memory', name: 'Memory', type: 'class', created_at: 1, updated_at: 1 } as any);
+    
+    // Update file on disk to simulate external CLI change
+    await new Promise(r => setTimeout(r, 100)); // Ensure mtime difference
+    fs.writeFileSync(entitiesPath, '{"id":"n1","name":"N1","type":"class","created_at":1,"updated_at":1}\n{"id":"n2","name":"N2","type":"class","created_at":1,"updated_at":1}\n', 'utf-8');
+    
+    // Second call: Within TTL (1000ms), should return cached graph (including in-memory node)
+    const graph2 = GraphStore.getGraph(workspaceRoot, testProject);
+    expect(graph2.getNode('in-memory')).toBeDefined();
+    
+    // Hack the lastCheckTime to bypass TTL
+    (GraphStore as any).lastCheckTime.set(testProject, 0);
+    
+    // Third call: Past TTL, should detect new mtime, evict cache, and reload from disk
+    const graph3 = GraphStore.getGraph(workspaceRoot, testProject);
+    
+    // The new graph should NOT have the in-memory node (it was evicted and reloaded)
+    expect(graph3.getNode('in-memory')).toBeUndefined();
+    
+    // Cleanup
+    GraphStore.flushGraph(testProject);
+    if (fs.existsSync(entitiesPath)) fs.rmSync(entitiesPath);
+  });
 });
