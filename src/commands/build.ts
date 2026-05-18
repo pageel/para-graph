@@ -17,6 +17,7 @@ import { CodeGraph } from '../graph/code-graph.js';
 import { exportToJsonl } from '../graph/jsonl-exporter.js';
 import { importFromJsonl } from '../graph/jsonl-importer.js';
 import { resolveEdges } from '../graph/edge-resolver.js';
+import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import type { GraphNode } from '../graph/models.js';
 
 export interface BuildOptions {
@@ -120,6 +121,20 @@ export function runBuild(options: BuildOptions): void {
   if (existsSync(lockFile)) {
     unlinkSync(lockFile);
     console.log('[para-graph] Reset hook reminder (graph updated).');
+  }
+
+  // Step 9: Invalidate God Nodes cache (QW-1)
+  try {
+    const dbPath = join(outputDir, `${options.projectName}.db`);
+    if (existsSync(dbPath)) {
+      const manager = new SqliteManager(options.projectName, dbPath);
+      const db = manager.getConnection();
+      db.prepare(`DELETE FROM metadata WHERE key = 'god_nodes_cache'`).run();
+      manager.close();
+      console.log('[para-graph] Invalidated god_nodes_cache.');
+    }
+  } catch (err) {
+    console.warn(`[para-graph] Failed to invalidate cache:`, err);
   }
 
   console.log(`[para-graph] Done. Output at: ${outputDir}`);

@@ -329,5 +329,12 @@ export class GraphStore {
     }
     return undefined;
   }
+
+  public static clearCustomMetadata(workspaceRoot: string, projectName: string, key: string): void {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    if (graph.repository) {
+      graph.repository.clearCustomMetadata(key);
+    }
+  }
 }
 

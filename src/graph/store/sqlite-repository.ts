@@ -78,4 +78,10 @@ export class SqliteGraphRepository {
     const row = stmt.get(key) as { value: string } | undefined;
     return row ? JSON.parse(row.value) : undefined;
   }
+
+  public clearCustomMetadata(key: string): void {
+    const db = this.manager.getConnection();
+    const stmt = db.prepare(`DELETE FROM metadata WHERE key = ?`);
+    stmt.run(key);
+  }
 }
