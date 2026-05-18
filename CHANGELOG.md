@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.6] - 2026-05-18
+
+### Fixed
+- `ProjectGraph.getMetadata()`: Add missing `resolution` block — was never included in this class, causing `metadata.json` to always omit resolution data after `graph_enrich` calls (root cause)
+- `GraphStore.saveMetadata()`: Implement merge-safe write — preserve existing `resolution` from disk when in-memory edges are empty (LRU cache eviction cold-start scenario)
+- `GraphStore.saveMetadata()`: Fix stale version fallback from hardcoded `'0.15.4'` to `'unknown'`
+
+### Tests
+- Add `test/graph/store/saveMetadata.test.ts` — TDD-verified: RED→GREEN cycle, 2 test cases
+
 ## [0.15.5] - 2026-05-18
 
 ### Fixed
