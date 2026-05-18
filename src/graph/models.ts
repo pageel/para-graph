@@ -224,6 +224,8 @@ export interface GraphMetadata {
   enrichableNodeCount?: number;
   /** Enrichment progress tracking — undefined if no enrichment has occurred */
   enrichment?: EnrichmentStats;
+  /** Overall health score based on resolution and enrichment weights */
+  healthScore?: number;
 }
 
 // --- Memory Engine Types (P11: Compact Memory) ---

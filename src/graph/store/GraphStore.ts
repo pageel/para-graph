@@ -223,21 +223,33 @@ export class GraphStore {
     const graph = this.getGraph(workspaceRoot, projectName);
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const metadataPath = join(graphDir, 'metadata.json');
-    const stats = graph.getStats();
-    const enrichment = graph.enrichmentStats;
-    const enrichableNodeCount = graph.getAllNodes().filter(n => n.type !== 'file').length;
+    
+    // Get version
+    let version = '0.15.4';
+    try {
+      const packageJsonPath = resolve(process.cwd(), 'package.json');
+      const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+      if (pkg.version) version = pkg.version;
+    } catch (e) {}
 
-    const metadata: GraphMetadata = {
-      version: '0.11.1',
-      generatedAt: new Date().toISOString(),
-      nodeCount: stats.nodeCount,
-      edgeCount: stats.edgeCount,
-      fileCount: stats.fileCount,
-      projectName,
-      enrichableNodeCount,
-      ...(enrichment.totalEnriched > 0 ? { enrichment } : {}),
-    };
+    const metadata = graph.getMetadata(projectName, version);
     writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + '\n', 'utf-8');
+
+    if (graph.repository) {
+      try {
+        const db = (graph.repository as any).manager.getConnection();
+        const stmt = db.prepare(`
+          UPDATE project_snapshots 
+          SET metrics = ? 
+          WHERE project_name = ? AND timestamp = (
+            SELECT MAX(timestamp) FROM project_snapshots WHERE project_name = ?
+          )
+        `);
+        stmt.run(JSON.stringify({ healthScore: metadata.healthScore }), projectName, projectName);
+      } catch (e) {
+        console.error(`[GraphStore] Failed to update project_snapshots with metrics:`, e);
+      }
+    }
   }
 
   /**

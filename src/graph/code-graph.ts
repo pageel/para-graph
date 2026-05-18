@@ -5,7 +5,7 @@
  * dual indexing for fast lookup by ID and by file path.
  */
 
-import type { GraphNode, GraphEdge, SemanticAttributes, EnrichmentStats } from './models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, EnrichmentStats, GraphMetadata } from './models.js';
 import { EdgeRelation, NodeType } from './models.js';
 
 export class CodeGraph {
@@ -136,6 +136,43 @@ export class CodeGraph {
       nodeCount: this.nodeMap.size,
       edgeCount: this.edgeList.length,
       fileCount: this.nodesByFile.size,
+    };
+  }
+
+  /** Calculate project metadata including the weighted healthScore */
+  getMetadata(projectName: string, version: string): GraphMetadata {
+    const stats = this.getStats();
+    const allNodes = this.getAllNodes();
+    const enrichableNodeCount = allNodes.filter(n => n.type !== NodeType.FILE).length;
+    
+    // 70% enrichment weight
+    const enrichmentRate = enrichableNodeCount > 0 ? this._enrichmentStats.totalEnriched / enrichableNodeCount : 0;
+    const enrichmentScore = enrichmentRate * 70;
+    
+    // 30% resolution weight
+    const allEdges = this.getAllEdges();
+    const totalEdges = allEdges.length;
+    let unresolvedEdges = 0;
+    for (const e of allEdges) {
+      if (e.sourceId.startsWith('?unresolved') || e.targetId.startsWith('?unresolved')) {
+        unresolvedEdges++;
+      }
+    }
+    const resolutionRate = totalEdges > 0 ? (totalEdges - unresolvedEdges) / totalEdges : 1;
+    const resolutionScore = resolutionRate * 30;
+    
+    const healthScore = Math.round(enrichmentScore + resolutionScore);
+    
+    return {
+      version,
+      generatedAt: new Date().toISOString(),
+      nodeCount: stats.nodeCount,
+      edgeCount: stats.edgeCount,
+      fileCount: stats.fileCount,
+      projectName,
+      enrichableNodeCount,
+      ...(this._enrichmentStats.totalEnriched > 0 ? { enrichment: this.enrichmentStats } : {}),
+      healthScore,
     };
   }
 

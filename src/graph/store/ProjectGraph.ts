@@ -11,6 +11,7 @@ import type {
   MemoryEvent,
   SemanticSlice,
   GodNodeProfile,
+  GraphMetadata,
 } from '../models.js';
 import { EdgeRelation } from '../models.js';
 import { AstStore } from './AstStore.js';
@@ -74,6 +75,42 @@ export class ProjectGraph {
     return this.astStore.getStats();
   }
   
+  public getMetadata(projectName: string, version: string): GraphMetadata {
+    const stats = this.getStats();
+    const allNodes = this.getAllNodes();
+    const enrichableNodeCount = allNodes.filter(n => n.type !== 'file').length;
+    
+    // 70% enrichment weight
+    const enrichmentRate = enrichableNodeCount > 0 ? this.enrichmentStats.totalEnriched / enrichableNodeCount : 0;
+    const enrichmentScore = enrichmentRate * 70;
+    
+    // 30% resolution weight
+    const allEdges = this.getAllEdges();
+    const totalEdges = allEdges.length;
+    let unresolvedEdges = 0;
+    for (const e of allEdges) {
+      if (e.sourceId.startsWith('?unresolved') || e.targetId.startsWith('?unresolved')) {
+        unresolvedEdges++;
+      }
+    }
+    const resolutionRate = totalEdges > 0 ? (totalEdges - unresolvedEdges) / totalEdges : 1;
+    const resolutionScore = resolutionRate * 30;
+    
+    const healthScore = Math.round(enrichmentScore + resolutionScore);
+    
+    return {
+      version,
+      generatedAt: new Date().toISOString(),
+      nodeCount: stats.nodeCount,
+      edgeCount: stats.edgeCount,
+      fileCount: stats.fileCount,
+      projectName,
+      enrichableNodeCount,
+      ...(this.enrichmentStats.totalEnriched > 0 ? { enrichment: this.enrichmentStats } : {}),
+      healthScore,
+    };
+  }
+
   public updateNode(node: GraphNode): void {
     this.astStore.updateNode(node);
   }
