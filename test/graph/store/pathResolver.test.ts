@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { resolveSourceDir, resolveGraphDir } from '../../../src/graph/store/pathResolver';
+import { resolveSourceDir, resolveGraphDir } from '../../../src/graph/store/pathResolver.js';
 import * as fs from 'node:fs';
 import { resolve } from 'node:path';
 

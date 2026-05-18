@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { writeFileSync, renameSync } from 'node:fs';
+import { writeFileSync, renameSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { MemoryEvent, SemanticSlice } from './models.js';
 import type { ProjectGraph } from './store/ProjectGraph.js';
@@ -96,7 +96,8 @@ export class CurationWorker {
 
     if (slicesCreated > 0 || eventsToProcess.length > 0) {
       const projectDir = resolveProjectPath(workspaceRoot, graph.projectName);
-      const summaryPath = join(projectDir, 'memory_summary.md');
+      const graphDir = join(projectDir, '.beads', 'graph');
+      const summaryPath = join(graphDir, 'memory-log.md');
       const tempPath = summaryPath + '.tmp';
 
       const slices = graph.getMemorySlices();
@@ -115,6 +116,7 @@ export class CurationWorker {
       }
 
       try {
+        mkdirSync(graphDir, { recursive: true });
         writeFileSync(tempPath, mdContent);
         renameSync(tempPath, summaryPath);
       } catch (err) {
