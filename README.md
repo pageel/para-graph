@@ -55,11 +55,12 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Multi-Language Support** — TypeScript, TSX, Python 🐍, Bash 🐚, Go 🐹, PHP 🐘
 - **Deep CALLS Capture** — Extracts member call chains, object+method pairs, and constructors
 - **Topological Edge Confidence** — Edge classification (`EXTRACTED`, `INFERRED`, `AMBIGUOUS`)
-- **God Nodes Detection** — Runtime degree analytics (`fanIn`/`fanOut`) to identify architectural choke points
+- **God Nodes Detection** — Runtime degree analytics (`fanIn`/`fanOut`) with SQLite caching to identify architectural choke points
 - **Deterministic parsing** — Tree-sitter AST & Pure SSEC Queries, no LLM heuristics
-- **JSONL output** — one entity/relation per line, easy to stream and process
+- **JSONL & SQLite Dual-Backend** — Robust storage with FTS5 semantic search and fast cold starts
 - **Global Workspace Server** — Serve multiple project graphs simultaneously via MCP
 - **Semantic Enrichment** — Agent-driven context tagging (summary, complexity, domain concepts)
+- **Compact Memory** — Architectural logs consolidated in `.beads/graph/` for context retention
 - **Fast In-Memory Query Engine** — Indexed lookups with LRU cache (Max=3 projects)
 - **Impact Analysis** — BFS traversal to find all affected nodes when changing a code entity
 - **Context Bundle** — Get source code, callers, callees, imports, and tests in one MCP call
@@ -390,8 +391,14 @@ This tool ships AI intelligence artifacts that enhance the PARA Workspace agent 
 | P6 | Impact & Context Queries | ✅ Done |
 | P7 | Agentic Bash Edge Resolution | ✅ Done |
 | P8 | Deep CALLS + Pattern Detection | ✅ Done |
-| P9 | Documentation & Stable Release (v1.0.0) | 📋 Planned |
+| P9 | Edge Resolution & Topology Analytics | ✅ Done |
 | P10 | Agent Auto-trigger (Hook Injection) | ✅ Done |
+| P11 | Compact Memory | ✅ Done |
+| P12 | SQLite Storage Engine (Dual Backend) | ✅ Done |
+| P13 | Freshness-Aware Memory | ✅ Done |
+| P14 | Schema Evolution + Code Search | 📋 Planned |
+| P-Vis | Graph Visualization MVP | 📋 Planned |
+| PX | Documentation & Stable Release (v1.0.0) | 📋 Planned |
 
 ## 📄 License
 
