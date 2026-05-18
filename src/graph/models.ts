@@ -226,6 +226,13 @@ export interface GraphMetadata {
   enrichment?: EnrichmentStats;
   /** Overall health score based on resolution and enrichment weights */
   healthScore?: number;
+  /** Edge resolution statistics */
+  resolution?: {
+    totalEdges: number;
+    resolvedEdges: number;
+    unresolvedEdges: number;
+    resolutionRate: number;
+  };
 }
 
 // --- Memory Engine Types (P11: Compact Memory) ---

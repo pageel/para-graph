@@ -7,8 +7,9 @@
  * - metadata.json: Summary statistics + enrichment tracking (P-Tracker v0.11.1)
  */
 
-import { writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+import { join, resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { CodeGraph } from './code-graph.js';
 import type { GraphMetadata } from './models.js';
 
@@ -49,12 +50,15 @@ export function exportToJsonl(graph: CodeGraph, outputDir: string, projectName: 
   // Export metadata (typed as GraphMetadata — P-Tracker v0.11.1)
   const metadataPath = join(resolved, 'metadata.json');
   
-  let version = '0.15.4';
+  let version = 'unknown';
   try {
-    // Attempt to read version from package.json if running in dev mode
-    const pkgPath = resolve(process.cwd(), 'package.json');
+    // Read version from the tool's package.json dynamically
+    const __filename = fileURLToPath(import.meta.url);
+    const __dirname = dirname(__filename);
+    const pkgPath = resolve(__dirname, '../../package.json');
+    
     if (existsSync(pkgPath)) {
-      const pkg = JSON.parse(require('node:fs').readFileSync(pkgPath, 'utf-8'));
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
       if (pkg.version) version = pkg.version;
     }
   } catch (e) {}
