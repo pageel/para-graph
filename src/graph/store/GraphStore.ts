@@ -225,6 +225,7 @@ export class GraphStore {
     const metadataPath = join(graphDir, 'metadata.json');
     const stats = graph.getStats();
     const enrichment = graph.enrichmentStats;
+    const enrichableNodeCount = graph.getAllNodes().filter(n => n.type !== 'file').length;
 
     const metadata: GraphMetadata = {
       version: '0.11.1',
@@ -233,6 +234,7 @@ export class GraphStore {
       edgeCount: stats.edgeCount,
       fileCount: stats.fileCount,
       projectName,
+      enrichableNodeCount,
       ...(enrichment.totalEnriched > 0 ? { enrichment } : {}),
     };
     writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + '\n', 'utf-8');
