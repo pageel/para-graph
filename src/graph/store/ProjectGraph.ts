@@ -107,6 +107,12 @@ export class ProjectGraph {
       projectName,
       enrichableNodeCount,
       ...(this.enrichmentStats.totalEnriched > 0 ? { enrichment: this.enrichmentStats } : {}),
+      resolution: {
+        totalEdges,
+        resolvedEdges: totalEdges - unresolvedEdges,
+        unresolvedEdges,
+        resolutionRate: Number(resolutionRate.toFixed(4)),
+      },
       healthScore,
     };
   }

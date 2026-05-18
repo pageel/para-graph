@@ -284,9 +284,9 @@ export class GraphStore {
     const graph = this.getGraph(workspaceRoot, projectName);
     const graphDir = resolveGraphDir(workspaceRoot, projectName);
     const metadataPath = join(graphDir, 'metadata.json');
-    
-    // Get version
-    let version = '0.15.4';
+
+    // Get version from package.json — fallback to 'unknown' (not a hardcoded stale version)
+    let version = 'unknown';
     try {
       const packageJsonPath = resolve(process.cwd(), 'package.json');
       const pkg = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
@@ -294,6 +294,22 @@ export class GraphStore {
     } catch (e) {}
 
     const metadata = graph.getMetadata(projectName, version);
+
+    // MERGE-SAFE FIX (v0.15.6): When in-memory edges are empty (e.g. LRU cache eviction
+    // between saveGraph() calls), computed resolution may be undefined or totalEdges=0.
+    // Preserve the existing resolution block from disk to prevent data loss.
+    const resolutionMissing = !metadata.resolution || metadata.resolution.totalEdges === 0;
+    if (resolutionMissing && existsSync(metadataPath)) {
+      try {
+        const existing = JSON.parse(readFileSync(metadataPath, 'utf-8'));
+        if (existing.resolution && existing.resolution.totalEdges > 0) {
+          metadata.resolution = existing.resolution;
+        }
+      } catch (e) {
+        // Ignore parse errors — proceed with computed (possibly zeroed) metadata
+      }
+    }
+
     writeFileSync(metadataPath, JSON.stringify(metadata, null, 2) + '\n', 'utf-8');
 
     if (graph.repository) {
@@ -312,6 +328,7 @@ export class GraphStore {
       }
     }
   }
+
 
   /**
    * Save the full graph (entities + relations + metadata) to disk.
