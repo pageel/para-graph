@@ -54,12 +54,6 @@ post_install() {
   # This hook runs AFTER install_agents() — which prints "Source not found"
   # warnings because templates/ is absent. We fetch and install correctly here.
 
-  if [ -d "$TOOL_INSTALL_DIR/templates" ]; then
-    # Legacy tarball with bundled templates — nothing to do
-    echo "  📊 para-graph: install hooks executed successfully."
-    return 0
-  fi
-
   echo "  📊 para-graph: fetching AI Intelligence from GitHub..."
 
   # Guard: ensure fetch function is available in scope
