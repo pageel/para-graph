@@ -10,7 +10,9 @@ import type {
   EnrichmentStats,
   MemoryEvent,
   SemanticSlice,
+  GodNodeProfile,
 } from '../models.js';
+import { EdgeRelation } from '../models.js';
 import { AstStore } from './AstStore.js';
 import { MemoryStore } from './MemoryStore.js';
 import type { SqliteGraphRepository } from './sqlite-repository.js';
@@ -141,5 +143,51 @@ export class ProjectGraph {
     }
     
     return bundle;
+  }
+
+  // --- Graph Analytics ---
+
+  public getTopGodNodes(topN: number = 50, unenrichedOnly: boolean = false): GodNodeProfile[] {
+    const allNodes = this.getAllNodes();
+    const allEdges = this.getAllEdges();
+
+    const degreeMap = new Map<string, { fanIn: number; fanOut: number }>();
+    for (const node of allNodes) {
+      if (node.type === 'file') continue;
+      degreeMap.set(node.id, { fanIn: 0, fanOut: 0 });
+    }
+    
+    for (const edge of allEdges) {
+      if (edge.relation !== EdgeRelation.CALLS) continue;
+      if (edge.sourceId.startsWith('?unresolved') || edge.targetId.startsWith('?unresolved')) continue;
+      const src = degreeMap.get(edge.sourceId);
+      if (src) src.fanOut++;
+      const tgt = degreeMap.get(edge.targetId);
+      if (tgt) tgt.fanIn++;
+    }
+
+    let profiles: GodNodeProfile[] = Array.from(degreeMap.entries()).map(([id, { fanIn, fanOut }]) => {
+      const node = this.getNode(id)!;
+      return {
+        id,
+        name: node.name,
+        type: node.type,
+        filePath: node.filePath,
+        degree: fanIn + fanOut,
+        fanIn,
+        fanOut,
+        enriched: !!node.semantic,
+      };
+    });
+
+    if (unenrichedOnly) {
+      profiles = profiles.filter(p => !p.enriched);
+    }
+
+    const effectiveTopN = Math.min(topN, 50);
+    return profiles
+      .filter(p => p.degree > 0)
+      .sort((a, b) => b.degree - a.degree)
+      .slice(0, effectiveTopN);
   }
 }

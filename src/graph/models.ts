@@ -283,3 +283,15 @@ export interface ProjectSnapshot {
   unresolvedCount: number;
 }
 
+/** Profile of a highly connected node (God Node) */
+export interface GodNodeProfile {
+  id: string;
+  name: string;
+  type: string;
+  filePath: string;
+  degree: number;
+  fanIn: number;
+  fanOut: number;
+  enriched: boolean;
+}
+

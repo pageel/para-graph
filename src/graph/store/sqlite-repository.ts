@@ -61,4 +61,21 @@ export class SqliteGraphRepository {
       };
     }
   }
+
+  public setCustomMetadata(key: string, value: any): void {
+    const db = this.manager.getConnection();
+    const strValue = JSON.stringify(value);
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO metadata (key, value)
+      VALUES (?, ?)
+    `);
+    stmt.run(key, strValue);
+  }
+
+  public getCustomMetadata(key: string): any {
+    const db = this.manager.getConnection();
+    const stmt = db.prepare(`SELECT value FROM metadata WHERE key = ?`);
+    const row = stmt.get(key) as { value: string } | undefined;
+    return row ? JSON.parse(row.value) : undefined;
+  }
 }

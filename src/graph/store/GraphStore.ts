@@ -314,5 +314,20 @@ export class GraphStore {
 
     return snapshot;
   }
+
+  public static setCustomMetadata(workspaceRoot: string, projectName: string, key: string, value: any): void {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    if (graph.repository) {
+      graph.repository.setCustomMetadata(key, value);
+    }
+  }
+
+  public static getCustomMetadata(workspaceRoot: string, projectName: string, key: string): any {
+    const graph = this.getGraph(workspaceRoot, projectName);
+    if (graph.repository) {
+      return graph.repository.getCustomMetadata(key);
+    }
+    return undefined;
+  }
 }
 

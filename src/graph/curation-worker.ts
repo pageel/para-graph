@@ -94,6 +94,10 @@ export class CurationWorker {
       GraphStore.insertSnapshot(workspaceRoot, graph.projectName, stats.unresolved);
     }
 
+    // Cache God Nodes (QW-1)
+    const godNodes = graph.getTopGodNodes(50);
+    GraphStore.setCustomMetadata(workspaceRoot, graph.projectName, 'god_nodes_cache', godNodes);
+
     if (slicesCreated > 0 || eventsToProcess.length > 0) {
       const projectDir = resolveProjectPath(workspaceRoot, graph.projectName);
       const graphDir = join(projectDir, '.beads', 'graph');

@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection } from '../graph/models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile } from '../graph/models.js';
 import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
@@ -307,49 +307,27 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     async ({ projectName, topN, unenrichedOnly }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
       const allNodes = graph.getAllNodes();
-      const allEdges = graph.getAllEdges();
 
-      // Build degree map (fan-in + fan-out of CALLS edges, exclude ?unresolved)
-      const degreeMap = new Map<string, { fanIn: number; fanOut: number }>();
-      for (const node of allNodes) {
-        if (node.type === 'file') continue;
-        degreeMap.set(node.id, { fanIn: 0, fanOut: 0 });
+      const effectiveTopN = Math.min(topN ?? 10, 50);
+      
+      // Try to load from cache first
+      let cachedProfiles: GodNodeProfile[] | undefined = GraphStore.getCustomMetadata(workspaceRoot, projectName, 'god_nodes_cache');
+      
+      let profiles: GodNodeProfile[] = [];
+      if (cachedProfiles && Array.isArray(cachedProfiles) && cachedProfiles.length > 0) {
+        profiles = cachedProfiles;
+      } else {
+        // Fallback to calculation
+        profiles = graph.getTopGodNodes(50, false);
       }
-      for (const edge of allEdges) {
-        if (edge.relation !== EdgeRelation.CALLS) continue;
-        if (edge.sourceId.startsWith('?unresolved') || edge.targetId.startsWith('?unresolved')) continue;
-        const src = degreeMap.get(edge.sourceId);
-        if (src) src.fanOut++;
-        const tgt = degreeMap.get(edge.targetId);
-        if (tgt) tgt.fanIn++;
-      }
-
-      // Build profiles
-      let profiles = Array.from(degreeMap.entries()).map(([id, { fanIn, fanOut }]) => {
-        const node = graph.getNode(id)!;
-        return {
-          id,
-          name: node.name,
-          type: node.type,
-          filePath: node.filePath,
-          degree: fanIn + fanOut,
-          fanIn,
-          fanOut,
-          enriched: !!node.semantic,
-        };
-      });
 
       // Filter unenriched if requested
       if (unenrichedOnly) {
         profiles = profiles.filter(p => !p.enriched);
       }
 
-      // Sort by degree descending, take topN
-      const effectiveTopN = Math.min(topN ?? 10, 50);
-      const result = profiles
-        .filter(p => p.degree > 0)
-        .sort((a, b) => b.degree - a.degree)
-        .slice(0, effectiveTopN);
+      // Take topN
+      const result = profiles.slice(0, effectiveTopN);
 
       return {
         content: [{
