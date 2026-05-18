@@ -90,7 +90,8 @@ export class SqliteManager {
         timestamp INTEGER NOT NULL,
         nodes_count INTEGER NOT NULL,
         edges_count INTEGER NOT NULL,
-        unresolved_count INTEGER NOT NULL
+        unresolved_count INTEGER NOT NULL,
+        metrics TEXT DEFAULT NULL
       )
     `);
     db.exec(`
@@ -137,6 +138,14 @@ export class SqliteManager {
     `);
 
     // 4. Schema Migrations
+    try {
+      db.exec(`ALTER TABLE project_snapshots ADD COLUMN metrics TEXT DEFAULT NULL;`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column name')) {
+        throw e;
+      }
+    }
+
     // v0.16.0: Add weight and archived to memory_events
     try {
       db.exec(`ALTER TABLE memory_events ADD COLUMN weight REAL DEFAULT 1.0;`);

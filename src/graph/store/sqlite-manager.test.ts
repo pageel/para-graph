@@ -110,4 +110,14 @@ describe('SqliteManager', () => {
     
     manager.close();
   });
+
+  it('should add metrics column to project_snapshots on initSchema', () => {
+    const manager = new SqliteManager('test-project', testDbPath);
+    activeManager = manager;
+    manager.initSchema();
+    const db = manager.getConnection() as any;
+    
+    const allSql = db.executedQueries.join('\n');
+    expect(allSql).toContain('metrics TEXT DEFAULT NULL');
+  });
 });
