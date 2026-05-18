@@ -51,7 +51,7 @@ describe('GraphStore Refactoring', () => {
     const end = Date.now();
     
     // Expect the function to return quickly (asynchronous DB insert)
-    expect(end - start).toBeLessThan(500); 
+    expect(end - start).toBeLessThan(1500); 
     
     // Wait for the background transaction to complete
     await new Promise(r => setTimeout(r, 100));

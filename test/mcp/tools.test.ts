@@ -67,6 +67,16 @@ describe('MCP Tools: graph_god_nodes', () => {
     const mockGraph = {
       getAllNodes: vi.fn().mockReturnValue(nodes),
       getNode: vi.fn().mockImplementation((id: string) => nodes.find(n => n.id === id)),
+      getTopGodNodes: vi.fn().mockReturnValue([{
+        id: 'node2',
+        name: 'node2',
+        type: 'function',
+        filePath: 'test.ts',
+        degree: 2,
+        fanIn: 1,
+        fanOut: 1,
+        enriched: false
+      }]),
       getAllEdges: vi.fn().mockReturnValue([
         { sourceId: 'node1', targetId: 'node2', relation: 'CALLS' },
         { sourceId: 'node2', targetId: 'node3', relation: 'CALLS' }

@@ -34,7 +34,7 @@ describe('CurationWorker', () => {
   });
 
   it('curate should write memory-log.md to .beads/graph/ and not memory_summary.md to project root', () => {
-    const graph = new ProjectGraph(projectName);
+    const graph = GraphStore.getGraph(workspaceRoot, projectName);
     // Add a mock event to trigger curation
     graph.pushMemoryEvent({
       id: 'event-1',
@@ -59,8 +59,23 @@ describe('CurationWorker', () => {
     graph.close();
   });
 
+  it('should call GraphStore.insertSnapshot after curation if stats provided', () => {
+    const graph = GraphStore.getGraph(workspaceRoot, projectName);
+    graph.pushMemoryEvent({ id: 'e1', sessionId: 's1', kind: 'observation', content: 'test', timestamp: '' });
+    
+    const stats = { nodes: 10, edges: 5, unresolved: 2 };
+    const spy = vi.spyOn(GraphStore, 'insertSnapshot').mockImplementation(() => ({}) as any);
+    
+    CurationWorker.curate(workspaceRoot, graph, stats);
+    
+    expect(spy).toHaveBeenCalledWith(workspaceRoot, projectName, expect.any(Number));
+    
+    spy.mockRestore();
+    graph.close();
+  });
+
   it('curate should delete legacy memory_summary.md if it exists', () => {
-    const graph = new ProjectGraph(projectName);
+    const graph = GraphStore.getGraph(workspaceRoot, projectName);
     graph.pushMemoryEvent({
       id: 'event-2',
       kind: 'test',
@@ -84,7 +99,7 @@ describe('CurationWorker', () => {
   });
 
   it('ProjectGraph.getTopGodNodes should return correct sorted array', () => {
-    const graph = new ProjectGraph(projectName);
+    const graph = GraphStore.getGraph(workspaceRoot, projectName);
     graph.addNode({ id: 'f1', name: 'f1', type: NodeType.FUNCTION, filePath: 'f1.ts', startLine: 1, endLine: 2, exportType: 'none' as any, signature: '' });
     graph.addNode({ id: 'f2', name: 'f2', type: NodeType.FUNCTION, filePath: 'f2.ts', startLine: 1, endLine: 2, exportType: 'none' as any, signature: '' });
     graph.addNode({ id: 'f3', name: 'f3', type: NodeType.FUNCTION, filePath: 'f3.ts', startLine: 1, endLine: 2, exportType: 'none' as any, signature: '' });
