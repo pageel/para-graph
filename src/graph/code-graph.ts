@@ -83,9 +83,16 @@ export class CodeGraph {
     this.nodesByFile.set(node.filePath, fileNodes);
   }
 
-  /** Add an edge to the graph. */
-  addEdge(edge: GraphEdge): void {
+  /** Add an edge to the graph. Deduplicates by sourceId+targetId+relation. */
+  addEdge(edge: GraphEdge): boolean {
+    const exists = this.edgeList.some(
+      e => e.sourceId === edge.sourceId
+        && e.targetId === edge.targetId
+        && e.relation === edge.relation
+    );
+    if (exists) return false;
     this.edgeList.push(edge);
+    return true;
   }
 
   /** Get a node by its unique ID. */

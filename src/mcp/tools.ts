@@ -283,6 +283,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           relation: e.relation as EdgeRelation,
           sourceFile: e.sourceFile ?? sourceNode?.filePath ?? e.sourceId.split('::')[0],
           sourceLine: e.sourceLine ?? sourceNode?.startLine ?? 0,
+          confidence: 'INFERRED',
         };
       });
 

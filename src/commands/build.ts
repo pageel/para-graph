@@ -18,7 +18,7 @@ import { exportToJsonl } from '../graph/jsonl-exporter.js';
 import { importFromJsonl } from '../graph/jsonl-importer.js';
 import { resolveEdges } from '../graph/edge-resolver.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
-import type { GraphNode } from '../graph/models.js';
+import type { GraphNode, GraphEdge } from '../graph/models.js';
 
 export interface BuildOptions {
   targetDir: string;
@@ -41,6 +41,7 @@ export function runBuild(options: BuildOptions): void {
 
   // Step 1: Default to loading existing graph unless --clean is set (H2-1)
   let existingNodes: Map<string, GraphNode> = new Map();
+  let existingInferredEdges: GraphEdge[] = [];
   let existingStats = undefined;
   if (!options.useClean && existsSync(outputDir)) {
     console.log(`[para-graph] Importing existing graph from: ${outputDir}`);
@@ -55,6 +56,11 @@ export function runBuild(options: BuildOptions): void {
     }
     if (existingNodes.size > 0) {
       console.log(`[para-graph] Found ${existingNodes.size} enriched node(s) to preserve`);
+    }
+    // Collect inferred edges to preserve (injected via graph_add_edges)
+    existingInferredEdges = existing.getAllEdges().filter(e => e.confidence === 'INFERRED');
+    if (existingInferredEdges.length > 0) {
+      console.log(`[para-graph] Found ${existingInferredEdges.length} agent-injected edge(s) to preserve`);
     }
   } else if (options.useClean) {
     console.log(`[para-graph] Clean mode enabled. Existing graph will be overwritten.`);
@@ -96,6 +102,25 @@ export function runBuild(options: BuildOptions): void {
   // Step 5.2: Preserve global enrichment stats
   if (existingStats && existingStats.totalEnriched > 0) {
     graph.setEnrichmentStats(existingStats);
+  }
+
+  // Step 5.3: Re-inject preserved inferred edges (P7)
+  // TIMING: This MUST run BEFORE EdgeResolver (Step 5.5).
+  // Safety: INFERRED edges have fully-qualified targetIds (contain '/'),
+  // so EdgeResolver skips them (edge-resolver.ts L146: `if (targetId.includes('/')) continue`).
+  // addEdge() dedup guard prevents duplicates if EdgeResolver also resolves the same pair.
+  if (existingInferredEdges.length > 0) {
+    let addedEdges = 0;
+    for (const edge of existingInferredEdges) {
+      // Check if both source and target exist to prevent orphaned/dangling references (H2-2)
+      if (graph.getNode(edge.sourceId) && graph.getNode(edge.targetId)) {
+        graph.addEdge(edge);
+        addedEdges++;
+      }
+    }
+    if (addedEdges > 0) {
+      console.log(`[para-graph] Re-injected ${addedEdges} valid agent-injected edge(s)`);
+    }
   }
 
   // Step 5.5: Resolve bare targetId in CALLS edges
