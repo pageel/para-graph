@@ -7,7 +7,7 @@ description: >
   when para-graph is not installed. Load this skill when working with code
   graphs, semantic enrichment, or any workflow that benefits from codebase
   structure awareness.
-version: "2.2.0"
+version: "2.3.0"
 ---
 
 # Skill: para-graph — Graph Intelligence Router
@@ -106,6 +106,35 @@ graph_add_edges(
 
 - **Validation**: Ensure both `sourceId` and `targetId` exist in the graph (use `graph_query` to verify if unsure).
 - **Relations**: Use `CALLS` for function invocations and `IMPORTS_FROM` for file sourcing/imports.
+
+### Step 5b: Framework-Aware Edge Resolution (v2.3.0+)
+
+> **Enhancement over Step 5:** Step 5 covers weakly-typed languages (Bash).
+> Step 5b addresses **dynamic binding patterns** in typed frameworks (React, Django)
+> where the generic EdgeResolver has low resolution rates due to destructured hooks,
+> context consumers, and HOC wrappers.
+
+Agent MUST detect the project's primary framework and load the matching
+lang-profile from `references/lang-profiles/` **BEFORE** performing edge injection.
+
+| Detection Signal | Profile | Path |
+|:--|:--|:--|
+| `.tsx` files + `react` in package.json | React/TypeScript | `references/lang-profiles/react-typescript.md` |
+| `manage.py` + `django` in requirements.txt | Python/Django | `references/lang-profiles/python-django.md` |
+| `.sh` files only, no package.json | Bash/Shell | _(handled by Step 5 — no separate profile)_ |
+
+**Routing Logic:**
+
+1. Check framework signals (one `find` + one `grep` per framework)
+2. **IF match found** → read the matched profile → follow its patterns for edge injection
+3. **IF no match** → fall back to generic Step 5 edge injection
+4. **IF multiple match** → load the primary one (most `.ext` files wins)
+
+**Constraints:**
+- Lang-profiles are **instructions**, not code — zero engine changes needed
+- All injected edges MUST use `confidence: 'INFERRED'`
+- Maximum 30 edges injected per profile session (safety limit)
+- Agent MUST verify target node exists via `graph_query` before injection
 
 ### Step 6: Verify
 
