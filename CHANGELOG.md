@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.7] - 2026-05-19
+
+### Added
+- **Lang-Profiles Sidecar Architecture** — Framework-aware edge resolution via `references/lang-profiles/` in the para-graph skill. Agent loads matching lang-profile (e.g., `react-typescript.md`) based on project framework signals before injecting missing edges.
+- **React/TypeScript Profile** — Prototype covering 5 binding patterns: Custom Hook Destructuring, useState SKIP, useContext Consumer, JSX Component Rendering, HOC wrappers. Based on real-world analysis of app-tinycrm.
+- **SKILL.md §2 Step 5b** — Routing table for framework detection → lang-profile loading with fallback to generic edge injection.
+
+### Fixed
+- **Edge Deduplication** — `CodeGraph.addEdge()` now checks `sourceId + targetId + relation` before insert, preventing duplicate edges that inflate fan-in/fan-out metrics.
+- **INFERRED Edge Preservation** — Build pipeline preserves agent-injected edges (`confidence: 'INFERRED'`) across rebuilds with node existence guard. `--clean` flag correctly bypasses preservation.
+
+### Tests
+- Add `test/build-reinject.test.ts` — 5 test cases: T1-T3 INFERRED edge preservation (BUG-08), T4-T5 addEdge deduplication.
+
 ## [0.15.6] - 2026-05-18
 
 ### Fixed
