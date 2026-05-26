@@ -54,6 +54,8 @@ export interface EdgeResolverResult {
   resolved: number;
   /** Number of edges that could not be resolved */
   unresolved: number;
+  /** Number of external packages edges */
+  external: number;
   /** Resolution rate as percentage (0-100) */
   rate: number;
 }
@@ -137,6 +139,7 @@ export function resolveEdges(graph: CodeGraph): EdgeResolverResult {
   // ── Step 3: Resolve each CALLS edge ──
   let total = 0;
   let resolved = 0;
+  let external = 0;
 
   for (const edge of allEdges) {
     if (edge.relation !== EdgeRelation.CALLS) continue;
@@ -179,14 +182,20 @@ export function resolveEdges(graph: CodeGraph): EdgeResolverResult {
       continue;
     }
 
-    // Priority 4: Ambiguous — mark and leave unchanged
-    edge.confidence = 'AMBIGUOUS' as EdgeConfidence;
+    // Priority 4: Determine EXTERNAL vs AMBIGUOUS
+    const candidates = nameIndex.get(extractObjectName(edge.targetId));
+    if (!candidates || candidates.length === 0) {
+      edge.confidence = 'EXTERNAL' as EdgeConfidence;
+      external++;
+    } else {
+      edge.confidence = 'AMBIGUOUS' as EdgeConfidence;
+    }
   }
 
-  const unresolved = total - resolved;
-  const rate = total > 0 ? Math.round((resolved / total) * 100) : 100;
+  const unresolved = total - resolved - external;
+  const rate = (total - external) > 0 ? Math.round((resolved / (total - external)) * 100) : 100;
 
-  return { total, resolved, unresolved, rate };
+  return { total, resolved, unresolved, external, rate };
 }
 
 // ─── Resolution Strategies ───────────────────────────────────────

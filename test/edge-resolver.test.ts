@@ -187,6 +187,22 @@ describe('EdgeResolver — resolveEdges()', () => {
     expect(result.resolved).toBe(1);
   });
 
+  it('T8: External package call fs::readFile → EXTERNAL, unchanged', () => {
+    const graph = new CodeGraph();
+
+    graph.addNode(makeNode('src/app.ts::main', 'main', 'src/app.ts'));
+    // caller calls fs::readFile — fs does not exist in graph nodes
+    graph.addEdge(makeCallEdge('src/app.ts::main', 'fs::readFile', 'src/app.ts'));
+
+    const result = resolveEdges(graph);
+
+    const edge = graph.getAllEdges().find(e => e.relation === EdgeRelation.CALLS);
+    expect(edge!.targetId).toBe('fs::readFile'); // unchanged
+    expect(edge!.confidence).toBe('EXTERNAL');
+    expect(result.external).toBe(1);
+    expect(result.unresolved).toBe(0); // EXTERNAL is not counted as unresolved
+  });
+
   it('BUILTIN_SKIP_LIST has ≥ 20 entries', () => {
     expect(BUILTIN_SKIP_LIST.size).toBeGreaterThanOrEqual(20);
   });

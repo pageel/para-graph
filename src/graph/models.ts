@@ -88,7 +88,7 @@ export interface GraphNode {
  * - INFERRED: Agent-injected via MCP graph_add_edges
  * - AMBIGUOUS: Partially resolved (e.g., ?unresolved prefix)
  */
-export type EdgeConfidence = 'EXTRACTED' | 'INFERRED' | 'AMBIGUOUS';
+export type EdgeConfidence = 'EXTRACTED' | 'INFERRED' | 'AMBIGUOUS' | 'EXTERNAL';
 
 /**
  * Represents a directed relationship between two graph nodes.
