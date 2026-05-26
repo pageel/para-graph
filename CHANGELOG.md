@@ -7,11 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.15.8] - 2026-05-26
 
+### Added
+- **EXTERNAL Edge Confidence** — Introduced `EXTERNAL` confidence level to `EdgeConfidence` type union (models.ts) to clearly distinguish between external npm package dependencies and unresolved internal workspace references.
+- **SQLite Compiler Diagnostics** — Added step-by-step instructions to `install-hooks.sh` to guide the setup of OS build tools when Node < 22 falls back to compiled `better-sqlite3` and fails.
+
 ### Changed
 - **Workflow path simplification** — Removed dynamic dev mode check, defaulting to the installed production CLI path for consistency (BUG-10 brainstorm).
+- **Metrics Refinement** — Filtered out test and fixture files/directories from `enrichableNodeCount` and excluded `EXTERNAL` edges from `unresolvedEdges` to improve the accuracy of the overall `healthScore`.
 
 ### Fixed
 - **Node Path Resolution** — Source node-resolver script in hook execution logic for NVM/fnm path detection (BUG-10).
+- **Security Vulnerability (Path Traversal)** — Sanitized project name input in `pathResolver.ts` by validating with `isProjectName` and checking resource sub-paths, blocking traversal attempts (e.g. `..`).
+- **Windows Path Separation** — Normalized AST file paths to use forward slashes (`/`) consistently, resolving path mismatches when calculating metrics on Windows.
 
 ## [0.15.7] - 2026-05-19
 

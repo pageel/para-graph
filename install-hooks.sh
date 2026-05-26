@@ -132,7 +132,17 @@ post_install() {
     if [ "$node_version" -lt 22 ]; then
       echo "  📦 para-graph: Node < 22 detected, installing native SQLite adapter fallback..."
       if ! npm install --prefix "$TOOL_INSTALL_DIR" better-sqlite3@^11.10.0 --no-save; then
-        echo "  ⚠️  Failed to install better-sqlite3 fallback."
+        echo "  ❌  Failed to install better-sqlite3 fallback dependency."
+        echo "      This is usually caused by missing C++ build tools (node-gyp compilation failed)."
+        echo "      To resolve this issue, please try one of the following:"
+        echo "      1) Upgrade Node.js to >= 22.5.0, which has built-in 'node:sqlite' support"
+        echo "         and completely bypasses native C++ compilation."
+        echo "      2) Install the required C++ build tools for your OS:"
+        echo "         - Windows: Run 'npm install --global --production windows-build-tools'"
+        echo "                    or install Visual Studio Build Tools with C++ workload."
+        echo "         - macOS: Run 'xcode-select --install' to install Command Line Tools."
+        echo "         - Linux: Install 'build-essential' and 'python3'."
+        echo "      Running without better-sqlite3 may cause para-graph storage operations to fail on Node < 22."
       fi
     fi
   fi
