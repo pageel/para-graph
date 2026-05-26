@@ -229,10 +229,16 @@ Go to **Cursor Settings** > **Features** > **MCP Servers** > **Add New MCP Serve
 ### Available MCP Tools
 Once connected, your AI Agent gains access to the following tools:
 - `graph_query`: Search entities by name or semantic type.
-- `graph_edges`: Find function callers and imports.
-- `graph_enrich`: Automatically save documentation and complexity data into the graph.
-- `graph_impact_analysis`: Discover upstream/downstream impacted files when changing code.
-- `graph_context_bundle`: Get the entire context of a code snippet in one call.
+- `graph_edges`: Find function callers and imports connected to a node.
+- `graph_enrich`: Save semantic documentation, complexity, and domain concepts to a node.
+- `graph_impact_analysis`: Discover upstream/downstream affected files and nodes (blast radius) when changing code.
+- `graph_context_bundle`: Get the entire context of a code snippet (source code, callers, callees, imports, tests) in one call.
+- `graph_add_edges`: Batch inject edges (CALLS, IMPORTS_FROM) to resolve relationships for weak AST-linking languages (e.g. Bash).
+- `graph_god_nodes`: Retrieve the most connected nodes in the graph to prioritize AI enrichment.
+- `graph_expand_node`: Retrieve only the source code for a specific node with AST bounds checking.
+- `memory_push`: Push a session event (conversation, decision, error) to the project MemoryStore.
+- `memory_search`: Full-text search (FTS5) over stored memory events by keyword.
+- `memory_curate`: Cluster raw events into semantic slices using session-based curation.
 
 ### Library Usage
 
