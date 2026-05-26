@@ -15,6 +15,18 @@
 #   Available functions (provided by install-tool.sh):
 #     semver_gte A B    — returns 0 if A >= B (semver comparison)
 
+# Node.js Path Resolution (BUG-10)
+# Source shared resolver if available (backward compat with older para-workspace)
+if [ -n "$WORKSPACE_ROOT" ] && [ -f "$WORKSPACE_ROOT/Projects/para-workspace/repo/cli/lib/node-resolver.sh" ]; then
+  # shellcheck source=/dev/null
+  . "$WORKSPACE_ROOT/Projects/para-workspace/repo/cli/lib/node-resolver.sh"
+  resolve_node "$WORKSPACE_ROOT" 2>/dev/null || true
+elif [ -n "$WORKSPACE_ROOT" ] && [ -f "$WORKSPACE_ROOT/Resources/references/para-workspace/cli/lib/node-resolver.sh" ]; then
+  # Fallback: prod/sync reference path
+  . "$WORKSPACE_ROOT/Resources/references/para-workspace/cli/lib/node-resolver.sh"
+  resolve_node "$WORKSPACE_ROOT" 2>/dev/null || true
+fi
+
 pre_install() {
   # Version guard: check engine version vs min_engine_version
   local engine_ver

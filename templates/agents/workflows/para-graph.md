@@ -80,15 +80,9 @@ Execute the scan using the `para-graph` CLI.
 > ⚠️ **Architecture Note:** The CLI path is dynamically resolved to support both **dev mode** (source repo at `Projects/para-graph/repo/dist/`) and **installed mode** (tarball installed at `.para/tools/graph/dist/`). This ensures cross-platform compatibility regardless of how the tool was set up.
 
 ```bash
-# Dynamic CLI path resolution (dev mode vs installed mode)
-if [ -f "Projects/para-graph/repo/dist/cli.js" ]; then
-  CLI_PATH="Projects/para-graph/repo/dist/cli.js"
-elif [ -f ".para/tools/graph/dist/cli.js" ]; then
-  CLI_PATH=".para/tools/graph/dist/cli.js"
-else
-  echo "❌ para-graph CLI not found."
-  echo "   Dev mode:      Projects/para-graph/repo/dist/cli.js"
-  echo "   Installed mode: .para/tools/graph/dist/cli.js"
+CLI_PATH=".para/tools/graph/dist/cli.js"
+if [ ! -f "$CLI_PATH" ]; then
+  echo "❌ para-graph CLI not found tại $CLI_PATH."
   echo "   Run: ./para install-tool para-graph"
   exit 1
 fi
@@ -146,13 +140,9 @@ else
   SOURCE_DIR="Projects/$TARGET/repo"
 fi
 
-# Dynamic CLI path resolution (dev mode vs installed mode)
-if [ -f "Projects/para-graph/repo/dist/cli.js" ]; then
-  CLI_PATH="Projects/para-graph/repo/dist/cli.js"
-elif [ -f ".para/tools/graph/dist/cli.js" ]; then
-  CLI_PATH=".para/tools/graph/dist/cli.js"
-else
-  echo "❌ para-graph CLI not found."
+CLI_PATH=".para/tools/graph/dist/cli.js"
+if [ ! -f "$CLI_PATH" ]; then
+  echo "❌ para-graph CLI not found tại $CLI_PATH."
   exit 1
 fi
 

@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.15.7-brightgreen.svg" alt="Version 0.15.7">
+    <img src="https://img.shields.io/badge/version-0.15.8-brightgreen.svg" alt="Version 0.15.8">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -371,7 +371,7 @@ This tool ships AI intelligence artifacts that enhance the PARA Workspace agent 
 
 | Type | Name | Version | Description & Usage |
 |:--|:--|:--|:--|
-| Workflow | `/para-graph` | 2.0.0 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
+| Workflow | `/para-graph` | 2.0.1 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
 | Skill | `para-graph` | 2.1.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
 | Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 

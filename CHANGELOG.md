@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.15.8] - 2026-05-26
+
+### Changed
+- **Workflow path simplification** — Removed dynamic dev mode check, defaulting to the installed production CLI path for consistency (BUG-10 brainstorm).
+
+### Fixed
+- **Node Path Resolution** — Source node-resolver script in hook execution logic for NVM/fnm path detection (BUG-10).
+
 ## [0.15.7] - 2026-05-19
 
 ### Added

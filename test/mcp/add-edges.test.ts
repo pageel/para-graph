@@ -5,9 +5,39 @@
  * Tests the full pipeline: MCP input → GraphStore.addEdges() → persist
  */
 
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+
+// Mock SqliteManager BEFORE any GraphStore import to prevent load-sqlite.cjs hang
+vi.mock('../../src/graph/store/sqlite-manager.js', () => {
+  return {
+    SqliteManager: class MockSqliteManager {
+      static DatabaseConstructor = null;
+      initSchema() {}
+      getConnection() {
+        return {
+          prepare: () => ({ run: () => {} }),
+          exec: () => {},
+          close: () => {},
+          transaction: (fn: Function) => (...args: unknown[]) => fn(...args),
+        };
+      }
+      close() {}
+    },
+  };
+});
+
+// Also mock SqliteGraphRepository to avoid any DB operations
+vi.mock('../../src/graph/store/sqlite-repository.js', () => {
+  return {
+    SqliteGraphRepository: class MockRepo {
+      getCustomMetadata() { return null; }
+      insertNode() {}
+    },
+  };
+});
+
 import { GraphStore } from '../../src/graph/store/GraphStore.js';
 import type { GraphNode, GraphEdge } from '../../src/graph/models.js';
 import { NodeType, ExportType, EdgeRelation } from '../../src/graph/models.js';
