@@ -150,7 +150,13 @@ export class CodeGraph {
   getMetadata(projectName: string, version: string): GraphMetadata {
     const stats = this.getStats();
     const allNodes = this.getAllNodes();
-    const enrichableNodeCount = allNodes.filter(n => n.type !== NodeType.FILE).length;
+    const isTestNode = (n: GraphNode) =>
+      n.filePath.startsWith('test/') ||
+      n.filePath.includes('/fixtures/') ||
+      n.filePath.includes('.test.') ||
+      n.filePath.endsWith('.test.ts') ||
+      n.filePath.endsWith('.test.sh');
+    const enrichableNodeCount = allNodes.filter(n => n.type !== NodeType.FILE && !isTestNode(n)).length;
     
     // 70% enrichment weight
     const enrichmentRate = enrichableNodeCount > 0 ? this._enrichmentStats.totalEnriched / enrichableNodeCount : 0;
@@ -165,7 +171,9 @@ export class CodeGraph {
         unresolvedEdges++;
       }
     }
-    const resolutionRate = totalEdges > 0 ? (totalEdges - unresolvedEdges) / totalEdges : 1;
+    const externalEdges = allEdges.filter(e => e.confidence === 'EXTERNAL').length;
+    const internalTotalEdges = totalEdges - externalEdges;
+    const resolutionRate = internalTotalEdges > 0 ? (internalTotalEdges - unresolvedEdges) / internalTotalEdges : 1;
     const resolutionScore = resolutionRate * 30;
     
     const healthScore = Math.round(enrichmentScore + resolutionScore);
@@ -181,8 +189,9 @@ export class CodeGraph {
       ...(this._enrichmentStats.totalEnriched > 0 ? { enrichment: this.enrichmentStats } : {}),
       resolution: {
         totalEdges,
-        resolvedEdges: totalEdges - unresolvedEdges,
+        resolvedEdges: internalTotalEdges - unresolvedEdges,
         unresolvedEdges,
+        externalEdges,
         resolutionRate: Number(resolutionRate.toFixed(4)),
       },
       healthScore,

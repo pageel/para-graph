@@ -231,6 +231,7 @@ export interface GraphMetadata {
     totalEdges: number;
     resolvedEdges: number;
     unresolvedEdges: number;
+    externalEdges?: number;
     resolutionRate: number;
   };
 }

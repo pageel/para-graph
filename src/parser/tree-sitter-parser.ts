@@ -78,7 +78,7 @@ export class TreeSitterParser {
       return;
     }
 
-    const relPath = relative(this.rootDir, filePath);
+    const relPath = relative(this.rootDir, filePath).replace(/\\/g, '/');
     const lines = content.split('\n');
 
     // Add FILE node

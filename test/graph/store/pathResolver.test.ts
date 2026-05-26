@@ -47,4 +47,27 @@ describe('pathResolver', () => {
       expect(result).toBe(resolve(workspaceRoot, 'Resources', 'references', 'ai-agents/kernel'));
     });
   });
+
+  describe('security validations', () => {
+    it('throws error for invalid project names (Path Traversal prevention)', () => {
+      expect(() => resolveGraphDir(workspaceRoot, '../../secret')).toThrow();
+      expect(() => resolveGraphDir(workspaceRoot, 'project/name')).toThrow();
+      expect(() => resolveGraphDir(workspaceRoot, 'project\\name')).toThrow();
+      expect(() => resolveGraphDir(workspaceRoot, 'proj.name')).toThrow();
+    });
+
+    it('throws error for invalid external resource paths', () => {
+      expect(() => resolveGraphDir(workspaceRoot, '@resources/')).toThrow();
+      expect(() => resolveGraphDir(workspaceRoot, '@resources/../secret')).toThrow();
+      expect(() => resolveGraphDir(workspaceRoot, '@resources/a/../b')).toThrow();
+      expect(() => resolveGraphDir(workspaceRoot, '@resources/abc/..')).toThrow();
+    });
+
+    it('throws error for project name or resource path exceeding 100 characters', () => {
+      const longProjectName = 'a'.repeat(101);
+      expect(() => resolveGraphDir(workspaceRoot, longProjectName)).toThrow();
+      const longResource = '@resources/' + 'a'.repeat(100);
+      expect(() => resolveGraphDir(workspaceRoot, longResource)).toThrow();
+    });
+  });
 });
