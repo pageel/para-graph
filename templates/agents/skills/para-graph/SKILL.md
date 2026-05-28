@@ -281,6 +281,12 @@ Step A — Build/refresh graph:
 Step B — Identify enrichment targets:
 0.2 🤖 `graph_query` to list nodes relevant to docs being written
 0.3 🤖 Build enrichment hit list (nodes with no `semantic.summary` field)
+0.3b 🤖 **Undocumented God Nodes Handling**:
+    If `/docs review` reports `🔴 Undocumented Core Components (God Nodes)`, Agent MUST:
+    1. Identify the source file and logic of the undocumented God Node.
+    2. Add or find the corresponding section (H2/H3) in the project documentation (e.g. `docs/architecture.md`).
+    3. Auto-insert the comment `<!-- @graph-node: nodeId -->` right before the heading.
+    4. Run Step H (`graph_link_docs`) to bind the node.
 
 Step C — Enrich nodes (OPTIONAL):
 0.4 🤖 `graph_enrich` for important nodes (God Nodes, core classes).
