@@ -108,6 +108,9 @@ export class AstStore {
         node.semantic = {};
       }
 
+      // Reset staleness on linking
+      node.semantic.staleSince = undefined;
+
       // A1 Cross-platform: Normalize backslashes to forward slashes
       const normalizedPath = link.docPath.replace(/\\/g, '/');
 
