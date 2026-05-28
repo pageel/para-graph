@@ -326,8 +326,8 @@ Công cụ này đi kèm với các artifact trí tuệ nhân tạo nhằm nâng
 
 | Loại | Tên | Phiên bản | Mô tả & Cách dùng |
 |:--|:--|:--|:--|
-| Workflow | `/para-graph` | 2.0.0 | Gõ `@[/para-graph]` để chỉ thị cho AI quét lại dự án và cập nhật trí nhớ đồ thị. |
-| Skill | `para-graph` | 2.1.0 | Bộ định tuyến Trí tuệ Đồ thị tập trung (Centralized Graph Intelligence Router). Được tự động nạp cho các workflow như `/plan`, `/docs`, `/brainstorm` nhằm phân tích ngữ nghĩa và xác thực kiến trúc. |
+| Workflow | `/para-graph` | 2.0.1 | Gõ `@[/para-graph]` để chỉ thị cho AI quét lại dự án và cập nhật trí nhớ đồ thị. |
+| Skill | `para-graph` | 2.4.0 | Bộ định tuyến Trí tuệ Đồ thị tập trung (Centralized Graph Intelligence Router). Được tự động nạp cho các workflow như `/plan`, `/docs`, `/brainstorm` nhằm phân tích ngữ nghĩa và xác thực kiến trúc. |
 | Rule | `graph-first-policy` | 1.0.0 | Bắt buộc thực hiện lập trình kiểu "đồ thị là trên hết". Agent sẽ tự động truy vấn MCP server trước khi ra quyết định kiến trúc. |
 
 > Yêu cầu PARA Workspace v1.8.2+ để có thể sử dụng chức năng tự động nhận diện cấu hình MCP.

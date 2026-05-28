@@ -381,7 +381,7 @@ This tool ships AI intelligence artifacts that enhance the PARA Workspace agent 
 | Type | Name | Version | Description & Usage |
 |:--|:--|:--|:--|
 | Workflow | `/para-graph` | 2.0.1 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
-| Skill | para-graph | 2.2.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
+| Skill | para-graph | 2.4.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
 | Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 
 > **v0.12.0+**: AI Intelligence is no longer bundled in the tarball. It is fetched on-demand from GitHub via the `post_install()` hook. Update independently: `./para install-tool para-graph --sync`.

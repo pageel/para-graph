@@ -22,7 +22,7 @@ agents:
   skills:
     - source: templates/agents/skills/para-graph/
       target: para-graph/
-      version: "2.2.0"
+      version: "2.4.0"
       shipped_in: "0.9.0"
       min_engine_version: "0.8.0"
   rules:

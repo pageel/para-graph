@@ -287,10 +287,16 @@ Step B — Identify enrichment targets:
     2. Add or find the corresponding section (H2/H3) in the project documentation (e.g. `docs/architecture.md`).
     3. Auto-insert the comment `<!-- @graph-node: nodeId -->` right before the heading.
     4. Run Step H (`graph_link_docs`) to bind the node.
+0.3c 🤖 **God Node Double-Binding (Enriched & Linked) Goal**:
+    To achieve maximum system clarity, God Nodes MUST undergo "Double-Binding" (be both documented/linked AND semantically enriched).
+    If `/docs review` reports `⚠️ Unenriched Core Components (God Nodes)` (nodes are linked in docs but missing `semantic.description` in graph), Agent MUST:
+    1. Read the source file implementation of the God Node.
+    2. Write semantic enrichment via Step C (`graph_enrich`) before proceeding.
 
-Step C — Enrich nodes (OPTIONAL):
+Step C — Enrich nodes (OPTIONAL / MANDATORY for God Nodes):
 0.4 🤖 `graph_enrich` for important nodes (God Nodes, core classes).
-    Not required for doc linking — linkDocs auto-inits semantic since v0.16.1.
+    - Not required for standard doc linking — linkDocs auto-inits semantic since v0.16.1.
+    - **MANDATORY for God Nodes** flagged as unenriched to satisfy the Double-Binding status.
 
 Step H — Link document anchors (100% success guaranteed):
 0.5 🤖 Call `graph_link_docs` after document creation/modification.
@@ -300,7 +306,7 @@ Step H — Link document anchors (100% success guaranteed):
 
 Step I — Update Index Statistics (if --graph):
 0.6 🤖 After linking, update `## Graph Traceability` section in `docs/README.md`
-    with doc coverage metrics and stale document detection.
+    with doc coverage metrics (including the `God Nodes fully covered (Enriched & Linked)` ratio) and stale document detection.
 
 Per-doc context loading (Phase N):
 Mode A (graph available): 1. `graph_context_bundle(nodeId)` — source, callers, callees, imports, tests 2. `graph_edges(nodeId)` — relationships and data flow 3. `view_file` — implementation details
