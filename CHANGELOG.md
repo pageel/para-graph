@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.0] - 2026-05-28
+
+### Added
+- **Markdown Anchor Linking** — Added `graph_link_docs` MCP tool to link markdown documentation anchors (`<!-- @graph-node: nodeId -->`) to code graph nodes.
+- **Project Insights Storage** — Introduced durable `project_insights` SQLite table, FTS5 virtual table, and triggers for managing lessons, risks, decisions, and patterns. Exposed via `insight_push` and `insight_search` MCP tools.
+- **Unified Semantic Layer** — Extended `SemanticAttributes` interface in `models.ts` with `docAnchors` (array of linked markdown paths) and `staleSince` (timestamp when node/docs became out-of-sync).
+
+### Changed
+- **Staleness Detection Pipeline** — Upgraded the build pipeline to calculate code signature hashes (3-field comparison: signature, startLine, endLine) and automatically flag stale nodes/anchors when code drifts.
+- **Re-Enrichment Reset** — Configured `enrichNode()` to clear `staleSince` and preserve docAnchors when updating semantic details.
+- **linkDocs Auto-Init Semantic** — `linkDocs()` now auto-initializes `semantic: {}` for non-enriched nodes instead of skipping them. Guarantees 100% doc-anchor linking success regardless of enrichment status.
+- **SemanticAttributes Optional Fields** — All enrichment fields (`summary`, `complexity`, `domainConcepts`, `enrichedAt`, `enrichedBy`) are now optional. Nodes can have minimal semantic data (e.g., only `docAnchors`) without requiring full enrichment.
+
 ## [0.15.8] - 2026-05-26
 
 ### Added

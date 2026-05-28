@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.15.8-brightgreen.svg" alt="Version 0.15.8">
+    <img src="https://img.shields.io/badge/version-0.16.0-brightgreen.svg" alt="Version 0.16.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -236,6 +236,9 @@ Once connected, your AI Agent gains access to the following tools:
 - `graph_add_edges`: Batch inject edges (CALLS, IMPORTS_FROM) to resolve relationships for weak AST-linking languages (e.g. Bash).
 - `graph_god_nodes`: Retrieve the most connected nodes in the graph to prioritize AI enrichment.
 - `graph_expand_node`: Retrieve only the source code for a specific node with AST bounds checking.
+- `graph_link_docs`: Link documentation markdown files to graph nodes based on anchor tags.
+- `insight_push`: Push a project insight (lesson, risk, decision, pattern, gotcha) to the database.
+- `insight_search`: Search project insights using full-text search with metadata filters.
 - `memory_push`: Push a session event (conversation, decision, error) to the project MemoryStore.
 - `memory_search`: Full-text search (FTS5) over stored memory events by keyword.
 - `memory_curate`: Cluster raw events into semantic slices using session-based curation.
@@ -378,7 +381,7 @@ This tool ships AI intelligence artifacts that enhance the PARA Workspace agent 
 | Type | Name | Version | Description & Usage |
 |:--|:--|:--|:--|
 | Workflow | `/para-graph` | 2.0.1 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
-| Skill | `para-graph` | 2.1.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
+| Skill | para-graph | 2.2.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
 | Rule | `graph-first-policy` | 1.0.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
 
 > **v0.12.0+**: AI Intelligence is no longer bundled in the tarball. It is fetched on-demand from GitHub via the `post_install()` hook. Update independently: `./para install-tool para-graph --sync`.

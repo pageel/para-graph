@@ -45,7 +45,7 @@ describe('CodeGraph.linkDocs()', () => {
     expect(updatedNode?.semantic?.docAnchors).toEqual(['docs/guide.md#foo-section']);
   });
 
-  it('should skip linking for non-enriched node', () => {
+  it('should auto-init semantic and link for non-enriched node', () => {
     const node: GraphNode = {
       id: 'src/foo.ts::foo',
       type: NodeType.FUNCTION,
@@ -63,12 +63,16 @@ describe('CodeGraph.linkDocs()', () => {
       { nodeId: 'src/foo.ts::foo', docPath: 'docs/guide.md#foo-section' }
     ]);
 
-    expect(result.linked).toBe(0);
-    expect(result.skipped).toBe(1);
+    expect(result.linked).toBe(1);
+    expect(result.skipped).toBe(0);
     expect(result.errors.length).toBe(0);
 
     const updatedNode = graph.getNode('src/foo.ts::foo');
-    expect(updatedNode?.semantic?.docAnchors).toBeUndefined();
+    expect(updatedNode?.semantic).toBeDefined();
+    expect(updatedNode?.semantic?.docAnchors).toEqual(['docs/guide.md#foo-section']);
+    // Auto-init should NOT set enrichment fields
+    expect(updatedNode?.semantic?.summary).toBeUndefined();
+    expect(updatedNode?.semantic?.enrichedBy).toBeUndefined();
   });
 
   it('should report error for non-existent node', () => {

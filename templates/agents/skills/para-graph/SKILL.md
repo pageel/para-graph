@@ -269,8 +269,8 @@ Reusable pipeline that workflows call when graph is available:
 
 #### §4.3.2 For `/docs` — Content Enrichment Pipeline
 
-**When:** Phase 0 of docs-only plan (detail-plan-docs.md template).
-**Steps:** A → B → C → D → E
+**When:** `/docs new --graph` or `/docs update --graph`.
+**Steps:** A → B → (C optional) → D → E → H
 
 ```markdown
 Phase 0 Graph Pipeline (skip entirely if no `.beads/graph/`):
@@ -280,13 +280,21 @@ Step A — Build/refresh graph:
 
 Step B — Identify enrichment targets:
 0.2 🤖 `graph_query` to list nodes relevant to docs being written
-0.3 🤖 Build enrichment hit list (nodes with no `semantic` field)
+0.3 🤖 Build enrichment hit list (nodes with no `semantic.summary` field)
 
-Step C — Enrich nodes:
-0.4 🤖 `graph_enrich` for each approved node (read source BEFORE enriching)
+Step C — Enrich nodes (OPTIONAL):
+0.4 🤖 `graph_enrich` for important nodes (God Nodes, core classes).
+    Not required for doc linking — linkDocs auto-inits semantic since v0.16.1.
 
-Step H — Link document anchors:
-0.5 🤖 Call `graph_link_docs` after document creation/modification to establish doc↔code traceability. Anchors in Markdown should use the `<!-- @graph-node: nodeId -->` comment format.
+Step H — Link document anchors (100% success guaranteed):
+0.5 🤖 Call `graph_link_docs` after document creation/modification.
+    Anchors use `<!-- @graph-node: nodeId -->` comment format.
+    v0.16.1+: linkDocs auto-initializes `semantic: {}` for non-enriched
+    nodes — no pre-enrichment required for linking.
+
+Step I — Update Index Statistics (if --graph):
+0.6 🤖 After linking, update `## Graph Traceability` section in `docs/README.md`
+    with doc coverage metrics and stale document detection.
 
 Per-doc context loading (Phase N):
 Mode A (graph available): 1. `graph_context_bundle(nodeId)` — source, callers, callees, imports, tests 2. `graph_edges(nodeId)` — relationships and data flow 3. `view_file` — implementation details
@@ -381,7 +389,12 @@ Use `insight_push` when a brainstorm, QA run, or bug fix produces reusable knowl
 
 ## §5. Constraints
 
-- **The 20% Rule (Compact Memory)** — Do NOT auto-enrich the entire graph. You MUST aim to keep only 10-20% of total nodes enriched (focusing strictly on God Nodes and Core Entities) to optimize token context and prevent semantic drift.
+- **Tiered Enrichment Guideline** — Agent SHOULD prioritize God Nodes and Core Entities for enrichment. Coverage targets vary by project size:
+  - Small project (< 50 enrichable nodes): up to 60-80% — overhead is minimal
+  - Medium project (50-150 nodes): 20-40% — focus God Nodes + public API
+  - Large project (> 150 nodes): 10-20% — only God Nodes + core classes
+  
+  The principle: **every enriched node must earn its tokens** — don't enrich trivial utility functions.
 - **Quality over quantity** — 5 well-enriched architectural nodes > 50 shallow enrichments of utility functions.
 - **enrichedBy is always "agent"** — the tool sets this automatically
 - **Re-scan safety** — if user re-runs para-graph CLI, remind them to use `--import` flag to preserve enrichment data

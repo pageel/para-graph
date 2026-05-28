@@ -65,7 +65,7 @@ export class AstStore {
     if (isFirstEnrich) {
       this._enrichmentStats.totalEnriched++;
     }
-    this._enrichmentStats.lastEnrichedAt = semantic.enrichedAt;
+    this._enrichmentStats.lastEnrichedAt = semantic.enrichedAt ?? null;
 
     // Update recentNodes — move to front, keep max 5
     const recent = this._enrichmentStats.recentNodes.filter(id => id !== nodeId);
@@ -99,8 +99,7 @@ export class AstStore {
       }
 
       if (!node.semantic) {
-        skipped++;
-        continue;
+        node.semantic = {};
       }
 
       // A1 Cross-platform: Normalize backslashes to forward slashes

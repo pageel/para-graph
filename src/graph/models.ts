@@ -42,15 +42,15 @@ export type ComplexityLevel = 'low' | 'medium' | 'high';
  */
 export interface SemanticAttributes {
   /** Human-readable summary of what this code entity does */
-  summary: string;
+  summary?: string;
   /** Estimated complexity level */
-  complexity: ComplexityLevel;
+  complexity?: ComplexityLevel;
   /** Domain concepts this entity relates to (e.g., ["graph", "indexing"]) */
-  domainConcepts: string[];
+  domainConcepts?: string[];
   /** ISO 8601 timestamp of when enrichment was performed */
-  enrichedAt: string;
+  enrichedAt?: string;
   /** Who performed the enrichment */
-  enrichedBy: 'agent' | 'manual';
+  enrichedBy?: 'agent' | 'manual';
   /** Paths of doc files referencing this node, format: "docs/path.md#section-slug" */
   docAnchors?: string[];
   /** ISO 8601 timestamp — when node code changed since last enrichment */
