@@ -137,6 +137,62 @@ export class SqliteManager {
       END;
     `);
 
+    // Project insights table (P5)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_insights (
+        id TEXT PRIMARY KEY,
+        category TEXT NOT NULL,
+        domain TEXT NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        source_type TEXT NOT NULL,
+        source_session TEXT,
+        related_node_ids TEXT DEFAULT '[]',
+        related_files TEXT DEFAULT '[]',
+        confidence TEXT DEFAULT 'hypothesis',
+        validated_at TEXT DEFAULT NULL,
+        created_at INTEGER NOT NULL,
+        updated_at INTEGER NOT NULL
+      )
+    `);
+
+    // FTS table for project insights
+    db.exec(`
+      CREATE VIRTUAL TABLE IF NOT EXISTS fts_insights USING fts5(
+        id UNINDEXED,
+        category UNINDEXED,
+        domain,
+        title,
+        description,
+        content='project_insights',
+        content_rowid='rowid'
+      )
+    `);
+
+    // Triggers for fts_insights
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS project_insights_ai AFTER INSERT ON project_insights BEGIN
+        INSERT INTO fts_insights(rowid, id, category, domain, title, description)
+        VALUES (new.rowid, new.id, new.category, new.domain, new.title, new.description);
+      END;
+    `);
+
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS project_insights_ad AFTER DELETE ON project_insights BEGIN
+        INSERT INTO fts_insights(fts_insights, rowid, id, category, domain, title, description)
+        VALUES ('delete', old.rowid, old.id, old.category, old.domain, old.title, old.description);
+      END;
+    `);
+
+    db.exec(`
+      CREATE TRIGGER IF NOT EXISTS project_insights_au AFTER UPDATE ON project_insights BEGIN
+        INSERT INTO fts_insights(fts_insights, rowid, id, category, domain, title, description)
+        VALUES ('delete', old.rowid, old.id, old.category, old.domain, old.title, old.description);
+        INSERT INTO fts_insights(rowid, id, category, domain, title, description)
+        VALUES (new.rowid, new.id, new.category, new.domain, new.title, new.description);
+      END;
+    `);
+
     // 4. Schema Migrations
     try {
       db.exec(`ALTER TABLE project_snapshots ADD COLUMN metrics TEXT DEFAULT NULL;`);

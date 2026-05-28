@@ -15,7 +15,7 @@ import { join, resolve } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile } from '../graph/models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight } from '../graph/models.js';
 import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
@@ -500,6 +500,84 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       
       return {
         content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
+  // --- insight_push: Push a project insight to SQLite database ---
+  server.tool(
+    'insight_push',
+    'Push a project insight (lesson, risk, decision, pattern, gotcha) to durable SQLite storage',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      category: z.enum(['lesson', 'risk', 'decision', 'pattern', 'gotcha']).describe('Insight category'),
+      domain: z.string().describe('Knowledge domain, e.g., path-handling, memory, parser, mcp'),
+      title: z.string().describe('Short descriptive title of the insight'),
+      description: z.string().describe('Detailed explanation of the insight, guidelines, or mitigations'),
+      sourceType: z.enum(['brainstorm', 'qa', 'bugfix', 'plan', 'research', 'resource', 'session']).describe('Source document type'),
+      sourceSession: z.string().optional().describe('Session identifier, e.g., session-2026-05-28'),
+      relatedNodeIds: z.array(z.string()).optional().describe('IDs of graph nodes related to this insight'),
+      relatedFiles: z.array(z.string()).optional().describe('Relative file paths from project root related to this insight'),
+    },
+    async ({
+      projectName,
+      category,
+      domain,
+      title,
+      description,
+      sourceType,
+      sourceSession,
+      relatedNodeIds,
+      relatedFiles,
+    }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      const insightId = `ins-${randomUUID()}`;
+
+      const insight: ProjectInsight = {
+        id: insightId,
+        category: category as any,
+        domain,
+        title,
+        description,
+        sourceType: sourceType as any,
+        sourceSession,
+        relatedNodeIds,
+        relatedFiles,
+        confidence: 'hypothesis',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+
+      graph.pushInsight(insight);
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, insightId }, null, 2) }],
+      };
+    },
+  );
+
+  // --- insight_search: Search project insights with full-text search ---
+  server.tool(
+    'insight_search',
+    'Search project insights with FTS5 and filter by category or domain',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      query: z.string().describe('Search term (FTS5 matched). Use empty string "" to fetch latest insights.'),
+      category: z.enum(['lesson', 'risk', 'decision', 'pattern', 'gotcha']).optional().describe('Filter by insight category'),
+      domain: z.string().optional().describe('Filter by exact domain'),
+      limit: z.number().optional().default(10).describe('Max results to return (default 10)'),
+    },
+    async ({ projectName, query, category, domain, limit }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      
+      const results = graph.searchInsights(query, {
+        category,
+        domain,
+        limit,
+      });
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
       };
     },
   );

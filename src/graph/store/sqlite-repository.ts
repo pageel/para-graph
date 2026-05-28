@@ -1,4 +1,5 @@
 import { SqliteManager } from './sqlite-manager.js';
+import type { ProjectInsight } from '../models.js';
 
 export class SqliteGraphRepository {
   constructor(private manager: SqliteManager) {}
@@ -83,5 +84,123 @@ export class SqliteGraphRepository {
     const db = this.manager.getConnection();
     const stmt = db.prepare(`DELETE FROM metadata WHERE key = ?`);
     stmt.run(key);
+  }
+
+  public insertInsight(insight: ProjectInsight): void {
+    const db = this.manager.getConnection();
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO project_insights (
+        id, category, domain, title, description, source_type, source_session,
+        related_node_ids, related_files, confidence, validated_at, created_at, updated_at
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      insight.id,
+      insight.category,
+      insight.domain,
+      insight.title,
+      insight.description,
+      insight.sourceType,
+      insight.sourceSession || null,
+      insight.relatedNodeIds ? JSON.stringify(insight.relatedNodeIds) : '[]',
+      insight.relatedFiles ? JSON.stringify(insight.relatedFiles) : '[]',
+      insight.confidence || 'hypothesis',
+      insight.validatedAt || null,
+      insight.createdAt,
+      insight.updatedAt
+    );
+  }
+
+  public searchInsights(query: string, opts?: { category?: string; domain?: string; limit?: number }): ProjectInsight[] {
+    const db = this.manager.getConnection();
+    const limit = opts?.limit ?? 10;
+
+    if (!query || query.trim() === '') {
+      const clauses: string[] = [];
+      const params: any[] = [];
+      
+      if (opts?.category) {
+        clauses.push('category = ?');
+        params.push(opts.category);
+      }
+      if (opts?.domain) {
+        clauses.push('domain = ?');
+        params.push(opts.domain);
+      }
+      
+      const whereClause = clauses.length > 0 ? 'WHERE ' + clauses.join(' AND ') : '';
+      params.push(limit);
+      
+      const sql = `
+        SELECT *
+        FROM project_insights
+        ${whereClause}
+        ORDER BY created_at DESC
+        LIMIT ?
+      `;
+      const stmt = db.prepare(sql);
+      const rows = stmt.all(...params);
+      return rows.map((row: any) => ({
+        id: row.id,
+        category: row.category as any,
+        domain: row.domain,
+        title: row.title,
+        description: row.description,
+        sourceType: row.source_type as any,
+        sourceSession: row.source_session || undefined,
+        relatedNodeIds: JSON.parse(row.related_node_ids || '[]'),
+        relatedFiles: JSON.parse(row.related_files || '[]'),
+        confidence: row.confidence as any,
+        validatedAt: row.validated_at || undefined,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at
+      }));
+    }
+
+    const sanitized = `"${query.replace(/"/g, '""')}"*`;
+    const clauses: string[] = ['f.fts_insights MATCH ?'];
+    const params: any[] = [sanitized];
+
+    if (opts?.category) {
+      clauses.push('m.category = ?');
+      params.push(opts.category);
+    }
+
+    if (opts?.domain) {
+      clauses.push('m.domain = ?');
+      params.push(opts.domain);
+    }
+
+    const whereClause = clauses.join(' AND ');
+    params.push(limit);
+
+    const sql = `
+      SELECT m.*
+      FROM project_insights m
+      JOIN fts_insights f ON m.rowid = f.rowid
+      WHERE ${whereClause}
+      ORDER BY f.rank
+      LIMIT ?
+    `;
+
+    const stmt = db.prepare(sql);
+    const rows = stmt.all(...params);
+
+    return rows.map((row: any) => ({
+      id: row.id,
+      category: row.category as any,
+      domain: row.domain,
+      title: row.title,
+      description: row.description,
+      sourceType: row.source_type as any,
+      sourceSession: row.source_session || undefined,
+      relatedNodeIds: JSON.parse(row.related_node_ids || '[]'),
+      relatedFiles: JSON.parse(row.related_files || '[]'),
+      confidence: row.confidence as any,
+      validatedAt: row.validated_at || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    }));
   }
 }

@@ -309,3 +309,21 @@ export interface GodNodeProfile {
   enriched: boolean;
 }
 
+// --- Project Intelligence Types (P5: Project Insights) ---
+
+export interface ProjectInsight {
+  id: string;
+  category: 'lesson' | 'risk' | 'decision' | 'pattern' | 'gotcha';
+  domain: string;          // e.g., 'path-handling', 'memory', 'parser', 'mcp'
+  title: string;
+  description: string;
+  sourceType: 'brainstorm' | 'qa' | 'bugfix' | 'plan' | 'research' | 'resource' | 'session';
+  sourceSession?: string;
+  relatedNodeIds?: string[];
+  relatedFiles?: string[];
+  confidence: 'hypothesis' | 'validated' | 'deprecated';
+  validatedAt?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+

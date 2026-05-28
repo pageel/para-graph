@@ -12,6 +12,7 @@ import type {
   SemanticSlice,
   GodNodeProfile,
   GraphMetadata,
+  ProjectInsight,
 } from '../models.js';
 import { EdgeRelation } from '../models.js';
 import { AstStore } from './AstStore.js';
@@ -249,5 +250,58 @@ export class ProjectGraph {
       .filter(p => p.degree > 0)
       .sort((a, b) => b.degree - a.degree)
       .slice(0, effectiveTopN);
+  }
+
+  // --- Project Insights Facade (P5) ---
+
+  private readonly insightsList: ProjectInsight[] = [];
+
+  public pushInsight(insight: ProjectInsight): void {
+    const exists = this.insightsList.findIndex(i => i.id === insight.id);
+    if (exists !== -1) {
+      this.insightsList[exists] = insight;
+    } else {
+      this.insightsList.push(insight);
+    }
+
+    if (this.repository) {
+      this.repository.insertInsight(insight);
+    }
+  }
+
+  public searchInsights(query: string, opts?: { category?: string; domain?: string; limit?: number }): ProjectInsight[] {
+    if (this.repository) {
+      try {
+        return this.repository.searchInsights(query, opts);
+      } catch (err) {
+        // Graceful fallback to memory on SQLite failures
+      }
+    }
+
+    const q = query.toLowerCase();
+    const limit = opts?.limit ?? 10;
+    const results: ProjectInsight[] = [];
+
+    // Sort in-memory insights by createdDate (newest first)
+    const sortedInsights = [...this.insightsList].sort((a, b) => b.createdAt - a.createdAt);
+
+    for (const insight of sortedInsights) {
+      if (results.length >= limit) break;
+
+      if (opts?.category && insight.category !== opts.category) continue;
+      if (opts?.domain && insight.domain !== opts.domain) continue;
+
+      if (!query || query.trim() === '') {
+        results.push(insight);
+        continue;
+      }
+
+      const matchText = `${insight.title} ${insight.description} ${insight.domain}`.toLowerCase();
+      if (matchText.includes(q)) {
+        results.push(insight);
+      }
+    }
+
+    return results;
   }
 }
