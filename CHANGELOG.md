@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.1] - 2026-05-28
+
+### Added
+- **Core & Extra Metrics Separation** — Split enrichment tracking into `coreEnriched` (non-file, non-test nodes) and `extraEnriched` (file/test nodes) to prevent `healthScore` from exceeding 100%.
+- **Zero Denominator Boundary Handling** — Handled empty/test-only project states gracefully by defaulting `enrichmentRate` to 1.0 when no core enrichable nodes exist.
+
+### Fixed
+- **Cross-Platform Test Path Matching** — Normalized backslashes to forward slashes in `isTestNode` helper to ensure accurate path matching on Windows.
+- **AstStore Semantic Merging** — Replaced direct overwrite with a merge strategy in `AstStore.enrichNode()` to prevent losing `docAnchors` attributes.
+- **ProjectGraph Metadata Alignment** — Synced `ProjectGraph.getMetadata()` with `CodeGraph` logic for consistent metrics calculation.
+
 ## [0.16.0] - 2026-05-28
 
 ### Added
