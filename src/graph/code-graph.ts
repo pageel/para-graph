@@ -49,7 +49,13 @@ export class CodeGraph {
     if (!node) return false;
 
     const isFirstEnrich = !node.semantic;
-    node.semantic = semantic;
+    const docAnchors = node.semantic?.docAnchors;
+
+    node.semantic = {
+      ...semantic,
+      docAnchors: docAnchors ?? semantic.docAnchors,
+      staleSince: undefined, // Reset staleSince on fresh enrichment
+    };
 
     // Update stats
     if (isFirstEnrich) {
@@ -63,6 +69,50 @@ export class CodeGraph {
     this._enrichmentStats.recentNodes = recent.slice(0, 5);
 
     return true;
+  }
+
+  /**
+   * Link code nodes to documentation paths.
+   * normalizes paths to prevent cross-platform directory slash issues (A1 Windows safety).
+   *
+   * @param links - Array of nodeId and docPath links to establish
+   * @returns statistics on the linking operation
+   */
+  linkDocs(links: Array<{ nodeId: string; docPath: string }>): {
+    linked: number;
+    skipped: number;
+    errors: string[];
+  } {
+    let linked = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (const link of links) {
+      const node = this.nodeMap.get(link.nodeId);
+      if (!node) {
+        errors.push(`Node not found: ${link.nodeId}`);
+        continue;
+      }
+
+      if (!node.semantic) {
+        skipped++;
+        continue;
+      }
+
+      // A1 Cross-platform: Normalize backslashes to forward slashes
+      const normalizedPath = link.docPath.replace(/\\/g, '/');
+
+      if (!node.semantic.docAnchors) {
+        node.semantic.docAnchors = [];
+      }
+
+      if (!node.semantic.docAnchors.includes(normalizedPath)) {
+        node.semantic.docAnchors.push(normalizedPath);
+      }
+      linked++;
+    }
+
+    return { linked, skipped, errors };
   }
 
   /**

@@ -303,6 +303,32 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
+  // --- graph_link_docs: Link graph nodes to documentation sections ---
+  server.tool(
+    'graph_link_docs',
+    'Link graph nodes to documentation sections. Call after /docs new or /docs update to establish doc↔code traceability.',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      links: z.array(z.object({
+        nodeId: z.string().describe('ID of the graph node to link'),
+        docPath: z.string().describe('Paths of doc files referencing this node, format: "docs/path.md#section-slug"'),
+      })).describe('Array of node-document links to establish'),
+    },
+    async ({ projectName, links }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+
+      const result = graph.linkDocs(links);
+
+      if (result.linked > 0) {
+        GraphStore.saveGraph(workspaceRoot, projectName);
+      }
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+      };
+    },
+  );
+
   // --- graph_god_nodes: Get top-N most connected nodes ---
   server.tool(
     'graph_god_nodes',

@@ -51,6 +51,14 @@ export class ProjectGraph {
     return this.astStore.enrichNode(nodeId, semantic);
   }
 
+  linkDocs(links: Array<{ nodeId: string; docPath: string }>): {
+    linked: number;
+    skipped: number;
+    errors: string[];
+  } {
+    return this.astStore.linkDocs(links);
+  }
+
   public addNode(node: GraphNode): void {
     this.astStore.addNode(node);
   }

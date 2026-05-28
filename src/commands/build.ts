@@ -89,14 +89,28 @@ export function runBuild(options: BuildOptions): void {
   // Step 5: Merge semantic data from existing graph (H2-1)
   if (existingNodes.size > 0) {
     let preserved = 0;
+    let staleCount = 0;
     for (const node of graph.getAllNodes()) {
       const existing = existingNodes.get(node.id);
       if (existing?.semantic) {
-        node.semantic = existing.semantic;
+        node.semantic = { ...existing.semantic };
         preserved++;
+
+        // Step 5.1: Staleness Detection — Compare node signature, startLine, and endLine
+        const codeChanged = existing.signature !== node.signature
+          || existing.startLine !== node.startLine
+          || existing.endLine !== node.endLine;
+
+        if (codeChanged) {
+          node.semantic.staleSince = new Date().toISOString();
+          staleCount++;
+        }
       }
     }
     console.log(`[para-graph] Preserved semantic data on ${preserved} node(s)`);
+    if (staleCount > 0) {
+      console.log(`[para-graph] Staleness: ${staleCount} enriched node(s) changed since last enrichment`);
+    }
   }
   
   // Step 5.2: Preserve global enrichment stats
