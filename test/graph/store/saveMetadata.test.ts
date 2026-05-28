@@ -32,6 +32,8 @@ vi.mock('../../../src/graph/store/sqlite-repository.js', () => {
 });
 
 import { GraphStore } from '../../../src/graph/store/GraphStore.js';
+import { AstStore } from '../../../src/graph/store/AstStore.js';
+import { ProjectGraph } from '../../../src/graph/store/ProjectGraph.js';
 
 const TMP_ROOT = join(process.cwd(), 'test-tmp-metadata');
 const PROJECT_NAME = 'test-save-meta';
@@ -130,5 +132,58 @@ describe('GraphStore.saveMetadata — merge-safe write', () => {
     expect(saved.resolution).toBeDefined();
     expect(saved.resolution.totalEdges).toBe(1);       // computed
     expect(saved.resolution.totalEdges).not.toBe(999); // not stale
+  });
+
+  it('should preserve docAnchors when calling AstStore.enrichNode() (semantic merge)', () => {
+    const store = new AstStore(PROJECT_NAME);
+    store.addNode({
+      id: 'src/a.ts::A',
+      name: 'A',
+      type: 'function' as any,
+      filePath: 'src/a.ts',
+      startLine: 1,
+      endLine: 5,
+      exportType: 'none' as any,
+      signature: '',
+      semantic: {
+        docAnchors: ['docs/a.md'],
+      },
+    });
+
+    // Enrich node with new semantic details
+    store.enrichNode('src/a.ts::A', {
+      summary: 'New function summary',
+      complexity: 'low',
+      domainConcepts: [],
+      enrichedAt: '2026-05-28T00:00:00Z',
+      enrichedBy: 'agent',
+    });
+
+    const node = store.getNode('src/a.ts::A');
+    expect(node?.semantic?.docAnchors).toEqual(['docs/a.md']);
+    expect(node?.semantic?.summary).toBe('New function summary');
+  });
+
+  it('should calculate core/extra enriched nodes in ProjectGraph.getMetadata() matching CodeGraph logic', () => {
+    const graph = new ProjectGraph(PROJECT_NAME);
+    
+    // Core nodes
+    graph.addNode({ id: 'src/a.ts::A', name: 'A', type: 'function' as any, filePath: 'src/a.ts', startLine: 1, endLine: 5, exportType: 'none' as any, signature: '' });
+    graph.addNode({ id: 'src/b.ts::B', name: 'B', type: 'function' as any, filePath: 'src/b.ts', startLine: 1, endLine: 5, exportType: 'none' as any, signature: '' });
+    
+    // Test node
+    graph.addNode({ id: 'test/a.test.ts::Test', name: 'Test', type: 'function' as any, filePath: 'test/a.test.ts', startLine: 1, endLine: 5, exportType: 'none' as any, signature: '' });
+
+    // Enrich all 3 nodes
+    graph.enrichNode('src/a.ts::A', { summary: 'A', complexity: 'low', domainConcepts: [], enrichedAt: '', enrichedBy: 'agent' });
+    graph.enrichNode('src/b.ts::B', { summary: 'B', complexity: 'low', domainConcepts: [], enrichedAt: '', enrichedBy: 'agent' });
+    graph.enrichNode('test/a.test.ts::Test', { summary: 'Test', complexity: 'low', domainConcepts: [], enrichedAt: '', enrichedBy: 'agent' });
+
+    const meta = graph.getMetadata(PROJECT_NAME, '1.0.0');
+    expect(meta.enrichableNodeCount).toBe(2);
+    expect(meta.enrichment?.coreEnriched).toBe(2);
+    expect(meta.enrichment?.extraEnriched).toBe(1);
+    expect(meta.enrichment?.totalEnriched).toBe(3);
+    expect(meta.healthScore).toBe(100);
   });
 });

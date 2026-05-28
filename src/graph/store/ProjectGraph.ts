@@ -14,7 +14,7 @@ import type {
   GraphMetadata,
   ProjectInsight,
 } from '../models.js';
-import { EdgeRelation } from '../models.js';
+import { EdgeRelation, isTestNode } from '../models.js';
 import { AstStore } from './AstStore.js';
 import { MemoryStore } from './MemoryStore.js';
 import type { SqliteGraphRepository } from './sqlite-repository.js';
@@ -87,16 +87,22 @@ export class ProjectGraph {
   public getMetadata(projectName: string, version: string): GraphMetadata {
     const stats = this.getStats();
     const allNodes = this.getAllNodes();
-    const isTestNode = (n: GraphNode) =>
-      n.filePath.startsWith('test/') ||
-      n.filePath.includes('/fixtures/') ||
-      n.filePath.includes('.test.') ||
-      n.filePath.endsWith('.test.ts') ||
-      n.filePath.endsWith('.test.sh');
-    const enrichableNodeCount = allNodes.filter(n => n.type !== 'file' && !isTestNode(n)).length;
+    const enrichableNodeCount = allNodes.filter(n => n.type !== 'file' && !isTestNode(n.filePath)).length;
     
-    // 70% enrichment weight
-    const enrichmentRate = enrichableNodeCount > 0 ? this.enrichmentStats.totalEnriched / enrichableNodeCount : 0;
+    // Calculate core vs extra enriched nodes dynamically to prevent metrics discrepancy and auto-heal old data
+    const coreEnriched = allNodes.filter(n => n.semantic && n.type !== 'file' && !isTestNode(n.filePath)).length;
+    const extraEnriched = allNodes.filter(n => n.semantic && (n.type === 'file' || isTestNode(n.filePath))).length;
+
+    // Sync totalEnriched to RAM counts (Auto-heals metadata loaded from old schemas)
+    const totalEnriched = coreEnriched + extraEnriched;
+    const currentStats = this.astStore.enrichmentStats;
+    this.astStore.setEnrichmentStats({
+      ...currentStats,
+      totalEnriched,
+    });
+    
+    // 70% enrichment weight (capped at 1.0, handles zero denominator)
+    const enrichmentRate = enrichableNodeCount > 0 ? Math.min(1.0, coreEnriched / enrichableNodeCount) : 1.0;
     const enrichmentScore = enrichmentRate * 70;
     
     // 30% resolution weight
@@ -123,7 +129,13 @@ export class ProjectGraph {
       fileCount: stats.fileCount,
       projectName,
       enrichableNodeCount,
-      ...(this.enrichmentStats.totalEnriched > 0 ? { enrichment: this.enrichmentStats } : {}),
+      ...(totalEnriched > 0 ? {
+        enrichment: {
+          ...this.enrichmentStats,
+          coreEnriched,
+          extraEnriched,
+        }
+      } : {}),
       resolution: {
         totalEdges,
         resolvedEdges: internalTotalEdges - unresolvedEdges,

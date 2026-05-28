@@ -59,7 +59,13 @@ export class AstStore {
     if (!node) return false;
 
     const isFirstEnrich = !node.semantic;
-    node.semantic = semantic;
+    const docAnchors = node.semantic?.docAnchors;
+
+    node.semantic = {
+      ...semantic,
+      docAnchors: docAnchors ?? semantic.docAnchors,
+      staleSince: undefined,
+    };
 
     // Update stats
     if (isFirstEnrich) {
