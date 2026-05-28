@@ -51,6 +51,10 @@ export interface SemanticAttributes {
   enrichedAt: string;
   /** Who performed the enrichment */
   enrichedBy: 'agent' | 'manual';
+  /** Paths of doc files referencing this node, format: "docs/path.md#section-slug" */
+  docAnchors?: string[];
+  /** ISO 8601 timestamp — when node code changed since last enrichment */
+  staleSince?: string | null;
 }
 
 // --- Interfaces ---

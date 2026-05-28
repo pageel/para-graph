@@ -39,6 +39,11 @@ function validateSemantic(data: unknown): string | null {
   if (!['agent', 'manual'].includes(s.enrichedBy as string)) {
     return 'semantic.enrichedBy must be "agent" | "manual"';
   }
+  if (s.docAnchors !== undefined) {
+    if (!Array.isArray(s.docAnchors) || !s.docAnchors.every(x => typeof x === 'string')) {
+      return 'semantic.docAnchors must be an array of strings';
+    }
+  }
   return null;
 }
 
@@ -101,15 +106,16 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // --- graph_enrich: Write semantic enrichment data to a node ---
   server.tool(
     'graph_enrich',
-    'Write semantic enrichment data (summary, complexity, domain concepts) to a graph node',
+    'Write semantic enrichment data (summary, complexity, domain concepts, docAnchors) to a graph node',
     {
       projectName: z.string().describe('Name of the PARA project'),
       nodeId: z.string().describe('ID of the node to enrich'),
       summary: z.string().describe('Human-readable summary of what this code entity does. MUST NOT use pronouns (Lossless Restatement).'),
       complexity: z.enum(['low', 'medium', 'high']).describe('Estimated complexity level'),
       domainConcepts: z.array(z.string()).describe('Domain concepts this entity relates to'),
+      docAnchors: z.array(z.string()).optional().describe('Paths of doc files referencing this node'),
     },
-    async ({ projectName, nodeId, summary, complexity, domainConcepts }) => {
+    async ({ projectName, nodeId, summary, complexity, domainConcepts, docAnchors }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
 
       // Build semantic attributes
@@ -117,6 +123,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         summary,
         complexity,
         domainConcepts,
+        docAnchors,
         enrichedAt: new Date().toISOString(),
         enrichedBy: 'agent',
       };
