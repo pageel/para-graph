@@ -7,7 +7,7 @@ description: >
   when para-graph is not installed. Load this skill when working with code
   graphs, semantic enrichment, or any workflow that benefits from codebase
   structure awareness.
-version: "2.3.0"
+version: "2.4.0"
 ---
 
 # Skill: para-graph — Graph Intelligence Router
@@ -210,8 +210,41 @@ Reusable pipeline that workflows call when graph is available:
 | D    | `graph_context_bundle(projectName, nodeId)`                              | Load full context (source, callers, callees, imports, tests) |
 | E    | `graph_edges(projectName, nodeId)`                                       | Understand relationships                                     |
 | F    | `graph_impact_analysis(projectName, nodeId, direction?)`                 | Assess change blast radius                                   |
+| G    | `grep_search` (pattern verify)                                           | Cross-validate inline pattern counts against graph estimates |
+| H    | `graph_link_docs(projectName, links)`                                    | Link doc sections to graph nodes after updating docs        |
+| I    | `insight_push(projectName, category, domain, title, description, sourceType, ...)` | Push project insights (decisions, risks, gotchas) to SQLite |
+| J    | `insight_search(projectName, query, category?, domain?, limit?)`         | Search project insights with full-text search                |
 
 > **Not all steps are needed for every workflow.** Each §4.3 snippet specifies which steps to use.
+>
+> **Step G is conditional** — only needed when the workflow estimates file counts for **inline code patterns** (e.g., `details: err.message`, `console.log(error)`, hardcoded string literals). For purely structural queries ("who calls function X?"), Step F is sufficient.
+
+#### Step G — Pattern Blast Radius Verify (v2.4.0)
+
+> **Rationale:** Graph indexes structural relationships (imports, exports, calls) but cannot detect
+> inline code patterns within function bodies. This step bridges that gap by using `grep_search`
+> to verify pattern occurrence counts after graph analysis.
+>
+> **Case Study:** In pageel-crm v0.8.0 Security Hardening, graph correctly identified 16 files
+> for hardcoded secrets (import-level pattern) but only estimated 4 files for verbose error
+> leakage (`details: err.message` — an inline catch-block pattern). Actual count was 16 files.
+
+**Trigger conditions** (Agent MUST check after Step F):
+- The analysis involves an **inline code pattern** (string literal, error handling, logging)
+- The issue is NOT purely structural (function call graph, import chain)
+- The workflow produces **file count estimates** that will feed into a plan or report
+
+**Action:**
+1. Identify the pattern string(s) from the graph/scan analysis
+2. Run `grep_search` across the relevant source directory to get **exact file count and locations**
+3. Compare grep result with graph estimation from Step F
+4. **IF discrepancy found** → update the estimation with grep-verified count and log:
+   ```
+   ⚠️ Pattern Verify: Graph estimated N files, grep verified M files for pattern [X]
+   ```
+5. Use the grep-verified count for all downstream workflow outputs (plans, reports, specs)
+
+**Constraint:** Step G supplements graph intelligence, not replaces it. Graph remains the primary tool for structural dependency analysis.
 
 ### §4.3 Integration Snippets
 
@@ -221,7 +254,7 @@ Reusable pipeline that workflows call when graph is available:
 #### §4.3.1 For `/plan` — Architecture Context Gathering
 
 **When:** Phase 0 of any detail plan for a project with code.
-**Steps:** A → B → D → F
+**Steps:** A → B → D → F → G
 
 ```markdown
 > 🔍 **Graph-First (conditional):** If project has `.beads/graph/metadata.json`:
@@ -230,6 +263,7 @@ Reusable pipeline that workflows call when graph is available:
 > 2. `graph_query` to list classes, exported functions relevant to plan scope (Step B)
 > 3. `graph_context_bundle` for key architecture nodes — understand callers/callees (Step D)
 > 4. `graph_impact_analysis` if plan modifies existing code — assess blast radius (Step F)
+> 5. `grep_search` to verify inline pattern counts if plan involves code pattern fixes (Step G)
 >    If no graph → skip these steps entirely. Plan proceeds with source-only context.
 ```
 
@@ -251,6 +285,9 @@ Step B — Identify enrichment targets:
 Step C — Enrich nodes:
 0.4 🤖 `graph_enrich` for each approved node (read source BEFORE enriching)
 
+Step H — Link document anchors:
+0.5 🤖 Call `graph_link_docs` after document creation/modification to establish doc↔code traceability. Anchors in Markdown should use the `<!-- @graph-node: nodeId -->` comment format.
+
 Per-doc context loading (Phase N):
 Mode A (graph available): 1. `graph_context_bundle(nodeId)` — source, callers, callees, imports, tests 2. `graph_edges(nodeId)` — relationships and data flow 3. `view_file` — implementation details
 
@@ -262,7 +299,7 @@ Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 #### §4.3.3 For `/brainstorm` — Codebase Understanding
 
 **When:** Brainstorm about code architecture, refactoring, or feature design.
-**Steps:** A → B → D → E → F
+**Steps:** A → B → D → E → F → G
 
 ```markdown
 > 🔍 **Graph Context (conditional):** If brainstorm topic involves code:
@@ -271,6 +308,7 @@ Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 > 2. `graph_context_bundle` for key nodes under discussion (Step D)
 > 3. `graph_edges` to map dependencies (Step E)
 > 4. `graph_impact_analysis` if proposing changes (Step F)
+> 5. `grep_search` to verify inline pattern counts if estimating file-level blast radius (Step G)
 >    Ground brainstorm options in actual code structure, not assumptions.
 >    If no graph → use `view_file` + `grep_search` for source-only context.
 ```
@@ -278,7 +316,7 @@ Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 #### §4.3.4 For `/spec` — Requirements Traceability
 
 **When:** Writing specification for a feature that touches existing code.
-**Steps:** A → B → D → F
+**Steps:** A → B → D → F → G
 
 ```markdown
 > 🔍 **Graph Context (conditional):** If spec involves modifying existing code:
@@ -286,8 +324,25 @@ Both modes enforce: write ONLY what exists in source code (zero-hallucination).
 > 1. `graph_query` to identify affected components (Step B)
 > 2. `graph_context_bundle` for components being specified (Step D)
 > 3. `graph_impact_analysis` to map downstream effects (Step F)
+> 4. `grep_search` to verify inline pattern counts for scope boundary accuracy (Step G)
 >    Include graph-derived dependency list in spec's "Affected Components" section.
 >    If no graph → manually list affected files via grep/find.
+```
+
+#### §4.3.5 For `/qa` — Stress-Test Validation
+
+**When:** QA stress-testing plans, specs, or artifacts that involve code changes.
+**Steps:** A → B → D → F → G
+
+```markdown
+> 🔍 **Graph Context (conditional):** If QA target involves code modifications:
+>
+> 1. `graph_query` + `graph_god_nodes` to identify architectural hot spots (Step B)
+> 2. `graph_context_bundle` for components under review (Step D)
+> 3. `graph_impact_analysis` to verify blast radius claims in the artifact (Step F)
+> 4. `grep_search` to cross-validate any file count estimates in the artifact (Step G)
+>    Challenge assumptions: "Does the plan claim 4 files affected? Verify with grep."
+>    If no graph → use grep/find for source-only validation.
 ```
 
 ### §4.4 Graceful Fallback (Source-Only Mode)
@@ -304,6 +359,25 @@ When para-graph is NOT available (no `.beads/graph/`), workflows fall back to:
 
 > **Key principle:** Graph intelligence enhances workflow quality but is NEVER required.
 > All workflows MUST work correctly without para-graph installed.
+
+### §4.5 Memory Event & Insight Conventions (v0.16.0)
+
+To allow memory consolidation and cross-entity reasoning, Agent SHOULD follow these conventions when pushing events or insights:
+
+#### Memory Events (`memory_push`)
+Recommended `kind` values for doc-graph changes:
+- `docs_link`: Logged when docAnchors are linked to graph nodes
+- `docs_stale`: Logged when staleness is detected during documentation builds
+
+#### Project Insights (`insight_push`)
+Use `insight_push` when a brainstorm, QA run, or bug fix produces reusable knowledge:
+- **category**:
+  - `lesson`: Lessons learned from fixing bugs or design reviews
+  - `risk`: Cross-platform or architectural risks identified
+  - `decision`: Brainstorm options evaluated and final choices
+  - `pattern`: Reusable code design patterns
+  - `gotcha`: Workspace-specific quirks (e.g. SQLite WAL mode details)
+- **domain**: Scope of the knowledge (e.g., `path-handling`, `memory`, `parser`, `mcp`, `governance`)
 
 ## §5. Constraints
 
