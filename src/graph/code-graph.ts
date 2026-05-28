@@ -6,7 +6,7 @@
  */
 
 import type { GraphNode, GraphEdge, SemanticAttributes, EnrichmentStats, GraphMetadata } from './models.js';
-import { EdgeRelation, NodeType } from './models.js';
+import { EdgeRelation, NodeType, isTestNode } from './models.js';
 
 export class CodeGraph {
   /** Primary index: node ID → GraphNode */
@@ -199,16 +199,17 @@ export class CodeGraph {
   getMetadata(projectName: string, version: string): GraphMetadata {
     const stats = this.getStats();
     const allNodes = this.getAllNodes();
-    const isTestNode = (n: GraphNode) =>
-      n.filePath.startsWith('test/') ||
-      n.filePath.includes('/fixtures/') ||
-      n.filePath.includes('.test.') ||
-      n.filePath.endsWith('.test.ts') ||
-      n.filePath.endsWith('.test.sh');
-    const enrichableNodeCount = allNodes.filter(n => n.type !== NodeType.FILE && !isTestNode(n)).length;
+    const enrichableNodeCount = allNodes.filter(n => n.type !== NodeType.FILE && !isTestNode(n.filePath)).length;
+
+    // Calculate core vs extra enriched nodes dynamically to prevent metrics discrepancy and auto-heal old data
+    const coreEnriched = allNodes.filter(n => n.semantic && n.type !== NodeType.FILE && !isTestNode(n.filePath)).length;
+    const extraEnriched = allNodes.filter(n => n.semantic && (n.type === NodeType.FILE || isTestNode(n.filePath))).length;
+
+    // Sync totalEnriched to RAM counts (Auto-heals metadata loaded from old schemas)
+    this._enrichmentStats.totalEnriched = coreEnriched + extraEnriched;
     
-    // 70% enrichment weight
-    const enrichmentRate = enrichableNodeCount > 0 ? this._enrichmentStats.totalEnriched / enrichableNodeCount : 0;
+    // 70% enrichment weight (capped at 1.0, handles zero denominator)
+    const enrichmentRate = enrichableNodeCount > 0 ? Math.min(1.0, coreEnriched / enrichableNodeCount) : 1.0;
     const enrichmentScore = enrichmentRate * 70;
     
     // 30% resolution weight
@@ -235,7 +236,13 @@ export class CodeGraph {
       fileCount: stats.fileCount,
       projectName,
       enrichableNodeCount,
-      ...(this._enrichmentStats.totalEnriched > 0 ? { enrichment: this.enrichmentStats } : {}),
+      ...(this._enrichmentStats.totalEnriched > 0 ? {
+        enrichment: {
+          ...this.enrichmentStats,
+          coreEnriched,
+          extraEnriched,
+        }
+      } : {}),
       resolution: {
         totalEdges,
         resolvedEdges: internalTotalEdges - unresolvedEdges,

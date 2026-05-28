@@ -205,6 +205,26 @@ export interface EnrichmentStats {
   lastEnrichedAt: string | null;
   /** IDs of the 5 most recently enriched nodes (newest first) */
   recentNodes: string[];
+  /** Number of core nodes (non-file, non-test) that have been enriched */
+  coreEnriched?: number;
+  /** Number of extra nodes (file, test) that have been enriched */
+  extraEnriched?: number;
+}
+
+/**
+ * Helper to identify test files or fixtures.
+ * Windows path safety included.
+ */
+export function isTestNode(filePath: string): boolean {
+  const normalized = filePath.replace(/\\/g, '/');
+  return (
+    normalized.startsWith('test/') ||
+    normalized.includes('/fixtures/') ||
+    normalized.startsWith('fixtures/') ||
+    normalized.includes('.test.') ||
+    normalized.endsWith('.test.ts') ||
+    normalized.endsWith('.test.sh')
+  );
 }
 
 /**
