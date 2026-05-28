@@ -280,11 +280,21 @@ function tryImportHint(
  * Priority 3: Unique-name match.
  * If there's exactly one entity with the target name across the entire graph,
  * resolve to it.
+ *
+ * Tries class-qualified key first (e.g., "GraphStore::getGraph") before
+ * falling back to standalone method/object name (e.g., "getGraph").
  */
 function tryUniqueName(
   edge: GraphEdge,
   nameIndex: Map<string, string[]>,
 ): string | null {
+  // Try 1: Full qualified key — preserves class context
+  const fullCandidates = nameIndex.get(edge.targetId);
+  if (fullCandidates && fullCandidates.length === 1) {
+    return fullCandidates[0];
+  }
+
+  // Try 2: Standalone method/object name
   const methodName = extractMethodName(edge.targetId);
   const searchName = methodName ?? extractObjectName(edge.targetId);
 
