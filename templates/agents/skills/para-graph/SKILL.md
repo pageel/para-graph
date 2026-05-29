@@ -7,7 +7,7 @@ description: >
   when para-graph is not installed. Load this skill when working with code
   graphs, semantic enrichment, or any workflow that benefits from codebase
   structure awareness.
-version: "2.4.0"
+version: "2.5.0"
 ---
 
 # Skill: para-graph — Graph Intelligence Router
@@ -76,6 +76,13 @@ graph_enrich(
 - `summary`: 1-2 sentences describing **what** (not **how**). MUST NOT use pronouns like "it", "this class", "this function" (Lossless Restatement).
 - `complexity`: `low` (< 20 lines, simple logic), `medium` (20-50 lines), `high` (> 50 lines or complex logic)
 - `domainConcepts`: 2-5 domain-level keywords, not implementation details
+
+> ⚠️ **Blast Radius in Summary (v2.5.0):** When mentioning blast radius in a `summary`, Agent MUST:
+> 1. Run `graph_impact_analysis(direction=upstream)` — upstream only
+> 2. Record the upstream value as "Blast Radius" (who breaks if this node changes)
+> 3. If also reporting bidirectional impact, label it explicitly:
+>    _"Upstream Blast Radius: N nodes. Transitive Impact (both-direction): M nodes."_
+> 4. MUST NOT label a `direction=both` result as "Blast Radius" — that is **Transitive Impact**
 
 ### Step 5: Agentic Edge Resolution (v0.7.0+)
 
@@ -209,7 +216,7 @@ Reusable pipeline that workflows call when graph is available:
 | C    | `graph_enrich(projectName, nodeId, summary, complexity, domainConcepts)` | Write semantic metadata                                      |
 | D    | `graph_context_bundle(projectName, nodeId)`                              | Load full context (source, callers, callees, imports, tests) |
 | E    | `graph_edges(projectName, nodeId)`                                       | Understand relationships                                     |
-| F    | `graph_impact_analysis(projectName, nodeId, direction?)`                 | Assess change blast radius                                   |
+| F    | `graph_impact_analysis(projectName, nodeId, direction?)`                 | Assess change blast radius (see §4.2.F Semantics below)      |
 | G    | `grep_search` (pattern verify)                                           | Cross-validate inline pattern counts against graph estimates |
 | H    | `graph_link_docs(projectName, links)`                                    | Link doc sections to graph nodes after updating docs        |
 | I    | `insight_push(projectName, category, domain, title, description, sourceType, ...)` | Push project insights (decisions, risks, gotchas) to SQLite |
@@ -218,6 +225,26 @@ Reusable pipeline that workflows call when graph is available:
 > **Not all steps are needed for every workflow.** Each §4.3 snippet specifies which steps to use.
 >
 > **Step G is conditional** — only needed when the workflow estimates file counts for **inline code patterns** (e.g., `details: err.message`, `console.log(error)`, hardcoded string literals). For purely structural queries ("who calls function X?"), Step F is sufficient.
+
+#### Step F — Impact Analysis Direction Semantics (v2.5.0)
+
+The `direction` parameter of `graph_impact_analysis` produces fundamentally different metrics. Agent MUST use the correct terminology:
+
+| `direction` | Correct Term | Meaning | When to Use |
+|:--|:--|:--|:--|
+| `upstream` | **Blast Radius** | Who transitively depends on this node? (callers of callers) | Risk assessment, enrichment summaries, plan scoping |
+| `downstream` | **Dependency Radius** | What does this node transitively depend on? | Understanding context, finding external dependencies |
+| `both` | **Transitive Impact** | Full bidirectional reachability | Research, architecture brainstorms, holistic analysis |
+
+> ⚠️ **Anti-pattern:** Do NOT call a `direction=both` result "Blast Radius".
+> Blast Radius strictly means upstream-only ("if I change X, what breaks?").
+> The HTML Docs Dashboard calculates Blast Radius using upstream BFS — reporting
+> a `both` value as blast radius creates data inconsistency between graph
+> enrichment and rendered documentation.
+>
+> **Case Study (v2.5.0):** Agent enriched `log_debug` with "Blast Radius ~25" using
+> `direction=both`, but the HTML dashboard correctly showed 10 (upstream-only BFS).
+> Root cause: no semantic guidance distinguishing direction values.
 
 #### Step G — Pattern Blast Radius Verify (v2.4.0)
 
