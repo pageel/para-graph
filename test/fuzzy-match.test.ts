@@ -1,3 +1,4 @@
+// Trigger IDE test index update
 import { describe, it, expect } from 'vitest';
 import { findFuzzyMatch } from '../src/utils/fuzzy-match.js';
 

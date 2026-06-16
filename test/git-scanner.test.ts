@@ -1,3 +1,4 @@
+// Trigger IDE test index update
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
