@@ -107,6 +107,9 @@ export class TreeSitterParser {
     if (profile.postProcess) {
       profile.postProcess(captures, graph);
     }
+
+    // Step 6: Extract @para-doc comments and add DOCUMENTED_BY edges
+    this.extractCsaComments(lines, relPath, graph);
   }
 
   /**
@@ -412,5 +415,64 @@ export class TreeSitterParser {
       }
     }
     return ExportType.NONE;
+  }
+
+  /**
+   * Scan lines for @para-doc references and link to the most specific matching node.
+   * @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-comments]
+   */
+  private extractCsaComments(lines: string[], relPath: string, graph: CodeGraph): void {
+    const csaRegex = /@para-doc\s+\[?([^\]#\s]+)#([^\]\s]+)\]?/g;
+    const allNodes = graph.getAllNodes();
+
+    for (let i = 0; i < lines.length; i++) {
+      const lineText = lines[i];
+      let match;
+      csaRegex.lastIndex = 0;
+      
+      while ((match = csaRegex.exec(lineText)) !== null) {
+        const anchorId = match[2];
+        const lineNum = i + 1;
+
+        // First check if a node starts immediately on the next line (L + 1)
+        const nodeStartingAfter = allNodes.filter(
+          (n) =>
+            n.filePath === relPath &&
+            n.type !== NodeType.FILE &&
+            n.startLine === lineNum + 1
+        );
+
+        let sourceId = relPath; // Default to file-level
+        if (nodeStartingAfter.length > 0) {
+          // Sort by startLine ascending to find the closest one
+          nodeStartingAfter.sort((a, b) => a.startLine - b.startLine);
+          sourceId = nodeStartingAfter[0].id;
+        } else {
+          // Fallback to containing nodes for comments inside blocks
+          const containingNodes = allNodes.filter(
+            (n) =>
+              n.filePath === relPath &&
+              n.type !== NodeType.FILE &&
+              n.startLine <= lineNum &&
+              n.endLine >= lineNum
+          );
+          if (containingNodes.length > 0) {
+            // Sort by span length ascending to find the most specific node
+            containingNodes.sort((a, b) => (a.endLine - a.startLine) - (b.endLine - b.startLine));
+            sourceId = containingNodes[0].id;
+          }
+        }
+
+        const edge: GraphEdge = {
+          sourceId,
+          targetId: anchorId,
+          relation: EdgeRelation.DOCUMENTED_BY,
+          sourceFile: relPath,
+          sourceLine: lineNum,
+          confidence: 'EXTRACTED',
+        };
+        graph.addEdge(edge);
+      }
+    }
   }
 }

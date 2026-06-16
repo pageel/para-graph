@@ -9,8 +9,8 @@
  *   para-graph build <target-dir> [output-dir] [--import]
  */
 
-import { resolve, join } from 'node:path';
-import { existsSync, unlinkSync } from 'node:fs';
+import { resolve, join, dirname, relative } from 'node:path';
+import { existsSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { walkDirectory } from '../parser/file-walker.js';
 import { TreeSitterParser } from '../parser/tree-sitter-parser.js';
 import { CodeGraph } from '../graph/code-graph.js';
@@ -18,7 +18,27 @@ import { exportToJsonl } from '../graph/jsonl-exporter.js';
 import { importFromJsonl } from '../graph/jsonl-importer.js';
 import { resolveEdges } from '../graph/edge-resolver.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
+import { NodeType, ExportType } from '../graph/models.js';
 import type { GraphNode, GraphEdge } from '../graph/models.js';
+import { extractSpecAnchors } from '../parser/csa-parser.js';
+
+// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+function findMdFiles(dir: string): string[] {
+  const results: string[] = [];
+  if (!existsSync(dir)) return results;
+
+  const list = readdirSync(dir);
+  for (const file of list) {
+    const fullPath = join(dir, file);
+    const stat = statSync(fullPath);
+    if (stat.isDirectory()) {
+      results.push(...findMdFiles(fullPath));
+    } else if (stat.isFile() && file.endsWith('.md')) {
+      results.push(fullPath);
+    }
+  }
+  return results;
+}
 
 export interface BuildOptions {
   targetDir: string;
@@ -84,6 +104,40 @@ export function runBuild(options: BuildOptions): void {
   // Step 4: Parse each file
   for (const file of files) {
     parser.parseFile(file, graph);
+  }
+
+  // Step 4.5: Scan project specs & plans for CSA anchors
+  const projectRoot = dirname(targetDir);
+  const docsPath = join(projectRoot, 'docs');
+  const plansPath = join(projectRoot, 'artifacts', 'plans');
+  const mdFiles = [...findMdFiles(docsPath), ...findMdFiles(plansPath)];
+  
+  if (mdFiles.length > 0) {
+    let anchorCount = 0;
+    for (const mdFile of mdFiles) {
+      const relPath = relative(projectRoot, mdFile).replace(/\\/g, '/');
+      try {
+        const anchors = extractSpecAnchors(mdFile);
+        for (const anchor of anchors) {
+          graph.addNode({
+            id: anchor.id,
+            type: NodeType.SPEC_ANCHOR,
+            name: anchor.id,
+            filePath: relPath,
+            startLine: anchor.line,
+            endLine: anchor.line,
+            exportType: ExportType.NONE,
+            signature: anchor.title,
+          });
+          anchorCount++;
+        }
+      } catch (err) {
+        console.warn(`[para-graph] Warning: Failed to parse CSA anchors in ${mdFile}: ${(err as Error).message}`);
+      }
+    }
+    if (anchorCount > 0) {
+      console.log(`[para-graph] Found and registered ${anchorCount} SPEC_ANCHOR node(s)`);
+    }
   }
 
   // Step 5: Merge semantic data from existing graph (H2-1)

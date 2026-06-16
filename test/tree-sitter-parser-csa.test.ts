@@ -1,0 +1,43 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { resolve, join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { CodeGraph } from '../src/graph/code-graph.js';
+import { TreeSitterParser } from '../src/parser/tree-sitter-parser.js';
+import { EdgeRelation } from '../src/graph/models.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const FIXTURES_DIR = resolve(__dirname, 'fixtures');
+
+describe('TreeSitterParser CSA comments extraction', () => {
+  let graph: CodeGraph;
+  let parser: TreeSitterParser;
+
+  beforeEach(() => {
+    graph = new CodeGraph();
+    parser = new TreeSitterParser(FIXTURES_DIR);
+  });
+
+  it('should parse @para-doc comments and add DOCUMENTED_BY edges', () => {
+    const filePath = join(FIXTURES_DIR, 'csa-comments.ts');
+    parser.parseFile(filePath, graph);
+
+    const edges = graph.getAllEdges().filter(e => e.relation === EdgeRelation.DOCUMENTED_BY);
+    expect(edges).toHaveLength(3);
+
+    // 1. File-level edge
+    const fileEdge = edges.find(e => e.targetId === 'csa-file-level');
+    expect(fileEdge).toBeDefined();
+    expect(fileEdge?.sourceId).toBe('csa-comments.ts');
+
+    // 2. Class-level edge
+    const classEdge = edges.find(e => e.targetId === 'csa-class-level');
+    expect(classEdge).toBeDefined();
+    expect(classEdge?.sourceId).toBe('csa-comments.ts::OrderProcessor');
+
+    // 3. Method-level edge
+    const methodEdge = edges.find(e => e.targetId === 'csa-method-level');
+    expect(methodEdge).toBeDefined();
+    expect(methodEdge?.sourceId).toBe('csa-comments.ts::OrderProcessor.process');
+  });
+});
