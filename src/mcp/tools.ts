@@ -22,6 +22,9 @@ import { GraphStore } from '../graph/store/GraphStore.js';
 import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.js';
 import { appendEnrichmentLog } from '../graph/logger.js';
 import { CurationWorker } from '../graph/curation-worker.js';
+import { SqliteManager } from '../graph/store/sqlite-manager.js';
+import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
+import { findFuzzyMatch } from '../utils/fuzzy-match.js';
 
 /**
  * Validate SemanticAttributes structure.
@@ -617,5 +620,142 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         content: [{ type: 'text' as const, text: JSON.stringify({ success: true, insight }, null, 2) }],
       };
     },
+  );
+
+  // --- graph_audit_csa: Run CSA compliance audit ---
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+  server.tool(
+    'graph_audit_csa',
+    'Run Convergent Specification Architecture (CSA) compliance audit for a project',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+    },
+    async ({ projectName }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      
+      try {
+        dbManager.initSchema();
+        const auditResult = dbManager.runCsaAudit();
+        dbManager.close();
+
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(auditResult, null, 2) }],
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- graph_fix_csa: Run self-healing fix for csa dangling links ---
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+  server.tool(
+    'graph_fix_csa',
+    'Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      dryRun: z.boolean().optional().default(false).describe('If true, only preview proposed fixes without writing to files'),
+    },
+    async ({ projectName, dryRun }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      const projectRepoPath = join(workspaceRoot, 'Projects', projectName, 'repo');
+
+      try {
+        dbManager.initSchema();
+        const auditResult = dbManager.runCsaAudit();
+
+        if (auditResult.danglingEdges.length === 0) {
+          dbManager.close();
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ success: true, message: 'No dangling spec links found. Nothing to fix.', fixedCount: 0 }) }],
+          };
+        }
+
+        const db = dbManager.getConnection();
+        const rows = db.prepare(`SELECT id FROM nodes WHERE type = 'spec_anchor'`).all() as Array<{ id: string }>;
+        const existingAnchorIds = rows.map(r => r.id);
+
+        let fixedCount = 0;
+        const repairsApplied: Array<{ sourceFile: string; line: number; oldAnchor: string; newAnchor: string; method: string }> = [];
+
+        for (const edge of auditResult.danglingEdges) {
+          const targetId = edge.targetId;
+          const sourceFile = edge.sourceFile;
+          const sourceLine = edge.sourceLine;
+
+          // Git Log Rename
+          let proposedTarget = findRenamedAnchorInGit(targetId, projectRepoPath);
+          let method = 'Git Log Rename';
+
+          // Levenshtein Fuzzy Match
+          if (!proposedTarget) {
+            proposedTarget = findFuzzyMatch(targetId, existingAnchorIds);
+            method = 'Fuzzy Match (Levenshtein)';
+          }
+
+          if (proposedTarget) {
+            if (dryRun) {
+              repairsApplied.push({
+                sourceFile,
+                line: sourceLine,
+                oldAnchor: targetId,
+                newAnchor: proposedTarget,
+                method: `${method} (dry-run)`
+              });
+              continue;
+            }
+
+            const fullSourcePath = resolve(projectRepoPath, sourceFile);
+            if (existsSync(fullSourcePath)) {
+              const content = readFileSync(fullSourcePath, 'utf-8');
+              const lines = content.split(/\r?\n/);
+              
+              if (sourceLine > 0 && sourceLine <= lines.length) {
+                const originalLine = lines[sourceLine - 1];
+                if (originalLine.includes(targetId)) {
+                  lines[sourceLine - 1] = originalLine.replace(targetId, proposedTarget);
+                  const hasCRLF = content.includes('\r\n');
+                  writeFileSync(fullSourcePath, lines.join(hasCRLF ? '\r\n' : '\n'), 'utf-8');
+                  fixedCount++;
+                  repairsApplied.push({
+                    sourceFile,
+                    line: sourceLine,
+                    oldAnchor: targetId,
+                    newAnchor: proposedTarget,
+                    method
+                  });
+                }
+              }
+            }
+          }
+        }
+
+        dbManager.close();
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: true,
+              message: dryRun ? `Previewed repairs for project ${projectName}` : `Applied repairs for project ${projectName}`,
+              fixedCount,
+              repairsApplied
+            }, null, 2)
+          }],
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
   );
 }

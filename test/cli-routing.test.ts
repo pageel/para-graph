@@ -9,6 +9,6 @@ describe('CLI Subcommand Routing', () => {
 
   it('should support fix csa command', () => {
     const output = execSync('npx tsx src/cli.ts fix csa --project .', { encoding: 'utf-8' });
-    expect(output).toContain('[para-graph] Running CSA fix for project: .');
+    expect(output).toContain('[CSA Fix]');
   }, 60000);
 });

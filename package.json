@@ -44,6 +44,7 @@
   "homepage": "https://github.com/pageel/para-graph#readme",
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.12",
+    "@types/fast-levenshtein": "^0.0.4",
     "@types/node": "^25.6.0",
     "better-sqlite3": "^12.10.0",
     "tsx": "^4.21.0",
@@ -52,6 +53,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "fast-levenshtein": "^3.0.0",
     "tree-sitter": "^0.21.1",
     "tree-sitter-bash": "^0.21.0",
     "tree-sitter-go": "^0.21.0",

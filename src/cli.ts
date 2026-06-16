@@ -22,6 +22,7 @@ import { runHooks } from './commands/hooks.js';
 import { runMem } from './commands/mem.js';
 import { runLink } from './commands/link.js';
 import { runAudit } from './commands/audit.js';
+import { runFix } from './commands/fix.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -242,7 +243,7 @@ function main(): void {
       const subcommand = args[1];
       if (subcommand !== 'csa') {
         console.error('Error: Unknown fix subcommand. Supported subcommands: csa');
-        console.error('Usage: para-graph fix csa --project <path>');
+        console.error('Usage: para-graph fix csa --project <path> [--auto] [--dry-run]');
         process.exit(1);
       }
 
@@ -255,8 +256,17 @@ function main(): void {
         process.exit(1);
       }
 
-      console.log(`[para-graph] Running CSA fix for project: ${projectPath}`);
-      process.exit(0);
+      const auto = subArgs.includes('--auto');
+      const dryRun = subArgs.includes('--dry-run');
+
+      runFix({ projectPath, auto, dryRun }).catch((err) => {
+        if (err.message && err.message.startsWith('exit:')) {
+          const code = parseInt(err.message.split(':')[1], 10);
+          process.exit(code);
+        }
+        console.error('[CSA Fix] CLI Error:', err);
+        process.exit(1);
+      });
       break;
     }
 
