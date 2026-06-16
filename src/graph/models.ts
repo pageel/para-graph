@@ -14,6 +14,7 @@ export enum NodeType {
   FUNCTION = 'function',
   INTERFACE = 'interface',
   VARIABLE = 'variable',
+  SPEC_ANCHOR = 'spec_anchor',
 }
 
 /** Type of relationship between two graph nodes */
@@ -22,6 +23,7 @@ export enum EdgeRelation {
   IMPORTS_FROM = 'IMPORTS_FROM',
   INHERITS = 'INHERITS',
   IMPLEMENTS = 'IMPLEMENTS',
+  DOCUMENTED_BY = 'DOCUMENTED_BY',
 }
 
 /** Export visibility of a code entity */

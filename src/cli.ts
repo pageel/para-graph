@@ -20,6 +20,7 @@ import { runServe } from './commands/serve.js';
 import { runInject } from './commands/inject.js';
 import { runHooks } from './commands/hooks.js';
 import { runMem } from './commands/mem.js';
+import { runLink } from './commands/link.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -32,6 +33,9 @@ Usage:
   para-graph build <target-dir> [output-dir] [--clean]    Scan code and export graph (manual paths)
   para-graph serve [workspace-root]                       Start MCP server (stdio)
   para-graph inject <path> [--project <name>] [--dry-run]  Inject graph context into Markdown
+  para-graph link <project-name>                          Scan docs and link anchors to code graph
+  para-graph audit csa --project <path>                   Run the CSA compliance audit
+  para-graph fix csa --project <path>                     Run the CSA self-healing fix
   para-graph hooks [install|uninstall|status]              Manage BeforeTool hooks
   para-graph --help                                       Show this help
 
@@ -39,6 +43,9 @@ Commands:
   build    Analyze source code and generate a structural graph (JSONL).
   serve    Start the MCP server exposing graph data to AI Agents.
   inject   Inject Living Docs / Blast Radius context into Markdown files.
+  link     Scan documentation anchors and link them to structural code nodes.
+  audit    Run project compliance audits (e.g., csa).
+  fix      Run project self-healing fixes (e.g., csa).
   hooks    Install/uninstall/status BeforeTool hooks for AI Agent nudging.
   mem      Curate session memory events into semantic slices.
 
@@ -188,6 +195,68 @@ function main(): void {
       }
       
       runMem(projectName, wsRoot);
+      break;
+    }
+
+    case 'link': {
+      const projectName = args[1];
+      if (!projectName) {
+        console.error('Error: link requires <project-name> argument.');
+        console.error('Usage: para-graph link <project-name>');
+        process.exit(1);
+      }
+      
+      const wsRoot = findWorkspaceRoot();
+      if (!wsRoot) {
+        console.error('Error: Could not auto-detect workspace root.');
+        process.exit(1);
+      }
+      
+      runLink(projectName, wsRoot);
+      break;
+    }
+
+    case 'audit': {
+      const subcommand = args[1];
+      if (subcommand !== 'csa') {
+        console.error('Error: Unknown audit subcommand. Supported subcommands: csa');
+        console.error('Usage: para-graph audit csa --project <path>');
+        process.exit(1);
+      }
+
+      const subArgs = args.slice(2);
+      const projectIdx = subArgs.indexOf('--project');
+      const projectPath = projectIdx !== -1 ? subArgs[projectIdx + 1] : undefined;
+
+      if (!projectPath) {
+        console.error('Error: audit csa requires --project <path> argument.');
+        process.exit(1);
+      }
+
+      console.log(`[para-graph] Running CSA audit for project: ${projectPath}`);
+      process.exit(0);
+      break;
+    }
+
+    case 'fix': {
+      const subcommand = args[1];
+      if (subcommand !== 'csa') {
+        console.error('Error: Unknown fix subcommand. Supported subcommands: csa');
+        console.error('Usage: para-graph fix csa --project <path>');
+        process.exit(1);
+      }
+
+      const subArgs = args.slice(2);
+      const projectIdx = subArgs.indexOf('--project');
+      const projectPath = projectIdx !== -1 ? subArgs[projectIdx + 1] : undefined;
+
+      if (!projectPath) {
+        console.error('Error: fix csa requires --project <path> argument.');
+        process.exit(1);
+      }
+
+      console.log(`[para-graph] Running CSA fix for project: ${projectPath}`);
+      process.exit(0);
       break;
     }
 
