@@ -55,6 +55,15 @@ describe('Project Insights Store and Search (P5)', () => {
     expect(results.length).toBe(1);
     expect(results[0].id).toBe('ins-1');
     expect(results[0].title).toBe('Normalize paths on Windows');
+
+    // Test getInsight
+    const fetched = graph.getInsight('ins-1');
+    expect(fetched).toBeDefined();
+    expect(fetched!.id).toBe('ins-1');
+    expect(fetched!.title).toBe('Normalize paths on Windows');
+
+    const fetchedNonExistent = graph.getInsight('ins-nonexistent');
+    expect(fetchedNonExistent).toBeNull();
   });
 
   it('should filter search results by category and domain', () => {
@@ -122,5 +131,59 @@ describe('Project Insights Store and Search (P5)', () => {
     expect(results.length).toBe(1);
     expect(results[0].id).toBe('ins-memory');
     expect(results[0].title).toBe('Use option 5 for semantic layer');
+  });
+
+  it('should skip pushing a new insight if a very similar insight (>0.8 Jaccard similarity) already exists in DB', () => {
+    const i1: ProjectInsight = {
+      id: 'ins-original',
+      category: 'lesson',
+      domain: 'path-handling',
+      title: 'Normalize paths on Windows system',
+      description: 'Paths must be normalized to forward slashes.',
+      sourceType: 'bugfix',
+      confidence: 'hypothesis',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const i2: ProjectInsight = {
+      id: 'ins-duplicate',
+      category: 'lesson',
+      domain: 'path-handling',
+      title: 'Normalize paths on Windows',
+      description: 'Paths must be normalized to forward slashes.',
+      sourceType: 'bugfix',
+      confidence: 'hypothesis',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const i3: ProjectInsight = {
+      id: 'ins-different',
+      category: 'lesson',
+      domain: 'sqlite',
+      title: 'SQLite database locking problems',
+      description: 'Database may lock on Windows during concurrent writes.',
+      sourceType: 'bugfix',
+      confidence: 'hypothesis',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    const id1 = graph.pushInsight(i1);
+    expect(id1).toBe('ins-original');
+
+    // Should detect i2 as duplicate and return 'ins-original'
+    const id2 = graph.pushInsight(i2);
+    expect(id2).toBe('ins-original');
+
+    // Should insert i3 because it is different
+    const id3 = graph.pushInsight(i3);
+    expect(id3).toBe('ins-different');
+
+    // Verify only 2 insights in database
+    const db = dbManager.getConnection();
+    const rows = db.prepare('SELECT id FROM project_insights').all();
+    expect(rows.length).toBe(2);
   });
 });

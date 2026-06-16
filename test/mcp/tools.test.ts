@@ -131,3 +131,81 @@ describe('MCP Tools: memory_search', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('MCP Tools: insight_validate', () => {
+  it('should validate an existing insight and update its confidence', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const validateHandler = handlers['insight_validate'];
+    expect(validateHandler).toBeDefined();
+
+    const mockInsight = {
+      id: 'ins-1',
+      category: 'lesson',
+      domain: 'parser',
+      title: 'Mock title',
+      description: 'Mock desc',
+      sourceType: 'bugfix',
+      confidence: 'hypothesis',
+      createdAt: 12345,
+      updatedAt: 12345
+    };
+
+    const mockGraph = {
+      getInsight: vi.fn().mockReturnValue(mockInsight),
+      pushInsight: vi.fn()
+    };
+    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+    vi.spyOn(GraphStore, 'saveGraph').mockImplementation(() => {});
+
+    const result = await validateHandler({
+      projectName: 'test',
+      insightId: 'ins-1',
+      confidence: 'validated'
+    });
+
+    const content = JSON.parse(result.content[0].text);
+    expect(content.success).toBe(true);
+    expect(content.insight.confidence).toBe('validated');
+    expect(content.insight.validatedAt).toBeDefined();
+    expect(mockGraph.pushInsight).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  it('should return error if insight is not found', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const validateHandler = handlers['insight_validate'];
+
+    const mockGraph = {
+      getInsight: vi.fn().mockReturnValue(null),
+      pushInsight: vi.fn()
+    };
+    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+
+    const result = await validateHandler({
+      projectName: 'test',
+      insightId: 'ins-nonexistent',
+      confidence: 'validated'
+    });
+
+    expect(result.isError).toBe(true);
+    const content = JSON.parse(result.content[0].text);
+    expect(content.error).toContain('not found');
+
+    vi.restoreAllMocks();
+  });
+});

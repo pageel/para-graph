@@ -4,6 +4,18 @@ import fs from 'fs';
 
 const require = createRequire(import.meta.url);
 
+export interface CsaAuditResult {
+  totalAnchors: number;
+  coveredAnchors: number;
+  coverageRate: number;
+  danglingEdges: Array<{
+    sourceId: string;
+    targetId: string;
+    sourceFile: string;
+    sourceLine: number;
+  }>;
+}
+
 export class SqliteManager {
   private dbPath: string;
   private db: any | null = null;
@@ -45,8 +57,7 @@ export class SqliteManager {
         source_file TEXT,
         source_line INTEGER,
         PRIMARY KEY (source_id, target_id, relation),
-        FOREIGN KEY (source_id) REFERENCES nodes(id) ON DELETE CASCADE,
-        FOREIGN KEY (target_id) REFERENCES nodes(id) ON DELETE CASCADE
+        FOREIGN KEY (source_id) REFERENCES nodes(id) ON DELETE CASCADE
       )
     `);
 
@@ -239,6 +250,95 @@ export class SqliteManager {
       }
     }
     return this.db;
+  }
+
+  public persistGraph(nodes: any[], edges: any[]): void {
+    const db = this.getConnection();
+    
+    const insertNode = db.prepare(`
+      INSERT OR REPLACE INTO nodes (id, name, type, semantic, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+    
+    const insertEdge = db.prepare(`
+      INSERT OR REPLACE INTO edges (source_id, target_id, relation, source_file, source_line)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    
+    const now = Date.now();
+    
+    const transaction = db.transaction(() => {
+      db.prepare(`DELETE FROM nodes`).run();
+      db.prepare(`DELETE FROM edges`).run();
+      
+      for (const node of nodes) {
+        insertNode.run(
+          node.id,
+          node.name,
+          node.type,
+          node.semantic ? JSON.stringify(node.semantic) : null,
+          node.createdAt || node.created_at || now,
+          node.updatedAt || node.updated_at || now
+        );
+      }
+      
+      for (const edge of edges) {
+        insertEdge.run(
+          edge.sourceId,
+          edge.targetId,
+          edge.relation,
+          edge.sourceFile || null,
+          edge.sourceLine || null
+        );
+      }
+    });
+    
+    transaction();
+  }
+
+  public runCsaAudit(): CsaAuditResult {
+    const db = this.getConnection();
+    
+    const totalAnchorsRow = db.prepare(`
+      SELECT COUNT(*) as count FROM nodes WHERE type = 'spec_anchor'
+    `).get() as { count: number } | undefined;
+    const totalAnchors = totalAnchorsRow ? totalAnchorsRow.count : 0;
+    
+    const coveredAnchorsRow = db.prepare(`
+      SELECT COUNT(DISTINCT e.target_id) as count 
+      FROM edges e 
+      JOIN nodes n ON e.target_id = n.id AND n.type = 'spec_anchor'
+      WHERE e.relation = 'DOCUMENTED_BY'
+    `).get() as { count: number } | undefined;
+    const coveredAnchors = coveredAnchorsRow ? coveredAnchorsRow.count : 0;
+    
+    const coverageRate = totalAnchors > 0 ? (coveredAnchors / totalAnchors) * 100 : 100.0;
+    
+    const danglingRows = db.prepare(`
+      SELECT e.source_id, e.target_id, e.source_file, e.source_line 
+      FROM edges e 
+      LEFT JOIN nodes n ON e.target_id = n.id AND n.type = 'spec_anchor'
+      WHERE e.relation = 'DOCUMENTED_BY' AND n.id IS NULL
+    `).all() as Array<{
+      source_id: string;
+      target_id: string;
+      source_file: string;
+      source_line: number;
+    }>;
+    
+    const danglingEdges = danglingRows.map(row => ({
+      sourceId: row.source_id,
+      targetId: row.target_id,
+      sourceFile: row.source_file || '',
+      sourceLine: row.source_line || 0,
+    }));
+    
+    return {
+      totalAnchors,
+      coveredAnchors,
+      coverageRate,
+      danglingEdges,
+    };
   }
 
   public close(): void {

@@ -19,6 +19,18 @@ import { AstStore } from './AstStore.js';
 import { MemoryStore } from './MemoryStore.js';
 import type { SqliteGraphRepository } from './sqlite-repository.js';
 
+function calculateJaccardSimilarity(text1: string, text2: string): number {
+  const words1 = new Set(text1.toLowerCase().match(/\w+/g) || []);
+  const words2 = new Set(text2.toLowerCase().match(/\w+/g) || []);
+  if (words1.size === 0 && words2.size === 0) return 1;
+  if (words1.size === 0 || words2.size === 0) return 0;
+  
+  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+  
+  return intersection.size / union.size;
+}
+
 export class ProjectGraph {
   public readonly projectName: string;
   private readonly astStore: AstStore;
@@ -268,8 +280,34 @@ export class ProjectGraph {
 
   private readonly insightsList: ProjectInsight[] = [];
 
-  public pushInsight(insight: ProjectInsight): void {
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  public pushInsight(insight: ProjectInsight): string {
     const exists = this.insightsList.findIndex(i => i.id === insight.id);
+    
+    // Dedup only when inserting a new insight
+    if (exists === -1) {
+      if (this.repository) {
+        const repo = this.repository as any;
+        if (typeof repo.findSimilarInsight === 'function') {
+          const similar = repo.findSimilarInsight(insight);
+          if (similar) {
+            return similar.id;
+          }
+        }
+      } else {
+        const newText = `${insight.title} ${insight.description}`;
+        for (const existing of this.insightsList) {
+          if (existing.category === insight.category) {
+            const existingText = `${existing.title} ${existing.description}`;
+            const sim = calculateJaccardSimilarity(newText, existingText);
+            if (sim > 0.8) {
+              return existing.id;
+            }
+          }
+        }
+      }
+    }
+
     if (exists !== -1) {
       this.insightsList[exists] = insight;
     } else {
@@ -279,6 +317,22 @@ export class ProjectGraph {
     if (this.repository) {
       this.repository.insertInsight(insight);
     }
+    return insight.id;
+  }
+
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  public getInsight(insightId: string): ProjectInsight | null {
+    if (this.repository) {
+      try {
+        const repo = this.repository as any;
+        if (typeof repo.getInsight === 'function') {
+          return repo.getInsight(insightId);
+        }
+      } catch (err) {
+        // Fallback to memory
+      }
+    }
+    return this.insightsList.find(i => i.id === insightId) || null;
   }
 
   public searchInsights(query: string, opts?: { category?: string; domain?: string; limit?: number }): ProjectInsight[] {

@@ -21,6 +21,7 @@ import { runInject } from './commands/inject.js';
 import { runHooks } from './commands/hooks.js';
 import { runMem } from './commands/mem.js';
 import { runLink } from './commands/link.js';
+import { runAudit } from './commands/audit.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -233,8 +234,7 @@ function main(): void {
         process.exit(1);
       }
 
-      console.log(`[para-graph] Running CSA audit for project: ${projectPath}`);
-      process.exit(0);
+      runAudit({ projectPath });
       break;
     }
 

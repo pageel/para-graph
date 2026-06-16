@@ -216,18 +216,21 @@ export function runBuild(options: BuildOptions): void {
     console.log('[para-graph] Reset hook reminder (graph updated).');
   }
 
-  // Step 9: Invalidate God Nodes cache (QW-1)
+  // Step 9: Persist to SQLite DB & Invalidate God Nodes cache (QW-1)
   try {
     const dbPath = join(outputDir, `${options.projectName}.db`);
-    if (existsSync(dbPath)) {
-      const manager = new SqliteManager(options.projectName, dbPath);
-      const db = manager.getConnection();
-      db.prepare(`DELETE FROM metadata WHERE key = 'god_nodes_cache'`).run();
-      manager.close();
-      console.log('[para-graph] Invalidated god_nodes_cache.');
-    }
+    const manager = new SqliteManager(options.projectName, dbPath);
+    manager.initSchema();
+    manager.persistGraph(graph.getAllNodes(), graph.getAllEdges());
+    
+    // Invalidate God Nodes cache
+    const db = manager.getConnection();
+    db.prepare(`DELETE FROM metadata WHERE key = 'god_nodes_cache'`).run();
+    
+    manager.close();
+    console.log('[para-graph] Persisted graph to SQLite and invalidated god_nodes_cache.');
   } catch (err) {
-    console.warn(`[para-graph] Failed to invalidate cache:`, err);
+    console.warn(`[para-graph] Failed to persist graph to SQLite DB:`, err);
   }
 
   console.log(`[para-graph] Done. Output at: ${outputDir}`);

@@ -1,6 +1,18 @@
 import { SqliteManager } from './sqlite-manager.js';
 import type { ProjectInsight } from '../models.js';
 
+function calculateJaccardSimilarity(text1: string, text2: string): number {
+  const words1 = new Set(text1.toLowerCase().match(/\w+/g) || []);
+  const words2 = new Set(text2.toLowerCase().match(/\w+/g) || []);
+  if (words1.size === 0 && words2.size === 0) return 1;
+  if (words1.size === 0 || words2.size === 0) return 0;
+  
+  const intersection = new Set([...words1].filter(x => words2.has(x)));
+  const union = new Set([...words1, ...words2]);
+  
+  return intersection.size / union.size;
+}
+
 export class SqliteGraphRepository {
   constructor(private manager: SqliteManager) {}
 
@@ -110,6 +122,79 @@ export class SqliteGraphRepository {
       insight.createdAt,
       insight.updatedAt
     );
+  }
+
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  public getInsight(insightId: string): ProjectInsight | null {
+    const db = this.manager.getConnection();
+    const stmt = db.prepare(`SELECT * FROM project_insights WHERE id = ?`);
+    const row = stmt.get(insightId) as any;
+    if (!row) return null;
+    return {
+      id: row.id,
+      category: row.category as any,
+      domain: row.domain,
+      title: row.title,
+      description: row.description,
+      sourceType: row.source_type as any,
+      sourceSession: row.source_session || undefined,
+      relatedNodeIds: JSON.parse(row.related_node_ids || '[]'),
+      relatedFiles: JSON.parse(row.related_files || '[]'),
+      confidence: row.confidence as any,
+      validatedAt: row.validated_at || undefined,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at
+    };
+  }
+
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  public findSimilarInsight(insight: ProjectInsight): ProjectInsight | null {
+    const db = this.manager.getConnection();
+    const words = (insight.title.toLowerCase().match(/\w+/g) || [])
+      .filter(w => w.length > 2);
+    
+    if (words.length === 0) return null;
+    
+    const ftsQuery = words.map(w => `"${w}"`).join(' OR ');
+    
+    try {
+      const stmt = db.prepare(`
+        SELECT m.*
+        FROM project_insights m
+        JOIN fts_insights f ON m.rowid = f.rowid
+        WHERE f.fts_insights MATCH ? AND m.category = ?
+      `);
+      const rows = stmt.all(ftsQuery, insight.category);
+      
+      const newText = `${insight.title} ${insight.description}`;
+      
+      for (const row of rows) {
+        if (row.id === insight.id) continue;
+        
+        const dbText = `${row.title} ${row.description}`;
+        const sim = calculateJaccardSimilarity(newText, dbText);
+        if (sim > 0.8) {
+          return {
+            id: row.id,
+            category: row.category as any,
+            domain: row.domain,
+            title: row.title,
+            description: row.description,
+            sourceType: row.source_type as any,
+            sourceSession: row.source_session || undefined,
+            relatedNodeIds: JSON.parse(row.related_node_ids || '[]'),
+            relatedFiles: JSON.parse(row.related_files || '[]'),
+            confidence: row.confidence as any,
+            validatedAt: row.validated_at || undefined,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at
+          };
+        }
+      }
+    } catch (err) {
+      // Graceful fallback
+    }
+    return null;
   }
 
   public searchInsights(query: string, opts?: { category?: string; domain?: string; limit?: number }): ProjectInsight[] {

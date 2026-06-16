@@ -505,6 +505,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- insight_push: Push a project insight to SQLite database ---
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
   server.tool(
     'insight_push',
     'Push a project insight (lesson, risk, decision, pattern, gotcha) to durable SQLite storage',
@@ -548,10 +549,10 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         updatedAt: Date.now(),
       };
 
-      graph.pushInsight(insight);
+      const actualInsightId = graph.pushInsight(insight);
 
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, insightId }, null, 2) }],
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, insightId: actualInsightId }, null, 2) }],
       };
     },
   );
@@ -578,6 +579,42 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
       return {
         content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
+      };
+    },
+  );
+
+  // --- insight_validate: Validate and update insight confidence lifecycle ---
+  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  server.tool(
+    'insight_validate',
+    'Update the confidence lifecycle of a project insight (hypothesis -> validated -> deprecated)',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      insightId: z.string().describe('ID of the insight to update'),
+      confidence: z.enum(['hypothesis', 'validated', 'deprecated']).describe('Target confidence status'),
+    },
+    async ({ projectName, insightId, confidence }) => {
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+      
+      const insight = graph.getInsight(insightId);
+      if (!insight) {
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: `Insight not found: ${insightId}` }) }],
+          isError: true,
+        };
+      }
+
+      insight.confidence = confidence as any;
+      insight.updatedAt = Date.now();
+      if (confidence === 'validated') {
+        insight.validatedAt = new Date().toISOString();
+      }
+
+      graph.pushInsight(insight);
+      GraphStore.saveGraph(workspaceRoot, projectName);
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify({ success: true, insight }, null, 2) }],
       };
     },
   );
