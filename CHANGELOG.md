@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-06-16
+
+### Added
+- **CSA Spec-Intelligence Native Integration** — Native parser for HTML spec anchors (`<span id="csa-..."></span>`) in Markdown specs/plans and `@para-doc` comments in source code, generating `SPEC_ANCHOR` nodes and `DOCUMENTED_BY` edges.
+- **SQLite-backed CSA Compliance Auditing** — Introduced `para-graph audit csa` CLI command and `graph_audit_csa` MCP tool to calculate coverage and detect dangling spec links with direct SQLite queries. Auto-logs failures as `risk` insights in SQLite DB.
+- **Self-Healing Engine** — Added `para-graph fix csa` CLI command (with `--auto` and `--dry-run`) and `graph_fix_csa` MCP tool to repair broken spec references using Git Rename history (`git log -S`) and Levenshtein distance fuzzy matching (threshold <= 3).
+- **Project Insights Core & FTS5 Dedup** — Added `insight_validate` MCP tool to manage confidence lifecycle, and integrated FTS5 virtual table search during `insight_push` to prevent redundant insights (>0.8 score similarity).
+
 ### Changed
 - **Skill Direction Semantics** — Updated `para-graph` skill template to v2.5.0, adding explicit Direction Semantics documentation and a case study to prevent "Blast Radius" vs "Transitive Impact" confusion during LLM-driven graph enrichment.
+- **Global CSA Skill Deprecation** — Updated global workspace CSA skill to deprecate the old shell `audit.js` in favor of native `para-graph audit csa`.
 
 ## [0.16.1] - 2026-05-28
 

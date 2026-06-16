@@ -24,7 +24,7 @@ import type { SemanticAttributes, GraphNode } from '../src/graph/models.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const FIXTURES_DIR = resolve(__dirname, 'fixtures');
-const TEST_OUTPUT_DIR = resolve(__dirname, '.test-output');
+const TEST_OUTPUT_DIR = resolve(__dirname, '.test-output', 'graph');
 
 describe('para-graph', () => {
   let graph: CodeGraph;

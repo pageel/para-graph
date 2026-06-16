@@ -3,7 +3,7 @@
 # Validated by: para-workspace/registry/tool.schema.json
 
 name: para-graph
-version: "0.16.1"
+version: "0.16.2"
 runtime: node
 min_runtime_version: "18.0.0"
 entry: dist/cli.js
@@ -22,13 +22,18 @@ agents:
   skills:
     - source: templates/agents/skills/para-graph/
       target: para-graph/
-      version: "2.4.0"
+      version: "2.5.0"
       shipped_in: "0.9.0"
+      min_engine_version: "0.8.0"
+    - source: templates/agents/skills/csa/
+      target: csa/
+      version: "1.1.0"
+      shipped_in: "0.16.2"
       min_engine_version: "0.8.0"
   rules:
     - source: templates/agents/rules/graph-first-policy.md
       target: graph-first-policy.md
-      version: "1.0.0"
+      version: "1.1.0"
       shipped_in: "0.9.0"
       min_engine_version: "0.8.0"
 

@@ -221,6 +221,8 @@ Reusable pipeline that workflows call when graph is available:
 | H    | `graph_link_docs(projectName, links)`                                    | Link doc sections to graph nodes after updating docs        |
 | I    | `insight_push(projectName, category, domain, title, description, sourceType, ...)` | Push project insights (decisions, risks, gotchas) to SQLite |
 | J    | `insight_search(projectName, query, category?, domain?, limit?)`         | Search project insights with full-text search                |
+| K    | `graph_audit_csa(projectName)`                                           | Run CSA compliance audit for a project                       |
+| L    | `graph_fix_csa(projectName, dryRun?)`                                    | Run self-healing fix for csa dangling links                  |
 
 > **Not all steps are needed for every workflow.** Each §4.3 snippet specifies which steps to use.
 >

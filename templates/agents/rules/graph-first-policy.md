@@ -59,6 +59,11 @@ Agent MUST follow this priority order when investigating code:
 - If the MCP server is unavailable or graph data is stale (`metadata.json` older than 7 days), Agent **MAY** fall back to standard file I/O with a warning to the user.
 - Agent **SHOULD** suggest running `/para-graph build` to refresh the graph after the task is complete.
 
+### 6. Mandatory CSA Compliance Verification
+
+- Before submitting code changes or completing a plan phase, Agent **MUST** run `npx para-graph audit csa --project .` to verify that code-specification double-binding coverage is >= 90.0% and no dangling spec links exist.
+- If the audit fails, Agent **MUST** run `npx para-graph fix csa --project .` (or use the `graph_fix_csa` MCP tool) to auto-heal references before proceeding.
+
 ## Related
 
 - Skill: `para-graph` — Centralized Graph Intelligence Router with enrichment workflow and workflow integration snippets.

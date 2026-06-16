@@ -25,33 +25,38 @@ describe('Git History Rename Scanner', () => {
   });
 
   it('should detect renamed anchor in git commits history', () => {
-    // 1. Initialize git repo
-    execSync('git init', { cwd: TEST_DIR });
-    // Cấu hình git local
-    execSync('git config user.name "Test User"', { cwd: TEST_DIR });
-    execSync('git config user.email "test@example.com"', { cwd: TEST_DIR });
-    execSync('git config commit.gpgsign false', { cwd: TEST_DIR });
+    const caseDir = join(TEST_DIR, 'case1');
+    mkdirSync(caseDir, { recursive: true });
 
-    const specPath = join(TEST_DIR, 'spec.md');
+    // 1. Initialize git repo
+    execSync('git init', { cwd: caseDir });
+    // Cấu hình git local
+    execSync('git config user.name "Test User"', { cwd: caseDir });
+    execSync('git config user.email "test@example.com"', { cwd: caseDir });
+    execSync('git config commit.gpgsign false', { cwd: caseDir });
+
+    const specPath = join(caseDir, 'spec.md');
 
     // 2. Commit 1: Tạo anchor cũ
     writeFileSync(specPath, '# Specification\n\n<span id="csa-old-anchor"></span>\nSome spec content.');
-    execSync('git add spec.md', { cwd: TEST_DIR });
-    execSync('git commit -m "initial commit"', { cwd: TEST_DIR });
+    execSync('git add spec.md', { cwd: caseDir });
+    execSync('git commit -m "initial commit"', { cwd: caseDir });
 
     // 3. Commit 2: Đổi tên anchor thành mới
     writeFileSync(specPath, '# Specification\n\n<span id="csa-new-anchor"></span>\nSome spec content.');
-    execSync('git add spec.md', { cwd: TEST_DIR });
-    execSync('git commit -m "rename anchor"', { cwd: TEST_DIR });
+    execSync('git add spec.md', { cwd: caseDir });
+    execSync('git commit -m "rename anchor"', { cwd: caseDir });
 
     // 4. Run scanner
-    const result = findRenamedAnchorInGit('csa-old-anchor', TEST_DIR);
+    const result = findRenamedAnchorInGit('csa-old-anchor', caseDir);
     expect(result).toBe('csa-new-anchor');
   });
 
   it('should return null if anchor was never modified or not in git', () => {
-    execSync('git init', { cwd: TEST_DIR });
-    const result = findRenamedAnchorInGit('non-existent-anchor', TEST_DIR);
+    const caseDir = join(TEST_DIR, 'case2');
+    mkdirSync(caseDir, { recursive: true });
+    execSync('git init', { cwd: caseDir });
+    const result = findRenamedAnchorInGit('non-existent-anchor', caseDir);
     expect(result).toBeNull();
   });
 });
