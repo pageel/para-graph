@@ -48,6 +48,14 @@ export class SqliteManager {
       )
     `);
 
+    // Fix legacy schema drift: Drop edges table if it has an obsolete foreign key constraint on target_id (L1 target_id can be external/unresolved)
+    try {
+      const fks = db.prepare("PRAGMA foreign_key_list(edges)").all() as Array<{ from: string }>;
+      if (fks.some(fk => fk.from === 'target_id')) {
+        db.exec(`DROP TABLE IF EXISTS edges;`);
+      }
+    } catch (e) {}
+
     // Edges table
     db.exec(`
       CREATE TABLE IF NOT EXISTS edges (

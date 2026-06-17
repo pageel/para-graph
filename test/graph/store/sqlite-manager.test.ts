@@ -48,5 +48,89 @@ describe('SqliteManager', () => {
       expect(indexResult?.name).toBe('idx_events_archived');
     });
   });
+
+  describe('Schema Migration / Drift', () => {
+    it('handles legacy edges table foreign key constraint on target_id', () => {
+      const manager = new SqliteManager('test-migration', ':memory:');
+      const db = manager.getConnection();
+      db.exec('PRAGMA foreign_keys = ON;');
+      db.exec(`
+        CREATE TABLE nodes (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          type TEXT NOT NULL,
+          semantic TEXT,
+          created_at INTEGER,
+          updated_at INTEGER
+        );
+      `);
+      db.exec(`
+        CREATE TABLE edges (
+          source_id TEXT NOT NULL,
+          target_id TEXT NOT NULL,
+          relation TEXT NOT NULL,
+          source_file TEXT,
+          source_line INTEGER,
+          PRIMARY KEY (source_id, target_id, relation),
+          FOREIGN KEY (source_id) REFERENCES nodes(id) ON DELETE CASCADE,
+          FOREIGN KEY (target_id) REFERENCES nodes(id) ON DELETE CASCADE
+        );
+      `);
+
+      db.prepare(`
+        INSERT INTO nodes (id, name, type, created_at, updated_at)
+        VALUES ('node1', 'Node 1', 'file', 123, 123)
+      `).run();
+
+      expect(() => {
+        db.prepare(`
+          INSERT INTO edges (source_id, target_id, relation)
+          VALUES ('node1', 'non_existent', 'DEPENDS_ON')
+        `).run();
+      }).toThrow(/FOREIGN KEY constraint failed/);
+
+      manager.initSchema();
+
+      db.prepare(`
+        INSERT INTO edges (source_id, target_id, relation)
+        VALUES ('node1', 'non_existent', 'DEPENDS_ON')
+      `).run();
+
+      manager.close();
+    });
+
+    it('migrates legacy project_snapshots table to include metrics column safely', () => {
+      const manager = new SqliteManager('test-migration-snapshots', ':memory:');
+      const db = manager.getConnection();
+
+      // Pre-create legacy project_snapshots table without metrics column
+      db.exec(`
+        CREATE TABLE project_snapshots (
+          id TEXT PRIMARY KEY,
+          project_name TEXT NOT NULL,
+          timestamp INTEGER NOT NULL,
+          nodes_count INTEGER NOT NULL,
+          edges_count INTEGER NOT NULL,
+          unresolved_count INTEGER NOT NULL
+        );
+      `);
+
+      // Verify that metrics column does not exist yet
+      let columns = db.prepare("PRAGMA table_info(project_snapshots)").all() as any[];
+      expect(columns.find(c => c.name === 'metrics')).toBeUndefined();
+
+      // Run initSchema() which should migrate the table
+      manager.initSchema();
+
+      // Verify that metrics column was added
+      columns = db.prepare("PRAGMA table_info(project_snapshots)").all() as any[];
+      const metricsCol = columns.find(c => c.name === 'metrics');
+      expect(metricsCol).toBeDefined();
+      expect(metricsCol.type).toBe('TEXT');
+      expect(metricsCol.dflt_value).toBe('NULL');
+
+      manager.close();
+    });
+  });
 });
 
