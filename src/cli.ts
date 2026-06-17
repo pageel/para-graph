@@ -24,6 +24,7 @@ import { runLink } from './commands/link.js';
 import { runAudit } from './commands/audit.js';
 import { runFix } from './commands/fix.js';
 import { runKiSync } from './commands/ki.js';
+import { runProjectSnapshot, runProjectDiff } from './commands/snapshot.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -41,21 +42,25 @@ Usage:
   para-graph fix csa --project <path>                     Run the CSA self-healing fix
   para-graph hooks [install|uninstall|status]              Manage BeforeTool hooks
   para-graph ki sync                                      Synchronize knowledge templates to AI Agent
+  para-graph project-snapshot <project-name>              Take a snapshot of the project directory structure
+  para-graph project-diff <project-name> <src> <tgt>      Compare two project snapshots
   para-graph --help                                       Show this help
 
 Commands:
-  build    Analyze source code and generate a structural graph (JSONL).
-  serve    Start the MCP server exposing graph data to AI Agents.
-  inject   Inject Living Docs / Blast Radius context into Markdown files.
-  link     Scan documentation anchors and link them to structural code nodes.
-  audit    Run project compliance audits (e.g., csa).
-  fix      Run project self-healing fixes (e.g., csa).
-  hooks    Install/uninstall/status BeforeTool hooks for AI Agent nudging.
-  mem      Curate session memory events into semantic slices.
-  ki       Sync knowledge items to user local knowledge directories.
+  build            Analyze source code and generate a structural graph (JSONL).
+  serve            Start the MCP server exposing graph data to AI Agents.
+  inject           Inject Living Docs / Blast Radius context into Markdown files.
+  link             Scan documentation anchors and link them to structural code nodes.
+  audit            Run project compliance audits (e.g., csa).
+  fix              Run project self-healing fixes (e.g., csa).
+  hooks            Manage BeforeTool hooks for AI Agent nudging.
+  mem              Curate session memory events into semantic slices.
+  ki               Sync knowledge items to user local knowledge directories.
+  project-snapshot Take a snapshot of the project directory structure.
+  project-diff     Compare two project snapshots.
 
 Flags (build):
-  --clean     Do not load existing graph, overwrite and scan from scratch.
+  --clean          Do not load existing graph, overwrite and scan from scratch.
 
 Examples:
   para-graph build para-graph                    Shorthand: auto-detect workspace
@@ -284,6 +289,28 @@ function main(): void {
         console.error('[KI Sync] CLI Error:', err);
         process.exit(1);
       });
+      break;
+    }
+    case 'project-snapshot': {
+      const projectName = args[1];
+      if (!projectName) {
+        console.error('Error: project-snapshot requires <project-name> argument.');
+        console.error('Usage: para-graph project-snapshot <project-name>');
+        process.exit(1);
+      }
+      runProjectSnapshot(projectName);
+      break;
+    }
+    case 'project-diff': {
+      const projectName = args[1];
+      const sourceSnap = args[2];
+      const targetSnap = args[3];
+      if (!projectName || !sourceSnap || !targetSnap) {
+        console.error('Error: project-diff requires <project-name> <source-snap-id> <target-snap-id> arguments.');
+        console.error('Usage: para-graph project-diff <project-name> <source-snap-id> <target-snap-id>');
+        process.exit(1);
+      }
+      runProjectDiff(projectName, sourceSnap, targetSnap);
       break;
     }
 

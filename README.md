@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.16.3-brightgreen.svg" alt="Version 0.16.3">
+    <img src="https://img.shields.io/badge/version-0.17.0-brightgreen.svg" alt="Version 0.17.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -107,6 +107,12 @@ para-graph build <target-dir> [output-dir] [--clean]
 
 # Inject Graph Data & Validate Drift in Markdown Docs/Plans
 para-graph inject <target-dir>
+
+# Take a snapshot of the project directory structure
+para-graph project-snapshot <project-name>
+
+# Compare two project snapshots
+para-graph project-diff <project-name> <src-snap-id> <tgt-snap-id>
 
 # Start MCP server for AI Agent integration
 para-graph serve [workspace-root]
