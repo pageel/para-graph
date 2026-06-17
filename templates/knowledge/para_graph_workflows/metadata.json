@@ -1,0 +1,9 @@
+{
+  "title": "PARA Graph Workflows & CLI Integration",
+  "summary": "Guides on integrating para-graph CLI commands (build, serve, link) with the PARA workspace workflows.",
+  "owner": "para",
+  "scope": "workspace",
+  "domain": "workflows",
+  "purpose": "reference",
+  "references": []
+}

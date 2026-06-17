@@ -1,0 +1,9 @@
+{
+  "title": "PARA Graph Core Architecture",
+  "summary": "Describes the core architecture of the hybrid code-knowledge graph, nodes and edges schemas, and directory layout inside the .beads/graph folder.",
+  "owner": "para",
+  "scope": "workspace",
+  "domain": "architecture",
+  "purpose": "reference",
+  "references": []
+}

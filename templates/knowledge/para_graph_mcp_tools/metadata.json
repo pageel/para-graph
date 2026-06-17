@@ -1,0 +1,9 @@
+{
+  "title": "PARA Graph MCP Tools Guide",
+  "summary": "Instruction guide on using MCP tools (graph_query, graph_context_bundle, etc.) to query and interact with the code graph.",
+  "owner": "para",
+  "scope": "workspace",
+  "domain": "tools",
+  "purpose": "reference",
+  "references": []
+}

@@ -23,6 +23,7 @@ import { runMem } from './commands/mem.js';
 import { runLink } from './commands/link.js';
 import { runAudit } from './commands/audit.js';
 import { runFix } from './commands/fix.js';
+import { runKiSync } from './commands/ki.js';
 import { findWorkspaceRoot, isProjectName } from './utils/workspace.js';
 
 const require = createRequire(import.meta.url);
@@ -39,6 +40,7 @@ Usage:
   para-graph audit csa --project <path>                   Run the CSA compliance audit
   para-graph fix csa --project <path>                     Run the CSA self-healing fix
   para-graph hooks [install|uninstall|status]              Manage BeforeTool hooks
+  para-graph ki sync                                      Synchronize knowledge templates to AI Agent
   para-graph --help                                       Show this help
 
 Commands:
@@ -50,6 +52,7 @@ Commands:
   fix      Run project self-healing fixes (e.g., csa).
   hooks    Install/uninstall/status BeforeTool hooks for AI Agent nudging.
   mem      Curate session memory events into semantic slices.
+  ki       Sync knowledge items to user local knowledge directories.
 
 Flags (build):
   --clean     Do not load existing graph, overwrite and scan from scratch.
@@ -265,6 +268,20 @@ function main(): void {
           process.exit(code);
         }
         console.error('[CSA Fix] CLI Error:', err);
+        process.exit(1);
+      });
+      break;
+    }
+    case 'ki': {
+      const subcommand = args[1];
+      if (subcommand !== 'sync') {
+        console.error('Error: Unknown ki subcommand. Supported subcommands: sync');
+        console.error('Usage: para-graph ki sync');
+        process.exit(1);
+      }
+
+      runKiSync().catch((err) => {
+        console.error('[KI Sync] CLI Error:', err);
         process.exit(1);
       });
       break;
