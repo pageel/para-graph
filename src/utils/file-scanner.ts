@@ -10,27 +10,27 @@ export interface ScanOptions {
 function globToRegex(pattern: string): RegExp {
   let temp = pattern;
   
-  // 1. Thay thế **/ ở đầu
+  // 1. Replace leading **/
   if (temp.startsWith('**/')) {
     temp = '___START_DIR___' + temp.slice(3);
   }
-  // 2. Thay thế /** ở cuối
+  // 2. Replace trailing /**
   if (temp.endsWith('/**')) {
     temp = temp.slice(0, -3) + '___END_DIR___';
   }
-  // 3. Thay thế /**/ ở giữa
+  // 3. Replace middle /**/
   temp = temp.replace(/\/\*\*\//g, '___MIDDLE_DIR___');
-  // 4. Thay thế ** còn lại
+  // 4. Replace remaining **
   temp = temp.replace(/\*\*/g, '___ANY_DIR___');
-  // 5. Thay thế * đơn
+  // 5. Replace single *
   temp = temp.replace(/\*/g, '___ANY_CHARS___');
-  // 6. Thay thế ? đơn
+  // 6. Replace single ?
   temp = temp.replace(/\?/g, '___ANY_CHAR___');
   
-  // Thoát các ký tự đặc biệt của regex còn lại
+  // Escape remaining special regex characters
   let escaped = temp.replace(/[.+^${}()|[\]\\]/g, '\\$&');
   
-  // Thay thế các placeholder bằng regex thực tế
+  // Substitute placeholders with actual regex patterns
   escaped = escaped.replace(/___START_DIR___/g, '(?:.*\\/)?');
   escaped = escaped.replace(/___END_DIR___/g, '(?:\\/.*)?');
   escaped = escaped.replace(/___MIDDLE_DIR___/g, '\\/(?:.*\\/)?');
@@ -46,7 +46,7 @@ export function scanDirectory(dirPath: string, options?: ScanOptions): string[] 
   const rootDir = options?.rootDir ? path.resolve(options.rootDir) : path.resolve(dirPath);
   const resolvedDir = path.resolve(dirPath);
 
-  // Directory Confinement: chống Path Traversal
+  // Directory Confinement: prevent Path Traversal
   const relativeFromRoot = path.relative(rootDir, resolvedDir);
   if (relativeFromRoot.startsWith('..') || path.isAbsolute(relativeFromRoot)) {
     throw new Error('Path Traversal detected: target directory is outside the allowed root directory');
@@ -77,15 +77,15 @@ export function scanDirectory(dirPath: string, options?: ScanOptions): string[] 
         continue;
       }
 
-      // Bỏ qua Symbolic Links hoàn toàn
+      // Ignore Symbolic Links entirely
       if (stats.isSymbolicLink()) {
         continue;
       }
 
-      // Tính toán relative path để so khớp loại trừ
+      // Calculate relative path for exclusion matching
       const relativePath = path.relative(rootDir, fullPath).replace(/\\/g, '/');
 
-      // Kiểm tra exclude patterns
+      // Check exclude patterns
       const isExcluded = excludeRegexes.some(regex => regex.test(relativePath));
       if (isExcluded) {
         continue;
@@ -99,9 +99,9 @@ export function scanDirectory(dirPath: string, options?: ScanOptions): string[] 
     }
   }
 
-  // Bắt đầu walk từ depth = 1 để đồng bộ với định nghĩa của test cases:
-  // Root directory = depth 1. Các file trực tiếp ở root có depth = 1.
-  // dir1 = depth 2. Các file ở dir1 có depth = 2.
+  // Start walking from depth = 1 to align with test expectations:
+  // Root directory = depth 1. Files directly under root have depth = 1.
+  // dir1 = depth 2. Files under dir1 have depth = 2.
   // d6 = depth 7.
   walk(resolvedDir, 1);
   return results;

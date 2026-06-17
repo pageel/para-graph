@@ -7,13 +7,13 @@ describe('file-scanner', () => {
   const sandboxPath = path.resolve(__dirname, '../../../../artifacts/tests/tmp/sandbox');
 
   beforeEach(() => {
-    // Tạo cấu trúc sandbox sạch sẽ
+    // Setup a clean sandbox environment
     if (fs.existsSync(sandboxPath)) {
       fs.rmSync(sandboxPath, { recursive: true, force: true });
     }
     fs.mkdirSync(sandboxPath, { recursive: true });
 
-    // Tạo các tệp tin và thư mục mẫu
+    // Create mock files and folders
     fs.writeFileSync(path.join(sandboxPath, 'file1.txt'), 'hello');
     fs.writeFileSync(path.join(sandboxPath, 'file2.log'), 'log data');
     
@@ -21,12 +21,12 @@ describe('file-scanner', () => {
     fs.mkdirSync(dir1);
     fs.writeFileSync(path.join(dir1, 'file3.txt'), 'nested');
 
-    // Thư mục loại trừ
+    // Folder to exclude
     const nodeModules = path.join(sandboxPath, 'node_modules');
     fs.mkdirSync(nodeModules);
     fs.writeFileSync(path.join(nodeModules, 'package.json'), '{}');
 
-    // Thư mục sâu > 5 cấp
+    // Deep directory structure (> 5 levels)
     // sandbox (0) -> dir1 (1) -> d2 (2) -> d3 (3) -> d4 (4) -> d5 (5) -> d6 (6) -> fileDeep.txt
     let deepDir = dir1;
     for (let i = 2; i <= 6; i++) {
@@ -42,25 +42,25 @@ describe('file-scanner', () => {
     }
   });
 
-  it('nên quét được toàn bộ tệp tin bình thường ở độ sâu mặc định', () => {
+  it('should scan all files at default depth limit', () => {
     const files = scanDirectory(sandboxPath);
-    // Chuẩn hóa về POSIX path để so sánh đồng nhất
+    // Normalize to POSIX paths for consistent assertions
     const relativeFiles = files.map((f: string) => path.relative(sandboxPath, f).replace(/\\/g, '/'));
     
     expect(relativeFiles).toContain('file1.txt');
     expect(relativeFiles).toContain('file2.log');
     expect(relativeFiles).toContain('dir1/file3.txt');
-    // Mặc định maxDepth = 5, d6 nằm ở cấp 6 nên fileDeep.txt không được quét
+    // Default maxDepth = 5, d6 is at level 6 so fileDeep.txt should be ignored
     expect(relativeFiles).not.toContain('dir1/d2/d3/d4/d5/d6/fileDeep.txt');
   });
 
-  it('nên hỗ trợ cấu hình maxDepth tùy chỉnh', () => {
-    // Với maxDepth = 7, nên quét được fileDeep.txt (nằm ở độ sâu 7)
+  it('should support custom maxDepth option', () => {
+    // With maxDepth = 7, fileDeep.txt (at depth 7) should be scanned
     const files = scanDirectory(sandboxPath, { maxDepth: 7 });
     const relativeFiles = files.map((f: string) => path.relative(sandboxPath, f).replace(/\\/g, '/'));
     expect(relativeFiles).toContain('dir1/d2/d3/d4/d5/d6/fileDeep.txt');
 
-    // Với maxDepth = 1, chỉ quét ở root của sandbox
+    // With maxDepth = 1, only files in the root sandbox should be scanned
     const shallowFiles = scanDirectory(sandboxPath, { maxDepth: 1 });
     const relativeShallow = shallowFiles.map((f: string) => path.relative(sandboxPath, f).replace(/\\/g, '/'));
     expect(relativeShallow).toContain('file1.txt');
@@ -68,7 +68,7 @@ describe('file-scanner', () => {
     expect(relativeShallow).not.toContain('dir1/file3.txt');
   });
 
-  it('nên hỗ trợ excludePatterns bằng glob patterns', () => {
+  it('should support excludePatterns using glob patterns', () => {
     const files = scanDirectory(sandboxPath, {
       excludePatterns: ['**/node_modules/**', '**/*.log']
     });
@@ -76,34 +76,30 @@ describe('file-scanner', () => {
     
     expect(relativeFiles).toContain('file1.txt');
     expect(relativeFiles).toContain('dir1/file3.txt');
-    expect(relativeFiles).not.toContain('file2.log'); // bị loại trừ bởi **/*.log
-    expect(relativeFiles).not.toContain('node_modules/package.json'); // bị loại trừ bởi **/node_modules/**
+    expect(relativeFiles).not.toContain('file2.log'); // excluded by **/*.log
+    expect(relativeFiles).not.toContain('node_modules/package.json'); // excluded by **/node_modules/**
   });
 
-  it('nên loại bỏ hoàn toàn các liên kết mềm (Symbolic Links) để tránh lặp vô hạn', () => {
-    // Tạo circular symlink: sandbox/dir_sym -> sandbox
+  it('should ignore symbolic links completely to prevent loops', () => {
+    // Create a circular symlink: sandbox/dir_sym -> sandbox
     const symlinkPath = path.join(sandboxPath, 'dir_sym');
     try {
       fs.symlinkSync(sandboxPath, symlinkPath, 'dir');
     } catch (err) {
-      // Trên Windows có thể thiếu quyền symlink, bỏ qua nếu lỗi
-      console.warn('Không thể tạo symlink trên môi trường này:', err);
+      // Skip symlink test if environment lacks privileges (e.g. non-admin Windows)
+      console.warn('Failed to create symlink in this environment:', err);
       return;
     }
 
-    // Tiến hành quét, nếu không xử lý symlink sẽ lặp vô hạn hoặc ném lỗi
     const files = scanDirectory(sandboxPath);
     const relativeFiles = files.map((f: string) => path.relative(sandboxPath, f).replace(/\\/g, '/'));
     
-    // File trong symlink không được xuất hiện
+    // Files inside symlink should not be listed
     expect(relativeFiles).not.toContain('dir_sym/file1.txt');
     expect(relativeFiles).toContain('file1.txt');
   });
 
-  it('nên thực thi Directory Confinement ngăn chặn Path Traversal', () => {
-    const parentDir = path.resolve(sandboxPath, '..');
-    
-    // Thử quét đường dẫn trỏ ra ngoài sandboxPath bằng cách truyền dirPath không hợp lệ hoặc tương đối ra ngoài
+  it('should enforce directory confinement to prevent path traversal', () => {
     expect(() => {
       scanDirectory(path.join(sandboxPath, '../'), { rootDir: sandboxPath });
     }).toThrow(/Path Traversal/);

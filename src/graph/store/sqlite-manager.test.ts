@@ -15,6 +15,16 @@ vi.mock('better-sqlite3', () => {
       exec(sql: string) {
         this.executedQueries.push(sql);
       }
+      prepare(sql: string) {
+        this.executedQueries.push(sql);
+        return {
+          run: (...args: any[]) => {
+            this.executedQueries.push(`RUN: ${JSON.stringify(args)}`);
+          },
+          all: (...args: any[]) => [],
+          get: (...args: any[]) => undefined
+        };
+      }
       close() {}
     }
   };

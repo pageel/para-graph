@@ -239,6 +239,46 @@ export class SqliteManager {
     }
     
     db.exec(`CREATE INDEX IF NOT EXISTS idx_events_archived ON memory_events(archived)`);
+
+    // Snapshot tables (v0.17.0)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS file_tree_snapshots (
+        id TEXT PRIMARY KEY,
+        timestamp INTEGER NOT NULL,
+        total_files INTEGER NOT NULL,
+        total_size INTEGER NOT NULL
+      )
+    `);
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS file_tree_entries (
+        snapshot_id TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        size INTEGER NOT NULL,
+        hash TEXT NOT NULL,
+        PRIMARY KEY (snapshot_id, file_path),
+        FOREIGN KEY (snapshot_id) REFERENCES file_tree_snapshots(id) ON DELETE CASCADE
+      )
+    `);
+
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS protected_files (
+        file_path TEXT PRIMARY KEY,
+        description TEXT,
+        created_at INTEGER NOT NULL
+      )
+    `);
+
+    // Gieo dữ liệu mặc định cho protected_files
+    const seedProtected = db.prepare(`
+      INSERT OR IGNORE INTO protected_files (file_path, description, created_at)
+      VALUES (?, ?, ?)
+    `);
+    const seedTime = Date.now();
+    seedProtected.run('.para-workspace.yml', 'Workspace configuration root', seedTime);
+    seedProtected.run('.agents/rules.md', 'Workspace rules trigger index', seedTime);
+    seedProtected.run('project.md', 'Project contract definition', seedTime);
+    seedProtected.run('.gitignore', 'Git exclude patterns', seedTime);
   }
 
   public static DatabaseConstructor: any = null;
@@ -347,6 +387,81 @@ export class SqliteManager {
       coverageRate,
       danglingEdges,
     };
+  }
+
+  public insertSnapshot(snapshotId: string, files: Array<{ filePath: string; size: number; hash: string }>): void {
+    const db = this.getConnection();
+    const totalFiles = files.length;
+    const totalSize = files.reduce((sum, f) => sum + f.size, 0);
+    const now = Date.now();
+
+    const insertSnap = db.prepare(`
+      INSERT OR REPLACE INTO file_tree_snapshots (id, timestamp, total_files, total_size)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const insertEntry = db.prepare(`
+      INSERT OR REPLACE INTO file_tree_entries (snapshot_id, file_path, size, hash)
+      VALUES (?, ?, ?, ?)
+    `);
+
+    const transaction = db.transaction(() => {
+      insertSnap.run(snapshotId, now, totalFiles, totalSize);
+      db.prepare(`DELETE FROM file_tree_entries WHERE snapshot_id = ?`).run(snapshotId);
+      for (const file of files) {
+        insertEntry.run(snapshotId, file.filePath, file.size, file.hash);
+      }
+    });
+
+    transaction();
+  }
+
+  public getSnapshot(snapshotId: string): Array<{ filePath: string; size: number; hash: string }> | null {
+    const db = this.getConnection();
+    
+    const snap = db.prepare(`SELECT id FROM file_tree_snapshots WHERE id = ?`).get(snapshotId);
+    if (!snap) {
+      return null;
+    }
+
+    const rows = db.prepare(`
+      SELECT file_path as filePath, size, hash FROM file_tree_entries WHERE snapshot_id = ?
+    `).all(snapshotId) as Array<{ filePath: string; size: number; hash: string }>;
+
+    return rows;
+  }
+
+  public compareSnapshots(sourceSnapshotId: string, targetSnapshotId: string): {
+    added: Array<{ filePath: string; size: number; hash: string }>;
+    removed: Array<{ filePath: string; size: number; hash: string }>;
+    modified: Array<{ filePath: string; size: number; hash: string }>;
+  } {
+    const sourceFiles = this.getSnapshot(sourceSnapshotId) ?? [];
+    const targetFiles = this.getSnapshot(targetSnapshotId) ?? [];
+
+    const sourceMap = new Map(sourceFiles.map(f => [f.filePath, f]));
+    const targetMap = new Map(targetFiles.map(f => [f.filePath, f]));
+
+    const added: Array<{ filePath: string; size: number; hash: string }> = [];
+    const removed: Array<{ filePath: string; size: number; hash: string }> = [];
+    const modified: Array<{ filePath: string; size: number; hash: string }> = [];
+
+    for (const targetFile of targetFiles) {
+      const sourceFile = sourceMap.get(targetFile.filePath);
+      if (!sourceFile) {
+        added.push(targetFile);
+      } else if (sourceFile.hash !== targetFile.hash || sourceFile.size !== targetFile.size) {
+        modified.push(targetFile);
+      }
+    }
+
+    for (const sourceFile of sourceFiles) {
+      if (!targetMap.has(sourceFile.filePath)) {
+        removed.push(sourceFile);
+      }
+    }
+
+    return { added, removed, modified };
   }
 
   public close(): void {
