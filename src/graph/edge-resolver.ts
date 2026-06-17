@@ -226,6 +226,15 @@ function trySameFile(
       const sameFile = methodCandidates.find(id => id.startsWith(edge.sourceFile + '::'));
       if (sameFile) return sameFile;
     }
+
+    // Constructor fallback: if target is "ClassName::constructor", map to Class node in same file
+    if (methodName === 'constructor') {
+      const classCandidates = nameIndex.get(objectName);
+      if (classCandidates) {
+        const sameFile = classCandidates.find(id => id.startsWith(edge.sourceFile + '::'));
+        if (sameFile) return sameFile;
+      }
+    }
   } else {
     // Simple call like "bar()" — look for entity named "bar" in same file
     const candidates = nameIndex.get(objectName);
@@ -270,6 +279,18 @@ function tryImportHint(
         });
         if (match) return match;
       }
+
+      // Constructor fallback: if target is "ClassName::constructor", map to Class node in that file
+      if (methodName === 'constructor') {
+        const classCandidates = nameIndex.get(objectName);
+        if (classCandidates) {
+          const match = classCandidates.find(id => {
+            const idFile = id.split('::')[0];
+            return idFile.includes(basename);
+          });
+          if (match) return match;
+        }
+      }
     }
   }
 
@@ -301,6 +322,15 @@ function tryUniqueName(
   const candidates = nameIndex.get(searchName);
   if (candidates && candidates.length === 1) {
     return candidates[0];
+  }
+
+  // Constructor fallback: if target is "ClassName::constructor", map to unique Class node
+  if (methodName === 'constructor') {
+    const objectName = extractObjectName(edge.targetId);
+    const classCandidates = nameIndex.get(objectName);
+    if (classCandidates && classCandidates.length === 1) {
+      return classCandidates[0];
+    }
   }
 
   return null;

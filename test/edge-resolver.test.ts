@@ -203,6 +203,81 @@ describe('EdgeResolver — resolveEdges()', () => {
     expect(result.unresolved).toBe(0); // EXTERNAL is not counted as unresolved
   });
 
+  it('T9: Constructor fallback same-file → EXTRACTED', () => {
+    const graph = new CodeGraph();
+
+    graph.addNode({
+      id: 'src/app.ts::MyClass',
+      type: NodeType.CLASS,
+      name: 'MyClass',
+      filePath: 'src/app.ts',
+      startLine: 1,
+      endLine: 10,
+      exportType: ExportType.NAMED,
+      signature: 'class MyClass',
+    });
+
+    graph.addEdge(makeCallEdge('src/app.ts::main', 'MyClass::constructor', 'src/app.ts'));
+
+    const result = resolveEdges(graph);
+
+    const edge = graph.getAllEdges().find(e => e.relation === EdgeRelation.CALLS);
+    expect(edge!.targetId).toBe('src/app.ts::MyClass');
+    expect(edge!.confidence).toBe('EXTRACTED');
+    expect(result.resolved).toBe(1);
+  });
+
+  it('T10: Constructor fallback import-hint → INFERRED', () => {
+    const graph = new CodeGraph();
+
+    graph.addNode(makeNode('src/app.ts::main', 'main', 'src/app.ts'));
+    graph.addNode({
+      id: 'src/lib/helper.ts::Helper',
+      type: NodeType.CLASS,
+      name: 'Helper',
+      filePath: 'src/lib/helper.ts',
+      startLine: 1,
+      endLine: 10,
+      exportType: ExportType.NAMED,
+      signature: 'class Helper',
+    });
+
+    graph.addEdge(makeImportEdge('src/app.ts', './lib/helper'));
+    graph.addEdge(makeCallEdge('src/app.ts::main', 'Helper::constructor', 'src/app.ts'));
+
+    const result = resolveEdges(graph);
+
+    const callEdge = graph.getAllEdges().find(e => e.relation === EdgeRelation.CALLS);
+    expect(callEdge!.targetId).toBe('src/lib/helper.ts::Helper');
+    expect(callEdge!.confidence).toBe('INFERRED');
+    expect(result.resolved).toBe(1);
+  });
+
+  it('T11: Constructor fallback unique-name → INFERRED', () => {
+    const graph = new CodeGraph();
+
+    graph.addNode(makeNode('src/app.ts::main', 'main', 'src/app.ts'));
+    graph.addNode({
+      id: 'src/utils/calculator.ts::Calculator',
+      type: NodeType.CLASS,
+      name: 'Calculator',
+      filePath: 'src/utils/calculator.ts',
+      startLine: 1,
+      endLine: 10,
+      exportType: ExportType.NAMED,
+      signature: 'class Calculator',
+    });
+
+    graph.addEdge(makeCallEdge('src/app.ts::main', 'Calculator::constructor', 'src/app.ts'));
+
+    const result = resolveEdges(graph);
+
+    const callEdge = graph.getAllEdges().find(e => e.relation === EdgeRelation.CALLS);
+    expect(callEdge!.targetId).toBe('src/utils/calculator.ts::Calculator');
+    expect(callEdge!.confidence).toBe('INFERRED');
+    expect(result.resolved).toBe(1);
+  });
+
   it('BUILTIN_SKIP_LIST has ≥ 20 entries', () => {
     expect(BUILTIN_SKIP_LIST.size).toBeGreaterThanOrEqual(20);
   });
