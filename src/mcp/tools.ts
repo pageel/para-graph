@@ -10,10 +10,13 @@
  * - graph_add_edges:       Batch inject edges for agentic edge resolution
  */
 
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
+import * as fs from 'node:fs';
 import { join, resolve } from 'node:path';
-import { randomUUID } from 'node:crypto';
+import * as path from 'node:path';
+import { randomUUID, createHash } from 'node:crypto';
 import { z } from 'zod';
+import { scanDirectory } from '../utils/file-scanner.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight } from '../graph/models.js';
 import { EdgeRelation } from '../graph/models.js';
@@ -748,6 +751,204 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
               repairsApplied
             }, null, 2)
           }],
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- project_snapshot: Take a project file structure snapshot and verify protected files ---
+  server.tool(
+    'project_snapshot',
+    'Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+    },
+    async ({ projectName }) => {
+      const rootDir = resolveSourceDir(workspaceRoot, projectName);
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+
+      try {
+        dbManager.initSchema();
+        
+        const excludePatterns = [
+          '**/node_modules/**',
+          '**/dist/**',
+          '**/build/**',
+          '**/.git/**',
+          '**/test-output/**',
+          '**/.beads/**',
+          '**/artifacts/**',
+          '**/sessions/**',
+          '**/docs/**',
+          '**/*.log'
+        ];
+        
+        const filePaths = scanDirectory(rootDir, { excludePatterns, rootDir });
+        const snapshotId = `snap-${randomUUID()}`;
+        const filesToInsert: Array<{ filePath: string; size: number; hash: string }> = [];
+
+        for (const fullPath of filePaths) {
+          try {
+            const stats = statSync(fullPath);
+            const content = readFileSync(fullPath);
+            const hash = createHash('sha256').update(content).digest('hex');
+            const relativePath = path.relative(rootDir, fullPath).replace(/\\/g, '/');
+            filesToInsert.push({
+              filePath: relativePath,
+              size: stats.size,
+              hash
+            });
+          } catch (e) {
+            // Ignore unreadable files
+          }
+        }
+
+        const db = dbManager.getConnection();
+        const rows = db.prepare('SELECT file_path as filePath FROM protected_files').all() as Array<{ filePath: string }>;
+        const protectedFilePaths = new Set(rows.map(r => r.filePath));
+        
+        const presentFiles = new Set(filesToInsert.map(f => f.filePath));
+        const warnings: string[] = [];
+        for (const protectedPath of protectedFilePaths) {
+          if (!presentFiles.has(protectedPath)) {
+            warnings.push(`Protected file is missing: ${protectedPath}`);
+          }
+        }
+
+        dbManager.insertSnapshot(snapshotId, filesToInsert);
+        dbManager.close();
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: true,
+              snapshotId,
+              totalFiles: filesToInsert.length,
+              totalSize: filesToInsert.reduce((sum, f) => sum + f.size, 0),
+              warnings
+            }, null, 2)
+          }],
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- project_diff: Compare two snapshots ---
+  server.tool(
+    'project_diff',
+    'Compare two project snapshots to identify added, removed, and modified files',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      sourceSnapshotId: z.string().describe('Source snapshot ID (older)'),
+      targetSnapshotId: z.string().describe('Target snapshot ID (newer)'),
+    },
+    async ({ projectName, sourceSnapshotId, targetSnapshotId }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+
+      try {
+        dbManager.initSchema();
+        const diff = dbManager.compareSnapshots(sourceSnapshotId, targetSnapshotId);
+        dbManager.close();
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify(diff, null, 2)
+          }],
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- project_protected_files: Manage protected files list ---
+  server.tool(
+    'project_protected_files',
+    'List, add, or remove protected files for a project',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      action: z.enum(['list', 'add', 'remove']).describe('Action to perform'),
+      filePath: z.string().optional().describe('File path relative to project root (required for add/remove)'),
+      description: z.string().optional().describe('Description of the protected file (optional for add)'),
+    },
+    async ({ projectName, action, filePath, description }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+
+      try {
+        dbManager.initSchema();
+        const db = dbManager.getConnection();
+
+        if (action === 'list') {
+          const rows = db.prepare('SELECT file_path, description, created_at FROM protected_files').all();
+          dbManager.close();
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ files: rows }, null, 2)
+            }],
+          };
+        }
+
+        if (!filePath) {
+          dbManager.close();
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ error: 'filePath parameter is required for add/remove actions' }) }],
+            isError: true,
+          };
+        }
+
+        if (action === 'add') {
+          const stmt = db.prepare(`
+            INSERT OR REPLACE INTO protected_files (file_path, description, created_at)
+            VALUES (?, ?, ?)
+          `);
+          stmt.run(filePath, description ?? null, Date.now());
+          dbManager.close();
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ success: true, message: `Added ${filePath} to protected files` }, null, 2)
+            }],
+          };
+        }
+
+        if (action === 'remove') {
+          const stmt = db.prepare('DELETE FROM protected_files WHERE file_path = ?');
+          stmt.run(filePath);
+          dbManager.close();
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ success: true, message: `Removed ${filePath} from protected files` }, null, 2)
+            }],
+          };
+        }
+
+        dbManager.close();
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: 'Invalid action' }) }],
+          isError: true,
         };
       } catch (err: any) {
         try { dbManager.close(); } catch {}
