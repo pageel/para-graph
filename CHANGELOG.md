@@ -5,7 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.16.3] - 2026-06-17
+
+### Added
+- **Performance Benchmark Suite** — Created a modular benchmark runner (`npm run benchmark`) using `tsx` to measure L1 AST parsing throughput (files/sec), SQLite database write speed (nodes/sec, edges/sec), and MCP tool search latencies (`graph_query`, `graph_context_bundle`).
+- **Native KI CLI Distribution** — Implemented the `para-graph ki sync` CLI command and registered it in the CLI router, which automatically syncs the 3 new domain-driven knowledge templates (`para_graph_architecture`, `para_graph_mcp_tools`, `para_graph_workflows`) to user local AI agent stores.
+
+### Fixed
+- **SQLite Schema Robustness** — Extended Vitest suite with regression tests simulating legacy database structures to verify that `initSchema()` auto-repairs obsolete schema drifts (such as target_id foreign key constraints) on disk without data loss.
 
 ## [0.16.2] - 2026-06-16
 
