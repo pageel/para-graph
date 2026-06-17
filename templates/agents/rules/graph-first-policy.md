@@ -30,8 +30,8 @@ Agent MUST follow this priority order when investigating code:
 
 | Priority | Tool | When to use |
 |:--|:--|:--|
-| 🥇 1st | `graph_query` + `graph_edges` | Locate entities, map dependencies, understand call graph |
-| 🥈 2nd | `graph_context_bundle` | Get full context (source + callers + callees + tests) for a specific entity |
+| 🥇 1st | `graph_query` + `graph_edges` + `graph_god_nodes` | Locate entities, map dependencies, or identify core central entrypoints (God Nodes) |
+| 🥈 2nd | `graph_context_bundle` + `graph_expand_node` | Retrieve full details, adjacent entities, callers, callees, or specs for a specific node |
 | 🥉 3rd | `view_file` | Read exact implementation AFTER graph has identified the target |
 | 4th | `grep_search` | Only when entity is not in graph (new/unindexed code) |
 
@@ -48,6 +48,8 @@ Agent MUST follow this priority order when investigating code:
 - Before creating a plan (`/plan`), designing a specification (`/spec`), evaluating options (`/brainstorm`), or executing code refactoring/bug fixes (`/vibecode` or general coding), Agent **MUST** run `insight_search` and `memory_search` using keywords related to the affected components and tech stack (e.g., `d1`, `sqlite`, `transaction`, `auth`, `migration`, `sepay`).
 - **Purpose:** Search for historically archived lessons (`lesson`), risks (`risk`), decisions (`decision`), gotchas (`gotcha`), and design patterns (`pattern`) to apply or avoid repeating past mistakes.
 - Agent **MUST NOT** design new solutions or modify code related to database structures, API routes, or core logic without executing this knowledge query step first.
+- At the end of a plan phase or coding session, Agent **MUST** actively review completed tasks to extract new reusable insights (lessons, gotchas, or decisions) and use the `insight_push` tool to save them in the project graph database.
+- Agent **SHOULD** use the `insight_validate` tool to verify the semantic consistency and format of the insights before saving.
 
 ### 4. Transparency
 
