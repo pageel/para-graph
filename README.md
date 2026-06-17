@@ -67,6 +67,8 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Agentic Edge Resolution** — Inject missing relationships (e.g., dynamic Bash imports) directly via MCP
 - **MCP Auto-Setup** — Manifest-declared `mcp:` block enables automatic IDE configuration via `./para mcp-setup`
 - **Agent Auto-trigger Hooks** — BeforeTool hooks that nudge the AI Agent to use Knowledge Graph before file scanning
+- **Atomic File Structure Snapshots (v0.17.0+)** — Captures project directory tree snapshots, hashing files (sha256) into SQLite for version tracking.
+- **Protected Files Guard (v0.17.0+)** — Manages protected files list and alerts if any critical files are missing during snapshot verification.
 
 ## 🚀 Quick Start
 
@@ -251,6 +253,9 @@ Once connected, your AI Agent gains access to the following tools:
 - `memory_curate`: Cluster raw events into semantic slices using session-based curation.
 - `graph_audit_csa`: Run Convergent Specification Architecture (CSA) compliance audit for a project.
 - `graph_fix_csa`: Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files).
+- `project_snapshot`: Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files.
+- `project_diff`: Compare two project snapshots to identify added, removed, and modified files.
+- `project_protected_files`: List, add, or remove protected files for a project.
 
 ### Library Usage
 
