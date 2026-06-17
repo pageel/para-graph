@@ -30,19 +30,19 @@ describe('Git History Rename Scanner', () => {
 
     // 1. Initialize git repo
     execSync('git init', { cwd: caseDir });
-    // Cấu hình git local
+    // Configure local git
     execSync('git config user.name "Test User"', { cwd: caseDir });
     execSync('git config user.email "test@example.com"', { cwd: caseDir });
     execSync('git config commit.gpgsign false', { cwd: caseDir });
 
     const specPath = join(caseDir, 'spec.md');
 
-    // 2. Commit 1: Tạo anchor cũ
+    // 2. Commit 1: Create old anchor
     writeFileSync(specPath, '# Specification\n\n<span id="csa-old-anchor"></span>\nSome spec content.');
     execSync('git add spec.md', { cwd: caseDir });
     execSync('git commit -m "initial commit"', { cwd: caseDir });
 
-    // 3. Commit 2: Đổi tên anchor thành mới
+    // 3. Commit 2: Rename anchor to new name
     writeFileSync(specPath, '# Specification\n\n<span id="csa-new-anchor"></span>\nSome spec content.');
     execSync('git add spec.md', { cwd: caseDir });
     execSync('git commit -m "rename anchor"', { cwd: caseDir });

@@ -102,7 +102,7 @@ describe('CLI runAudit command', () => {
       throw new Error(`exit:${code}`);
     };
 
-    // Mock console.log và console.error
+    // Mock console.log and console.error
     console.log = (...args: any[]) => {
       logs.push(args.join(' '));
     };

@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.16.3-brightgreen.svg" alt="Version 0.16.3">
+    <img src="https://img.shields.io/badge/version-0.17.0-brightgreen.svg" alt="Version 0.17.0">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -63,6 +63,8 @@ Công cụ sử dụng [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 - **Gói ngữ cảnh (Context Bundle)** — Lấy mã nguồn, nơi gọi, nơi được gọi, imports, và tests chỉ trong một lần gọi MCP
 - **Agentic Edge Resolution** — Cho phép chèn các mối quan hệ còn thiếu (ví dụ: dynamic Bash imports) trực tiếp qua MCP
 - **MCP Auto-Setup** — Manifest-declared `mcp:` block cho phép cấu hình tự động cho IDE qua lệnh `./para mcp-setup`
+- **Ảnh cấu trúc tệp tin nguyên tử (v0.17.0+)** — Chụp ảnh cấu trúc cây thư mục mã nguồn dự án, băm mã SHA256 từng tệp tin vào SQLite để theo dõi phiên bản.
+- **Bảo vệ tệp tin quan trọng (v0.17.0+)** — Quản lý danh sách tệp tin được bảo vệ và cảnh báo nếu phát hiện thiếu hụt tệp tin khi xác thực snapshot.
 
 <a name="bat-dau-nhanh"></a>
 ## 🚀 Bắt đầu nhanh
@@ -105,6 +107,12 @@ para-graph build <target-dir> [output-dir] [--clean]
 
 # Tiêm dữ liệu Đồ thị & Xác thực sự sai lệch (Drift) trong Markdown Docs/Plans
 para-graph inject <target-dir>
+
+# Chụp ảnh cấu trúc cây thư mục mã nguồn dự án
+para-graph project-snapshot <project-name>
+
+# So khớp khác biệt giữa hai bản chụp snapshot
+para-graph project-diff <project-name> <src-snap-id> <tgt-snap-id>
 
 # Khởi động MCP server để tích hợp AI Agent
 para-graph serve [workspace-root]
@@ -231,8 +239,11 @@ Sau khi kết nối, AI Agent của bạn sẽ có quyền truy cập vào các 
 - `memory_push`: Gửi một sự kiện phiên làm việc (cuộc hội thoại, quyết định, lỗi phát sinh) vào kho lưu trữ MemoryStore của dự án.
 - `memory_search`: Tìm kiếm toàn văn (FTS5) trên các sự kiện bộ nhớ đã lưu trữ bằng từ khóa.
 - `memory_curate`: Gom cụm các sự kiện bộ nhớ thô thành các lát cắt ngữ nghĩa dựa trên phiên làm việc.
-- `graph_audit_csa`: Chạy kiểm tra tuân thủ Kiến trúc Đặc tả Đồng quy (Convergent Specification Architecture - CSA) cho dự án.
-- `graph_fix_csa`: Tự động sửa chữa các liên kết spec bị hỏng/dangling (tự động thay thế thẻ neo spec bị trôi lệch trong mã nguồn).
+- `graph_audit_csa`: Chạy kiểm tra tuân thủ Kiến trúc Đặc tả Đồng quy (CSA) cho dự án.
+- `graph_fix_csa`: Tự động sửa chữa các liên kết spec bị hỏng (thay thế thẻ neo spec bị trôi lệch trong mã nguồn).
+- `project_snapshot`: Chụp ảnh cấu trúc thư mục dự án, ghi nhận metadata vào SQLite, và kiểm tra các tệp tin bảo vệ.
+- `project_diff`: So khớp hai bản chụp snapshot để tìm ra các file thêm mới, bị xoá, hoặc bị chỉnh sửa.
+- `project_protected_files`: Liệt kê, thêm hoặc xoá các file thuộc danh sách bảo vệ của dự án.
 
 ### Sử dụng như Thư viện
 

@@ -27,8 +27,8 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
     projectName = path.basename(normalizedTarget);
   }
 
-  // Khởi tạo SqliteManager cho dự án này
-  // DB path mặc định: <wsRoot>/Projects/<projectName>/.beads/graph/<projectName>.db
+  // Initialize SqliteManager for this project
+  // Default DB path: <wsRoot>/Projects/<projectName>/.beads/graph/<projectName>.db
   const dbPath = path.join(wsRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
   const dbManager = new SqliteManager(projectName, dbPath);
   
@@ -42,8 +42,8 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
     console.log(`Coverage Rate:      ${auditResult.coverageRate.toFixed(2)}%`);
     console.log(`Dangling Edges:     ${auditResult.danglingEdges.length}`);
     
-    // Nếu tổng số Anchors là 0 thì CSA là opt-out (0 total edges/anchors -> exit code 0)
-    // Tức là dự án không áp dụng CSA, ta xử lý gracefully
+    // If total anchors is 0, CSA is opt-out (0 total edges/anchors -> exit code 0)
+    // Meaning the project does not apply CSA, we handle gracefully
     if (auditResult.totalAnchors === 0 && auditResult.danglingEdges.length === 0) {
       console.log('\n[CSA Audit] No CSA anchors or undocumented elements found. CSA is strictly Opt-In. Exit code 0.');
       dbManager.close();
@@ -57,7 +57,7 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
       }
     }
 
-    // Ghi nhận cảnh báo dưới dạng insight "risk"
+    // Record warning as a "risk" insight
     if (auditResult.coverageRate < 90.00 || auditResult.danglingEdges.length > 0) {
       const graph = GraphStore.getGraph(wsRoot, projectName);
       

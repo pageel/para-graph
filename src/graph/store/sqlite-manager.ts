@@ -269,7 +269,7 @@ export class SqliteManager {
       )
     `);
 
-    // Gieo dữ liệu mặc định cho protected_files
+    // Seed default data for protected_files
     const seedProtected = db.prepare(`
       INSERT OR IGNORE INTO protected_files (file_path, description, created_at)
       VALUES (?, ?, ?)

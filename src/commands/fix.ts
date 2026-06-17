@@ -55,7 +55,7 @@ export async function runFix({ projectPath, auto = false, dryRun = false }: FixC
       process.exit(0);
     }
 
-    // Lấy toàn bộ existing anchor IDs từ DB để fuzzy match
+    // Get all existing anchor IDs from DB for fuzzy matching
     const db = dbManager.getConnection();
     const rows = db.prepare(`SELECT id FROM nodes WHERE type = 'spec_anchor'`).all() as Array<{ id: string }>;
     const existingAnchorIds = rows.map(r => r.id);
@@ -72,11 +72,11 @@ export async function runFix({ projectPath, auto = false, dryRun = false }: FixC
 
       console.log(`\nAnalyzing broken link to "${targetId}" in ${sourceFile}:${sourceLine} (node: ${sourceId})`);
 
-      // Bước 1: Git Log Rename
+      // Step 1: Git Log Rename
       let proposedTarget = findRenamedAnchorInGit(targetId, projectRepoPath);
       let method = 'Git Log Rename';
 
-      // Bước 2: Levenshtein Fuzzy Match
+      // Step 2: Levenshtein Fuzzy Match
       if (!proposedTarget) {
         proposedTarget = findFuzzyMatch(targetId, existingAnchorIds);
         method = 'Fuzzy Match (Levenshtein)';
@@ -116,7 +116,7 @@ export async function runFix({ projectPath, auto = false, dryRun = false }: FixC
             if (originalLine.includes(targetId)) {
               lines[sourceLine - 1] = originalLine.replace(targetId, proposedTarget);
               
-              // Ghi lại tệp tin
+              // Write back to file
               const hasCRLF = content.includes('\r\n');
               fs.writeFileSync(fullSourcePath, lines.join(hasCRLF ? '\r\n' : '\n'), 'utf-8');
               console.log(`  [Success] Fixed reference in ${sourceFile}:${sourceLine}`);
