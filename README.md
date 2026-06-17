@@ -239,9 +239,12 @@ Once connected, your AI Agent gains access to the following tools:
 - `graph_link_docs`: Link documentation markdown files to graph nodes based on anchor tags.
 - `insight_push`: Push a project insight (lesson, risk, decision, pattern, gotcha) to the database.
 - `insight_search`: Search project insights using full-text search with metadata filters.
+- `insight_validate`: Update the confidence lifecycle of a project insight (hypothesis -> validated -> deprecated).
 - `memory_push`: Push a session event (conversation, decision, error) to the project MemoryStore.
 - `memory_search`: Full-text search (FTS5) over stored memory events by keyword.
 - `memory_curate`: Cluster raw events into semantic slices using session-based curation.
+- `graph_audit_csa`: Run Convergent Specification Architecture (CSA) compliance audit for a project.
+- `graph_fix_csa`: Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files).
 
 ### Library Usage
 
@@ -382,7 +385,11 @@ This tool ships AI intelligence artifacts that enhance the PARA Workspace agent 
 |:--|:--|:--|:--|
 | Workflow | `/para-graph` | 2.0.1 | Type `@[/para-graph]` to instruct the AI to re-scan and update the graph memory. |
 | Skill | para-graph | 2.5.0 | Centralized Graph Intelligence Router. Loaded on-demand for workflows like `/plan`, `/docs`, `/brainstorm` to provide graph enrichment and architecture validation. |
+| Skill | csa | 1.1.0 | Global Convergent Specification Architecture (CSA) skill for workspace-wide verification and documentation quality gates. |
 | Rule | `graph-first-policy` | 1.1.0 | Enforces graph-first development practices. The agent will proactively query the MCP server before making architecture decisions. |
+| Knowledge Item | `para_graph_architecture` | — | Describes the core architecture of the hybrid code-knowledge graph, nodes and edges schemas, and directory layout inside the `.beads/graph/` folder. |
+| Knowledge Item | `para_graph_mcp_tools` | — | Instruction guide on using MCP tools (`graph_query`, `graph_context_bundle`, etc.) to query and interact with the code graph. |
+| Knowledge Item | `para_graph_workflows` | — | Guides on integrating para-graph CLI commands (`build`, `serve`, `link`) with the PARA workspace workflows. |
 
 > **v0.12.0+**: AI Intelligence is no longer bundled in the tarball. It is fetched on-demand from GitHub via the `post_install()` hook. Update independently: `./para install-tool para-graph --sync`.
 >

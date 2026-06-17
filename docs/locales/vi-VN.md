@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.16.1-brightgreen.svg" alt="Version 0.16.1">
+    <img src="https://img.shields.io/badge/version-0.16.3-brightgreen.svg" alt="Version 0.16.3">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -97,39 +97,74 @@ npx para-graph build ./src ./output
 ### Lệnh CLI
 
 ```bash
-# Quét mã nguồn và xuất đồ thị
-para-graph build <target-dir> [output-dir] [--import]
+# Quét mã nguồn theo tên dự án (tự động phát hiện workspace)
+para-graph build <project-name>
+
+# Quét mã nguồn và xuất đồ thị (đường dẫn thủ công)
+para-graph build <target-dir> [output-dir] [--clean]
 
 # Tiêm dữ liệu Đồ thị & Xác thực sự sai lệch (Drift) trong Markdown Docs/Plans
 para-graph inject <target-dir>
 
 # Khởi động MCP server để tích hợp AI Agent
-para-graph serve <workspace-root>
+para-graph serve [workspace-root]
+
+# Quản lý BeforeTool hooks
+para-graph hooks install
+para-graph hooks uninstall
+para-graph hooks status
 
 # Xem trợ giúp
 para-graph --help
 ```
 
+### Lệnh Hooks
+
+Lệnh `hooks` dùng để quản lý BeforeTool hooks, tự động nhắc nhở (nudge) AI Agent sử dụng Đồ thị Tri thức trước khi truy quét tập tin một cách mù quáng.
+
+```bash
+# Cài đặt hook vào ~/.gemini/settings.json
+para-graph hooks install
+
+# Kiểm tra trạng thái hook hiện tại
+para-graph hooks status
+
+# Gỡ bỏ hook và khôi phục cài đặt gốc
+para-graph hooks uninstall
+```
+
+**Cách hoạt động:**
+1. `para-graph build` tạo lập Đồ thị Tri thức.
+2. `para-graph hooks install` tiêm BeforeTool hook vào cấu hình Gemini CLI.
+3. Khi Agent truy cập file lần đầu, nó nhận được lời nhắc ngữ cảnh: _"Đã có Đồ thị Tri thức — hãy sử dụng các công cụ MCP trước"_.
+4. Một file khóa (lock file) sẽ ngăn chặn việc nhắc đi nhắc lại trong cùng một phiên làm việc.
+5. `para-graph build` tự động đặt lại (reset) khóa sau mỗi lần đồ thị cập nhật.
+
 ### Lệnh Build
 
 ```bash
 # Sử dụng cơ bản
+para-graph build my-project                  # Dạng rút gọn (khuyên dùng)
 para-graph build ./src                       # Xuất ra ./output/
 para-graph build ./src ./my-graph            # Tùy chỉnh thư mục xuất
-para-graph build ./src ./out --import        # Giữ lại dữ liệu ngữ nghĩa khi quét lại
+para-graph build ./src ./out --clean        # Xóa đồ thị cũ, quét lại từ đầu
 ```
 
 | Tham số | Bắt buộc | Mặc định | Mô tả |
 |:--|:--|:--|:--|
-| `target-dir` | ✅ | — | Thư mục chứa mã nguồn được hỗ trợ |
+| `project-name` | ✅ (hoặc target-dir) | — | Tên dự án trong workspace (tự động phân giải repo/ và .beads/graph/) |
+| `target-dir` | ✅ (hoặc project-name) | — | Thư mục chứa mã nguồn được quét |
 | `output-dir` | — | `./output` | Thư mục để ghi kết quả đồ thị |
-| `--import` | — | — | Tải đồ thị có sẵn, giữ lại dữ liệu ngữ nghĩa (enrichment) |
+| `--clean` | — | — | Không tải đồ thị có sẵn, xóa và quét lại từ đầu |
 
 ### Lệnh Serve
 
 ```bash
 # Khởi động MCP server (stdio transport)
 para-graph serve /path/to/workspace
+
+# Hoặc tự động phát hiện thư mục gốc của workspace
+para-graph serve
 ```
 
 <a name="thiet-lap-mcp-server"></a>
@@ -181,11 +216,23 @@ Vào **Cursor Settings** > **Features** > **MCP Servers** > **Add New MCP Server
 
 ### Các công cụ MCP có sẵn
 Sau khi kết nối, AI Agent của bạn sẽ có quyền truy cập vào các công cụ sau:
-- `graph_query`: Tìm kiếm thực thể theo tên hoặc kiểu ngữ nghĩa.
-- `graph_edges`: Tìm những nơi gọi hàm (callers) và imports.
-- `graph_enrich`: Tự động lưu trữ tài liệu và độ phức tạp vào đồ thị.
-- `graph_impact_analysis`: Khám phá những file bị ảnh hưởng ở phía trên/dưới khi sửa đổi code.
-- `graph_context_bundle`: Lấy toàn bộ ngữ cảnh của một đoạn code chỉ trong một lần gọi.
+- `graph_query`: Tìm kiếm các thực thể theo tên hoặc theo loại node (file, class, function, interface, variable) trong đồ thị.
+- `graph_edges`: Tìm tất cả mối quan hệ (cạnh) được kết nối đến/đi từ một node cụ thể.
+- `graph_enrich`: Lưu trữ thông tin làm giàu ngữ nghĩa (tóm tắt, độ phức tạp, domain concepts, docAnchors) cho một node.
+- `graph_impact_analysis`: Phân tích tác động khi sửa đổi thực thể code, trả về tất cả các node/file bị ảnh hưởng ngược dòng (upstream) hoặc xuôi dòng (downstream).
+- `graph_context_bundle`: Lấy gói ngữ cảnh đầy đủ cho thực thể code (mã nguồn, callers, callees, imports, tests liên quan) trong một lần gọi duy nhất.
+- `graph_add_edges`: Thêm hàng loạt các mối quan hệ (CALLS, IMPORTS_FROM) vào đồ thị để giải quyết liên kết yếu đối với các ngôn ngữ có AST yếu (ví dụ: Bash).
+- `graph_god_nodes`: Lấy các thực thể kết nối nhiều nhất trong đồ thị (God nodes) để ưu tiên làm giàu ngữ nghĩa trước.
+- `graph_expand_node`: Chỉ lấy mã nguồn cho một thực thể code cụ thể với cơ chế kiểm tra giới hạn AST.
+- `graph_link_docs`: Liên kết các file tài liệu Markdown vào các node tương ứng trên đồ thị dựa trên các thẻ neo (anchors).
+- `insight_push`: Đẩy một bài học/nhận thức dự án (lesson, risk, decision, pattern, gotcha) vào cơ sở dữ liệu SQLite bền vững.
+- `insight_search`: Tìm kiếm các bài học/nhận thức dự án bằng tìm kiếm toàn văn FTS5 cùng bộ lọc metadata.
+- `insight_validate`: Cập nhật trạng thái vòng đời của một nhận thức dự án (hypothesis -> validated -> deprecated).
+- `memory_push`: Gửi một sự kiện phiên làm việc (cuộc hội thoại, quyết định, lỗi phát sinh) vào kho lưu trữ MemoryStore của dự án.
+- `memory_search`: Tìm kiếm toàn văn (FTS5) trên các sự kiện bộ nhớ đã lưu trữ bằng từ khóa.
+- `memory_curate`: Gom cụm các sự kiện bộ nhớ thô thành các lát cắt ngữ nghĩa dựa trên phiên làm việc.
+- `graph_audit_csa`: Chạy kiểm tra tuân thủ Kiến trúc Đặc tả Đồng quy (Convergent Specification Architecture - CSA) cho dự án.
+- `graph_fix_csa`: Tự động sửa chữa các liên kết spec bị hỏng/dangling (tự động thay thế thẻ neo spec bị trôi lệch trong mã nguồn).
 
 ### Sử dụng như Thư viện
 
@@ -327,10 +374,16 @@ Công cụ này đi kèm với các artifact trí tuệ nhân tạo nhằm nâng
 | Loại | Tên | Phiên bản | Mô tả & Cách dùng |
 |:--|:--|:--|:--|
 | Workflow | `/para-graph` | 2.0.1 | Gõ `@[/para-graph]` để chỉ thị cho AI quét lại dự án và cập nhật trí nhớ đồ thị. |
-| Skill | `para-graph` | 2.4.0 | Bộ định tuyến Trí tuệ Đồ thị tập trung (Centralized Graph Intelligence Router). Được tự động nạp cho các workflow như `/plan`, `/docs`, `/brainstorm` nhằm phân tích ngữ nghĩa và xác thực kiến trúc. |
-| Rule | `graph-first-policy` | 1.0.0 | Bắt buộc thực hiện lập trình kiểu "đồ thị là trên hết". Agent sẽ tự động truy vấn MCP server trước khi ra quyết định kiến trúc. |
+| Skill | `para-graph` | 2.5.0 | Bộ định tuyến Trí tuệ Đồ thị tập trung (Centralized Graph Intelligence Router). Được tự động nạp cho các workflow như `/plan`, `/docs`, `/brainstorm` nhằm phân tích ngữ nghĩa và xác thực kiến trúc. |
+| Skill | `csa` | 1.1.0 | Skill Kiến trúc Đặc tả Đồng quy (Convergent Specification Architecture) toàn cục dùng để kiểm tra tính tuân thủ và cổng chất lượng tài liệu trên toàn workspace. |
+| Rule | `graph-first-policy` | 1.1.0 | Bắt buộc thực hiện lập trình kiểu "đồ thị là trên hết". Agent sẽ tự động truy vấn MCP server trước khi ra quyết định kiến trúc. |
+| Knowledge Item | `para_graph_architecture` | — | Mô tả kiến trúc cốt lõi của đồ thị lai mã nguồn - tri thức, lược đồ thực thể/mối quan hệ, và sơ đồ thư mục trong `.beads/graph/`. |
+| Knowledge Item | `para_graph_mcp_tools` | — | Hướng dẫn chi tiết cách sử dụng các công cụ MCP (`graph_query`, `graph_context_bundle`, v.v.) để truy vấn và tương tác với đồ thị. |
+| Knowledge Item | `para_graph_workflows` | — | Hướng dẫn tích hợp các lệnh CLI của `para-graph` (`build`, `serve`, `link`) vào các workflow trong workspace PARA. |
 
-> Yêu cầu PARA Workspace v1.8.2+ để có thể sử dụng chức năng tự động nhận diện cấu hình MCP.
+> **v0.12.0+**: Trí tuệ Nhân tạo không còn được đóng gói sẵn trong tệp lưu trữ tarball, mà được tải theo yêu cầu từ GitHub thông qua hook `post_install()`. Cập nhật độc lập bằng lệnh: `./para install-tool para-graph --sync`.
+>
+> Yêu cầu PARA Workspace v1.8.5+ để có thể tự động đồng bộ hóa template.
 
 <a name="lo-trinh"></a>
 ## 🗺️ Lộ trình (Roadmap)
@@ -339,13 +392,20 @@ Công cụ này đi kèm với các artifact trí tuệ nhân tạo nhằm nâng
 |:--|:--|:--|
 | P1 | Cấu trúc cơ bản (Tree-sitter AST) | ✅ Hoàn thành |
 | P2 | Làm giàu ngữ nghĩa tự động bằng Agent | ✅ Hoàn thành |
-| P3 | Storage & Động cơ Truy vấn | ✅ Hoàn thành |
+| P3 | Cơ sở dữ liệu & Động cơ truy vấn | ✅ Hoàn thành |
 | P4 | Tích hợp CLI & NPM Package | ✅ Hoàn thành |
-| P5 | Hỗ trợ đa ngôn ngữ & Tái cấu trúc Query | ✅ Hoàn thành |
+| P5 | Hỗ trợ đa ngôn ngữ & Tái cấu trúc truy vấn | ✅ Hoàn thành |
 | P6 | Truy vấn tác động & bối cảnh | ✅ Hoàn thành |
 | P7 | Giải quyết cạnh tự động cho Bash | ✅ Hoàn thành |
 | P8 | Deep CALLS + Nhận diện Design Pattern | ✅ Hoàn thành |
-| P9 | Viết tài liệu & Phát hành v1.0.0 | 📋 Trong kế hoạch |
+| P9 | Giải quyết cạnh & Phân tích cấu trúc (Topology Analytics) | ✅ Hoàn thành |
+| P10 | Tự động kích hoạt Agent (Hook Injection) | ✅ Hoàn thành |
+| P11 | Bộ nhớ tinh gọn (Compact Memory) | ✅ Hoàn thành |
+| P12 | SQLite Storage Engine (Cơ chế lưu trữ kép) | ✅ Hoàn thành |
+| P13 | Đồng bộ hóa bộ nhớ theo thời gian thực (Freshness-Aware Memory) | ✅ Hoàn thành |
+| P14 | Tiến hóa lược đồ & Tìm kiếm mã nguồn | 📋 Trong kế hoạch |
+| P-Vis | Trực quan hóa đồ thị MVP | 📋 Trong kế hoạch |
+| PX | Viết tài liệu & Phát hành bản ổn định (v1.0.0) | 📋 Trong kế hoạch |
 
 <a name="giay-phep"></a>
 ## 📄 Giấy phép
