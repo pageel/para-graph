@@ -21,6 +21,7 @@ import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { NodeType, ExportType } from '../graph/models.js';
 import type { GraphNode, GraphEdge } from '../graph/models.js';
 import { extractSpecAnchors } from '../parser/csa-parser.js';
+import { runLink } from './link.js';
 
 // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
 function findMdFiles(dir: string): string[] {
@@ -231,6 +232,20 @@ export function runBuild(options: BuildOptions): void {
     console.log('[para-graph] Persisted graph to SQLite and invalidated god_nodes_cache.');
   } catch (err) {
     console.warn(`[para-graph] Failed to persist graph to SQLite DB:`, err);
+  }
+
+  // Step 10: Auto-link documents after successful build if docs folder exists
+  try {
+    const wsRoot = dirname(dirname(targetDir));
+    const projectRoot = targetDir;
+    const docsDirProj = join(projectRoot, 'docs');
+    const docsDirRepo = join(dirname(projectRoot), 'docs');
+    
+    if (existsSync(docsDirProj) || existsSync(docsDirRepo)) {
+      runLink(options.projectName, wsRoot);
+    }
+  } catch (err: any) {
+    console.warn(`[para-graph] Warning: Auto-linking documents failed: ${err.message}`);
   }
 
   console.log(`[para-graph] Done. Output at: ${outputDir}`);
