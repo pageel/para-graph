@@ -146,4 +146,12 @@ post_install() {
       fi
     fi
   fi
+
+  # Auto-sync Knowledge Items
+  echo "  📚 para-graph: syncing Knowledge Items to IDE..."
+  if node "$TOOL_INSTALL_DIR/dist/cli.js" ki sync 2>/dev/null; then
+    echo "  ✅ Knowledge Items synchronized."
+  else
+    echo "  ⚠️  KI sync skipped. Run './para graph ki sync' manually."
+  fi
 }

@@ -28,10 +28,11 @@ The `para-graph` MCP server registers **21 tools** across 5 functional domains. 
 - **Purpose**: Batch inject edges (CALLS, IMPORTS_FROM) into the graph — for agentic edge resolution of languages with weak AST linking (e.g., Bash).
 - **Key Params**: `projectName`, `edges[]` (sourceId, targetId, relation)
 
-### 7. `graph_link_docs`
-- **Purpose**: Link graph nodes to documentation sections. Establishes doc↔code traceability via `docAnchors` in `SemanticAttributes`. Call after `/docs new` or `/docs update`.
+### 7. `graph_link_docs` (Deprecated)
+- **Purpose**: [DEPRECATED] Link graph nodes to documentation sections. Establishes doc↔code traceability via `docAnchors` in `SemanticAttributes`. Call after `/docs new` or `/docs update`.
 - **Key Params**: `projectName`, `links[]` (nodeId, docPath as `docs/path.md#section-slug`)
-- **Note**: Uses unidirectional anchoring (Docs→Code). Different from CSA Double-Binding which is bidirectional (Code↔Spec).
+- **Note**: This tool is deprecated since v0.17.2 and will be removed in v0.19.0. Use Unified CSA (Specs & Docs) instead.
+- **Legacy Note**: Uses unidirectional anchoring (Docs→Code). Different from CSA Double-Binding which is bidirectional (Code↔Spec).
 
 ### 8. `graph_god_nodes`
 - **Purpose**: Get the most connected (God) nodes in the graph — helps Agent prioritize which nodes to enrich first.
@@ -72,9 +73,9 @@ The `para-graph` MCP server registers **21 tools** across 5 functional domains. 
 ## Domain 4: CSA Governance (2 tools)
 
 ### 16. `graph_audit_csa`
-- **Purpose**: Run Convergent Specification Architecture (CSA) compliance audit. Checks bidirectional traceability between spec anchors (`<span id="csa-...">`) and code comments (`// @para-doc`).
+- **Purpose**: Run Convergent Specification Architecture (CSA) compliance audit. Checks bidirectional traceability between anchors (`<span id="csa-...">`) and code comments (`// @para-doc`).
 - **Key Params**: `projectName`
-- **Note**: Reports coverage metrics for Spec↔Code binding. Separate from doc-anchoring (`graph_link_docs`).
+- **Note**: Reports tiered coverage metrics (Tier 1 Specs: hard gate, Tier 2 Docs: soft/hard/off gate) based on `csa:` configuration in `project.md`.
 
 ### 17. `graph_fix_csa`
 - **Purpose**: Run CSA self-healing fix for dangling spec references. Uses Git rename history and fuzzy matching to auto-replace drifted `// @para-doc` comments in code files.
@@ -95,16 +96,15 @@ The `para-graph` MCP server registers **21 tools** across 5 functional domains. 
 - **Key Params**: `projectName`, `action` (list/add/remove), `filePath?`
 
 ### 21. `project_session_compact`
-- **Purpose**: Scan rules, skills, and project contract, then write a compacted markdown context summary to `vibecode_session/artifacts/session.md` for context recovery.
+- **Purpose**: Scan rules, skills, and project contract, then write a compacted markdown context summary to `para_vibecode_session/artifacts/session.md` for context recovery.
 - **Key Params**: `projectName`
 
-## Two Traceability Systems
+## Unified CSA Traceability (v0.17.2+)
 
-The tool surface exposes **two distinct** doc-code traceability mechanisms:
+Since v0.17.2, the two legacy doc-code systems have been merged into a single **Unified CSA** mechanism:
 
-| Mechanism | Tools | Direction | Target | Binding Type |
-|:--|:--|:--|:--|:--|
-| **CSA Double-Binding** | `graph_audit_csa`, `graph_fix_csa` | Bidirectional (Code↔Spec) | Specs (`artifacts/specs/`) | `// @para-doc` + `<span id="csa-...">` |
-| **Graph Doc-Anchoring** | `graph_link_docs` | Unidirectional (Docs→Code) | Docs (`docs/`) | `<!-- @graph-node -->` + `docAnchors[]` |
-
-Agents must not confuse these two systems. CSA is for strict spec compliance; Doc-Anchoring is for lightweight documentation traceability.
+- **Unified Anchor Syntax**: `<span id="csa-xxx">` in Specs (`artifacts/specs/`) or Docs (`docs/`) bound to `// @para-doc [#xxx]` in code.
+- **Tiered Compliance Gating**:
+  - **Tier 1: Specs (Hard Gate)**: Targets `artifacts/specs/`. Blocks release if below threshold (default 90%).
+  - **Tier 2: Docs (Configurable Gate)**: Targets `docs/`. Configurable threshold (default 50%) and gate (`soft` warning, `hard` block, `off` bypass).
+- **Deprecated components**: `<!-- @graph-node -->` comments, `docAnchors[]` attribute, `graph_link_docs` tool, and `para-graph link` CLI command.

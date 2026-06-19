@@ -31,7 +31,7 @@ Added by Agent via `graph_enrich` MCP tool. Fields:
 - `domainConcepts`: Array of domain tags (e.g., `["graph", "indexing"]`).
 - `enrichedAt`: ISO 8601 timestamp.
 - `enrichedBy`: `agent` | `manual`.
-- `docAnchors?`: Array of doc file paths referencing this node (populated by `graph_link_docs`), format: `docs/path.md#section-slug`.
+- `docAnchors?`: Array of doc file paths referencing this node (Deprecated since v0.17.2 — use CSA double-binding instead), format: `docs/path.md#section-slug`.
 - `staleSince?`: ISO timestamp when node code changed since last enrichment.
 
 ## Edge Schema (`GraphEdge`)
@@ -42,21 +42,18 @@ Edges represent directed relationships between two nodes:
 - `sourceFile` / `sourceLine`: Where the relationship originates.
 - `confidence?`: `EXTRACTED` (from AST), `INFERRED` (Agent-injected), `AMBIGUOUS`, or `EXTERNAL`.
 
-## Two Traceability Mechanisms
+## Unified CSA Traceability (v0.17.2+)
 
-### 1. CSA Double-Binding (Spec↔Code)
-- **Direction**: Bidirectional.
-- **Code side**: `// @para-doc [specs/spec.md#anchor]` comments in source.
-- **Spec side**: `<span id="csa-...">` HTML anchors in spec files.
-- **Audited by**: `graph_audit_csa` MCP tool.
-- **Self-healed by**: `graph_fix_csa` MCP tool (uses Git rename + fuzzy matching).
+Since v0.17.2, the two legacy doc-code systems have been merged into a single **Unified CSA** mechanism:
 
-### 2. Graph Doc-Anchoring (Docs→Code)
-- **Direction**: Unidirectional (Docs reference Code, Code does not need to know about Docs).
-- **Doc side**: `<!-- @graph-node: nodeId -->` HTML comments in doc files.
-- **Code side**: `docAnchors[]` field in `SemanticAttributes`.
-- **Established by**: `graph_link_docs` MCP tool.
-- **Tracked in**: `## Graph Traceability` section in `docs/README.md`.
+- **Unified Anchor Syntax**: `<span id="csa-xxx">` in Specs (`artifacts/specs/`) or Docs (`docs/`) bound to `// @para-doc [#xxx]` in code.
+- **Tiered Compliance Gating**:
+  - **Tier 1: Specs (Hard Gate)**: Targets `artifacts/specs/`. Blocks release if below threshold (default 90%).
+  - **Tier 2: Docs (Configurable Gate)**: Targets `docs/`. Configurable threshold (default 50%) and gate (`soft` warning, `hard` block, `off` bypass).
+- **Audit & Self-Healing**:
+  - **Audit**: `graph_audit_csa` MCP tool and `para-graph audit` CLI command check coverage for both specs and docs based on the configured gating.
+  - **Fix**: `graph_fix_csa` MCP tool applies automated rename resolution to correct drifted comments.
+- **Deprecated components**: `<!-- @graph-node -->` comments, `docAnchors[]` attribute, `graph_link_docs` tool, and `para-graph link` CLI command.
 
 ## Memory & Insights (SQLite-backed)
 
@@ -68,7 +65,7 @@ Edges represent directed relationships between two nodes:
 - **Snapshots**: `project_snapshot` records the full directory tree and metadata to SQLite.
 - **Diff**: `project_diff` compares two snapshots to detect physical drift (added/removed/modified files).
 - **Protected Files**: `project_protected_files` manages a watchlist of critical files (`project.md`, `.agents/rules.md`, etc.) and alerts on deletion or unauthorized modification.
-- **Compaction**: `project_session_compact` scans active session files (rules, skills, and project contract) and writes a compacted markdown summary to `vibecode_session/artifacts/session.md` for context recovery.
+- **Compaction**: `project_session_compact` scans active session files (rules, skills, and project contract) and writes a compacted markdown summary to `para_vibecode_session/artifacts/session.md` for context recovery.
 
 ## Search & Context Retrieval Engines
 
