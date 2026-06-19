@@ -15,6 +15,7 @@ import * as fs from 'node:fs';
 import { join, resolve } from 'node:path';
 import * as path from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
+import * as os from 'node:os';
 import { z } from 'zod';
 import { scanDirectory } from '../utils/file-scanner.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
@@ -957,6 +958,114 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           isError: true,
         };
       }
+    }
+  );
+
+  // --- project_session_compact: Compact workspace and project context into Vibecode Session KI ---
+  // @para-doc [artifacts/specs/spec-2026-06-19-session-compaction.md#csa-session-compact]
+  server.tool(
+    'project_session_compact',
+    'Compact workspace and project context (rules, skills, contract, guidelines) into Vibecode Session KI',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+    },
+    async ({ projectName }) => {
+      const warnings: string[] = [];
+      let compactedText = '';
+
+      // Helper to read file safely
+      const readFileSafe = (filePath: string, label: string): string | null => {
+        if (existsSync(filePath)) {
+          try {
+            return readFileSync(filePath, 'utf-8');
+          } catch (err: any) {
+            warnings.push(`Failed to read ${label}: ${err.message}`);
+          }
+        } else {
+          warnings.push(`${label} not found at ${filePath}`);
+        }
+        return null;
+      };
+
+      // 1. Build Markdown structure
+      compactedText += `# Session Context Compaction\n\n`;
+      compactedText += `> **Generated:** ${new Date().toISOString()}\n`;
+      compactedText += `> **Project:** ${projectName}\n\n`;
+
+      // 2. Read project.md (Contract)
+      const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
+      const projectMd = readFileSafe(projectMdPath, 'project.md');
+      if (projectMd) {
+        compactedText += `## Project Contract\n\n\`\`\`markdown\n${projectMd}\n\`\`\`\n\n`;
+      }
+
+      // 3. Read Workspace Rules & Skills indices
+      const wsRulesPath = join(workspaceRoot, '.agents', 'rules.md');
+      const wsRules = readFileSafe(wsRulesPath, 'Workspace Rules');
+      if (wsRules) {
+        compactedText += `## Workspace Rules Index\n\n${wsRules}\n\n`;
+      }
+
+      const wsSkillsPath = join(workspaceRoot, '.agents', 'skills.md');
+      const wsSkills = readFileSafe(wsSkillsPath, 'Workspace Skills');
+      if (wsSkills) {
+        compactedText += `## Workspace Skills Index\n\n${wsSkills}\n\n`;
+      }
+
+      // 4. Read Project Rules & Skills indices
+      const projRulesPath = join(workspaceRoot, 'Projects', projectName, '.agents', 'rules.md');
+      const projRules = readFileSafe(projRulesPath, 'Project Rules');
+      if (projRules) {
+        compactedText += `## Project Rules Index\n\n${projRules}\n\n`;
+      }
+
+      const projSkillsPath = join(workspaceRoot, 'Projects', projectName, '.agents', 'skills.md');
+      const projSkills = readFileSafe(projSkillsPath, 'Project Skills');
+      if (projSkills) {
+        compactedText += `## Project Skills Index\n\n${projSkills}\n\n`;
+      }
+
+      // 5. Read Project Guidelines (AGENTS.md)
+      const agentsMdPath = join(workspaceRoot, 'Projects', projectName, '.agents', 'AGENTS.md');
+      const agentsMd = readFileSafe(agentsMdPath, 'Agent Guidelines');
+      if (agentsMd) {
+        compactedText += `## Agent Guidelines\n\n${agentsMd}\n\n`;
+      }
+
+      // 6. Write to knowledge directories
+      const homeDir = os.homedir();
+      const appDataDir = process.env.APP_DATA_DIR || join(homeDir, '.gemini', 'antigravity-ide');
+      
+      const sessionDirs = [
+        join(appDataDir, 'knowledge', 'vibecode_session', 'artifacts'),
+        join(appDataDir, 'knowledge', 'para_vibecode_session', 'artifacts')
+      ];
+
+      let writeSuccess = true;
+      for (const dir of sessionDirs) {
+        try {
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+          }
+          const sessionFilePath = join(dir, 'session.md');
+          writeFileSync(sessionFilePath, compactedText, 'utf-8');
+        } catch (err: any) {
+          writeSuccess = false;
+          warnings.push(`Failed to write to ${dir}: ${err.message}`);
+        }
+      }
+
+      const response = {
+        success: writeSuccess && compactedText.length > 0,
+        projectName,
+        warnings,
+        writtenPaths: sessionDirs.map(d => join(d, 'session.md')),
+      };
+
+      return {
+        content: [{ type: 'text' as const, text: JSON.stringify(response, null, 2) }],
+        isError: !response.success,
+      };
     }
   );
 }

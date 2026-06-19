@@ -189,6 +189,27 @@ export class GraphStore {
             rawEntities.forEach(line => {
               graph.repository!.insertNode(JSON.parse(line));
             });
+            // Also sync edges to prevent ON DELETE CASCADE from wiping them (CSA bug fix)
+            const relationsPath = join(graphDir, 'relations.jsonl');
+            if (existsSync(relationsPath)) {
+              const content = readFileSync(relationsPath, 'utf-8').trim();
+              if (content.length > 0) {
+                const insertEdge = db.prepare(`
+                  INSERT OR REPLACE INTO edges (source_id, target_id, relation, source_file, source_line)
+                  VALUES (?, ?, ?, ?, ?)
+                `);
+                content.split(/\r?\n/).forEach(line => {
+                  const edge = JSON.parse(line) as GraphEdge;
+                  insertEdge.run(
+                    edge.sourceId,
+                    edge.targetId,
+                    edge.relation,
+                    edge.sourceFile || null,
+                    edge.sourceLine || null
+                  );
+                });
+              }
+            }
           });
           insertAll();
         } catch (e) {

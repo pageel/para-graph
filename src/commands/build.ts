@@ -22,6 +22,7 @@ import { NodeType, ExportType } from '../graph/models.js';
 import type { GraphNode, GraphEdge } from '../graph/models.js';
 import { extractSpecAnchors } from '../parser/csa-parser.js';
 import { runLink } from './link.js';
+import { findWorkspaceRoot } from '../utils/workspace.js';
 
 // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
 function findMdFiles(dir: string): string[] {
@@ -111,7 +112,8 @@ export function runBuild(options: BuildOptions): void {
   const projectRoot = dirname(targetDir);
   const docsPath = join(projectRoot, 'docs');
   const plansPath = join(projectRoot, 'artifacts', 'plans');
-  const mdFiles = [...findMdFiles(docsPath), ...findMdFiles(plansPath)];
+  const specsPath = join(projectRoot, 'artifacts', 'specs');
+  const mdFiles = [...findMdFiles(docsPath), ...findMdFiles(plansPath), ...findMdFiles(specsPath)];
   
   if (mdFiles.length > 0) {
     let anchorCount = 0;
@@ -236,7 +238,7 @@ export function runBuild(options: BuildOptions): void {
 
   // Step 10: Auto-link documents after successful build if docs folder exists
   try {
-    const wsRoot = dirname(dirname(targetDir));
+    const wsRoot = findWorkspaceRoot(targetDir) ?? dirname(dirname(targetDir));
     const projectRoot = targetDir;
     const docsDirProj = join(projectRoot, 'docs');
     const docsDirRepo = join(dirname(projectRoot), 'docs');
