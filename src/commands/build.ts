@@ -109,7 +109,16 @@ export function runBuild(options: BuildOptions): void {
   }
 
   // Step 4.5: Scan project specs & plans for CSA anchors
-  const projectRoot = dirname(targetDir);
+  let projectRoot = targetDir;
+  while (projectRoot !== dirname(projectRoot)) {
+    if (existsSync(join(projectRoot, 'project.md'))) {
+      break;
+    }
+    projectRoot = dirname(projectRoot);
+  }
+  if (!existsSync(join(projectRoot, 'project.md'))) {
+    projectRoot = dirname(targetDir); // Fallback
+  }
   const docsPath = join(projectRoot, 'docs');
   const plansPath = join(projectRoot, 'artifacts', 'plans');
   const specsPath = join(projectRoot, 'artifacts', 'specs');

@@ -23,6 +23,7 @@ describe('Build CSA Integration', () => {
     mkdirSync(repoDir, { recursive: true });
     mkdirSync(docsDir, { recursive: true });
     mkdirSync(outputDir, { recursive: true });
+    writeFileSync(join(projectDir, 'project.md'), 'version: 0.0.1\nname: mock-project\n', 'utf-8');
   });
 
   afterEach(() => {

@@ -19,7 +19,7 @@ import * as os from 'node:os';
 import { z } from 'zod';
 import { scanDirectory } from '../utils/file-scanner.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight } from '../graph/models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight, CsaConfig } from '../graph/models.js';
 import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
@@ -642,6 +642,23 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     },
   );
 
+  function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
+    const config: Partial<CsaConfig> = {};
+    if (!existsSync(projectMdPath)) return config;
+    try {
+      const content = readFileSync(projectMdPath, 'utf8');
+      const specMatch = content.match(/spec_threshold:\s*(\d+)/);
+      if (specMatch) config.specThreshold = parseInt(specMatch[1], 10);
+
+      const docMatch = content.match(/doc_threshold:\s*(\d+)/);
+      if (docMatch) config.docThreshold = parseInt(docMatch[1], 10);
+
+      const gateMatch = content.match(/doc_gate:\s*['"]?(soft|hard|off)['"]?/);
+      if (gateMatch) config.docGate = gateMatch[1] as 'soft' | 'hard' | 'off';
+    } catch {}
+    return config;
+  }
+
   // --- graph_audit_csa: Run CSA compliance audit ---
   // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
   server.tool(
@@ -651,12 +668,15 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       projectName: z.string().describe('Name of the PARA project'),
     },
     async ({ projectName }) => {
+      const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
+      const config = readCsaConfig(projectMdPath);
+
       const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
       const dbManager = new SqliteManager(projectName, dbPath);
       
       try {
         dbManager.initSchema();
-        const auditResult = dbManager.runCsaAudit();
+        const auditResult = dbManager.runCsaAudit(config);
         dbManager.close();
 
         return {

@@ -366,4 +366,30 @@ export interface FusedResult<T> {
   /** The original 0-indexed ranks of this item across input lists (-1 if not present) */
   ranks: number[];
 }
+// --- CSA Compliance & Tiered Audit Types (v0.17.2) ---
 
+/** Configuration options for Tiered CSA audit */
+export interface CsaConfig {
+  specThreshold: number;     // e.g. 90 (Hard Gate)
+  docThreshold: number;      // e.g. 50 (Soft Gate)
+  docGate: 'soft' | 'hard' | 'off'; // default: 'soft'
+}
+
+/** Details about coverage within a single tier (Spec or Doc) */
+export interface CsaCoverageDetails {
+  totalAnchors: number;
+  coveredAnchors: number;
+  coverageRate: number;
+  threshold: number;
+  gate: 'hard' | 'soft' | 'off';
+  pass: boolean;
+}
+
+/** Complete result of a tiered CSA audit */
+export interface CsaTieredResult {
+  projectName: string;
+  config: CsaConfig;
+  specCoverage: CsaCoverageDetails;
+  docCoverage: CsaCoverageDetails;
+  combinedHealth: number;    // Weighted health score (spec/doc average)
+}

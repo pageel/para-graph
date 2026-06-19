@@ -176,7 +176,7 @@ describe('CLI runAudit command', () => {
     }).toThrow('exit:1');
 
     expect(exitCode).toBe(1);
-    expect(errors.some(e => e.includes('Fail: Coverage 50.00% < 90.00%'))).toBe(true);
+    expect(errors.some(e => e.includes('Fail: Tier 1 Spec Coverage 50.00% < 90%'))).toBe(true);
   });
 
   it('should exit code 0 when there are no anchors (Opt-In)', () => {

@@ -4,10 +4,28 @@ import { GraphStore } from '../graph/store/GraphStore.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import type { ProjectInsight } from '../graph/models.js';
+import { existsSync, readFileSync } from 'node:fs';
+import type { ProjectInsight, CsaConfig } from '../graph/models.js';
 
 export interface AuditCsaOptions {
   projectPath: string;
+}
+
+function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
+  const config: Partial<CsaConfig> = {};
+  if (!existsSync(projectMdPath)) return config;
+  try {
+    const content = readFileSync(projectMdPath, 'utf8');
+    const specMatch = content.match(/spec_threshold:\s*(\d+)/);
+    if (specMatch) config.specThreshold = parseInt(specMatch[1], 10);
+
+    const docMatch = content.match(/doc_threshold:\s*(\d+)/);
+    if (docMatch) config.docThreshold = parseInt(docMatch[1], 10);
+
+    const gateMatch = content.match(/doc_gate:\s*['"]?(soft|hard|off)['"]?/);
+    if (gateMatch) config.docGate = gateMatch[1] as 'soft' | 'hard' | 'off';
+  } catch {}
+  return config;
 }
 
 export function runAudit({ projectPath }: AuditCsaOptions): void {
@@ -34,14 +52,30 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
   
   try {
     dbManager.initSchema();
-    const auditResult = dbManager.runCsaAudit();
+    const projectMdPath = path.join(wsRoot, 'Projects', projectName, 'project.md');
+    const config = readCsaConfig(projectMdPath);
+    const auditResult = dbManager.runCsaAudit(config);
 
     console.log(`\n=== CSA COMPLIANCE AUDIT REPORT: ${projectName} ===`);
-    console.log(`Total CSA Anchors:  ${auditResult.totalAnchors}`);
-    console.log(`Covered Anchors:    ${auditResult.coveredAnchors}`);
-    console.log(`Coverage Rate:      ${auditResult.coverageRate.toFixed(2)}%`);
-    console.log(`Dangling Edges:     ${auditResult.danglingEdges.length}`);
+    console.log(`Combined Health Score: ${auditResult.combinedHealth.toFixed(2)}%`);
+    console.log(`Dangling Edges:        ${auditResult.danglingEdges.length}`);
     
+    console.log(`\n--- Tier 1: Specs (Hard Gate) ---`);
+    console.log(`  Total Anchors:  ${auditResult.specCoverage.totalAnchors}`);
+    console.log(`  Covered:        ${auditResult.specCoverage.coveredAnchors}`);
+    console.log(`  Coverage Rate:  ${auditResult.specCoverage.coverageRate.toFixed(2)}% (threshold: ${auditResult.specCoverage.threshold}%)`);
+    console.log(`  Status:         ${auditResult.specCoverage.pass ? 'PASS' : 'FAIL'}`);
+
+    console.log(`\n--- Tier 2: Docs (${auditResult.docCoverage.gate.toUpperCase()} Gate) ---`);
+    if (auditResult.docCoverage.gate === 'off') {
+      console.log(`  Status:         OFF (skipped)`);
+    } else {
+      console.log(`  Total Anchors:  ${auditResult.docCoverage.totalAnchors}`);
+      console.log(`  Covered:        ${auditResult.docCoverage.coveredAnchors}`);
+      console.log(`  Coverage Rate:  ${auditResult.docCoverage.coverageRate.toFixed(2)}% (threshold: ${auditResult.docCoverage.threshold}%)`);
+      console.log(`  Status:         ${auditResult.docCoverage.pass ? 'PASS' : 'FAIL'}`);
+    }
+
     // If total anchors is 0, CSA is opt-out (0 total edges/anchors -> exit code 0)
     // Meaning the project does not apply CSA, we handle gracefully
     if (auditResult.totalAnchors === 0 && auditResult.danglingEdges.length === 0) {
@@ -58,15 +92,22 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
     }
 
     // Record warning as a "risk" insight
-    if (auditResult.coverageRate < 90.00 || auditResult.danglingEdges.length > 0) {
+    const specFail = !auditResult.specCoverage.pass;
+    const docFail = auditResult.docCoverage.gate !== 'off' && !auditResult.docCoverage.pass;
+    const hasDangling = auditResult.danglingEdges.length > 0;
+
+    if (specFail || docFail || hasDangling) {
       const graph = GraphStore.getGraph(wsRoot, projectName);
       
       const insightId = `ins-${randomUUID()}`;
       let description = '';
-      if (auditResult.coverageRate < 90.00) {
-        description += `CSA coverage rate is ${auditResult.coverageRate.toFixed(2)}%, which is below the 90.00% requirement. `;
+      if (specFail) {
+        description += `Tier 1 Spec Coverage is ${auditResult.specCoverage.coverageRate.toFixed(2)}%, which is below the ${auditResult.specCoverage.threshold}% requirement. `;
       }
-      if (auditResult.danglingEdges.length > 0) {
+      if (docFail) {
+        description += `Tier 2 Doc Coverage is ${auditResult.docCoverage.coverageRate.toFixed(2)}%, which is below the ${auditResult.docCoverage.threshold}% requirement (gate: ${auditResult.docCoverage.gate}). `;
+      }
+      if (hasDangling) {
         description += `Found ${auditResult.danglingEdges.length} dangling spec links: ${auditResult.danglingEdges.map(e => e.targetId).join(', ')}.`;
       }
 
@@ -74,7 +115,7 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
         id: insightId,
         category: 'risk',
         domain: 'csa-compliance',
-        title: `CSA Audit Failure: Coverage ${auditResult.coverageRate.toFixed(2)}%`,
+        title: `CSA Audit Failure: Spec ${auditResult.specCoverage.coverageRate.toFixed(2)}%, Doc ${auditResult.docCoverage.coverageRate.toFixed(2)}%`,
         description,
         sourceType: 'qa',
         confidence: 'hypothesis',
@@ -87,13 +128,24 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
       console.log(`[CSA Audit] Saved drift audit warning to insights database as risk: ${insightId}`);
     }
 
-    if (auditResult.coverageRate < 90.00) {
-      console.error(`\n[CSA Audit] Fail: Coverage ${auditResult.coverageRate.toFixed(2)}% < 90.00%`);
+    // Check Gating Exit Condition
+    if (specFail) {
+      console.error(`\n[CSA Audit] Fail: Tier 1 Spec Coverage ${auditResult.specCoverage.coverageRate.toFixed(2)}% < ${auditResult.specCoverage.threshold}%`);
       dbManager.close();
       process.exit(1);
     }
 
-    console.log('\n[CSA Audit] Success: CSA coverage requirement passed (>90.00%).');
+    if (auditResult.docCoverage.gate === 'hard' && !auditResult.docCoverage.pass) {
+      console.error(`\n[CSA Audit] Fail: Tier 2 Doc Coverage ${auditResult.docCoverage.coverageRate.toFixed(2)}% < ${auditResult.docCoverage.threshold}% (hard gate)`);
+      dbManager.close();
+      process.exit(1);
+    }
+
+    if (auditResult.docCoverage.gate === 'soft' && !auditResult.docCoverage.pass) {
+      console.warn(`\n[CSA Audit] Warning: Tier 2 Doc Coverage ${auditResult.docCoverage.coverageRate.toFixed(2)}% is below threshold of ${auditResult.docCoverage.threshold}%.`);
+    }
+
+    console.log('\n[CSA Audit] Success: CSA coverage requirement passed.');
     dbManager.close();
     process.exit(0);
 

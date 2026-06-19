@@ -1,6 +1,7 @@
 import { createRequire } from 'module';
 import path from 'path';
 import fs from 'fs';
+import { CsaConfig } from '../models.js';
 
 const require = createRequire(import.meta.url);
 
@@ -8,6 +9,28 @@ export interface CsaAuditResult {
   totalAnchors: number;
   coveredAnchors: number;
   coverageRate: number;
+  config: {
+    specThreshold: number;
+    docThreshold: number;
+    docGate: 'soft' | 'hard' | 'off';
+  };
+  specCoverage: {
+    totalAnchors: number;
+    coveredAnchors: number;
+    coverageRate: number;
+    threshold: number;
+    gate: 'hard' | 'soft' | 'off';
+    pass: boolean;
+  };
+  docCoverage: {
+    totalAnchors: number;
+    coveredAnchors: number;
+    coverageRate: number;
+    threshold: number;
+    gate: 'hard' | 'soft' | 'off';
+    pass: boolean;
+  };
+  combinedHealth: number;
   danglingEdges: Array<{
     sourceId: string;
     targetId: string;
@@ -43,6 +66,7 @@ export class SqliteManager {
         name TEXT NOT NULL,
         type TEXT NOT NULL,
         semantic TEXT DEFAULT NULL,
+        file_path TEXT DEFAULT NULL,
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       )
@@ -221,6 +245,15 @@ export class SqliteManager {
       }
     }
 
+    // v0.17.2: Add file_path to nodes table
+    try {
+      db.exec(`ALTER TABLE nodes ADD COLUMN file_path TEXT DEFAULT NULL;`);
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column name')) {
+        throw e;
+      }
+    }
+
     // v0.16.0: Add weight and archived to memory_events
     try {
       db.exec(`ALTER TABLE memory_events ADD COLUMN weight REAL DEFAULT 1.0;`);
@@ -304,8 +337,8 @@ export class SqliteManager {
     const db = this.getConnection();
     
     const insertNode = db.prepare(`
-      INSERT OR REPLACE INTO nodes (id, name, type, semantic, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO nodes (id, name, type, semantic, file_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     const insertEdge = db.prepare(`
@@ -325,6 +358,7 @@ export class SqliteManager {
           node.name,
           node.type,
           node.semantic ? JSON.stringify(node.semantic) : null,
+          node.filePath || node.file_path || null,
           node.createdAt || node.created_at || now,
           node.updatedAt || node.updated_at || now
         );
@@ -344,24 +378,66 @@ export class SqliteManager {
     transaction();
   }
 
-  public runCsaAudit(): CsaAuditResult {
+  public runCsaAudit(config?: Partial<CsaConfig>): CsaAuditResult {
     const db = this.getConnection();
     
-    const totalAnchorsRow = db.prepare(`
-      SELECT COUNT(*) as count FROM nodes WHERE type = 'spec_anchor'
-    `).get() as { count: number } | undefined;
-    const totalAnchors = totalAnchorsRow ? totalAnchorsRow.count : 0;
+    // Resolve config defaults
+    const specThreshold = config?.specThreshold ?? 90;
+    const docThreshold = config?.docThreshold ?? 50;
+    const docGate = config?.docGate ?? 'soft';
     
-    const coveredAnchorsRow = db.prepare(`
-      SELECT COUNT(DISTINCT e.target_id) as count 
-      FROM edges e 
-      JOIN nodes n ON e.target_id = n.id AND n.type = 'spec_anchor'
-      WHERE e.relation = 'DOCUMENTED_BY'
-    `).get() as { count: number } | undefined;
-    const coveredAnchors = coveredAnchorsRow ? coveredAnchorsRow.count : 0;
+    // 1. Fetch spec anchors (defined as anchors in artifacts/specs/ or having no filePath/null)
+    const specAnchorsRows = db.prepare(`
+      SELECT id FROM nodes 
+      WHERE type = 'spec_anchor' 
+        AND (file_path LIKE 'artifacts/specs/%' OR file_path IS NULL OR file_path = '')
+    `).all() as Array<{ id: string }>;
+    const totalSpecAnchors = specAnchorsRows.length;
     
-    const coverageRate = totalAnchors > 0 ? (coveredAnchors / totalAnchors) * 100 : 100.0;
-    
+    // 2. Fetch doc anchors (defined as anchors NOT in artifacts/specs/ and having a valid filePath)
+    const docAnchorsRows = db.prepare(`
+      SELECT id FROM nodes 
+      WHERE type = 'spec_anchor' 
+        AND file_path NOT LIKE 'artifacts/specs/%' 
+        AND file_path IS NOT NULL 
+        AND file_path != ''
+    `).all() as Array<{ id: string }>;
+    const totalDocAnchors = docGate === 'off' ? 0 : docAnchorsRows.length;
+
+    // Check which anchors have DOCUMENTED_BY edge
+    const checkCovered = db.prepare(`
+      SELECT COUNT(*) as count 
+      FROM edges 
+      WHERE target_id = ? AND relation = 'DOCUMENTED_BY'
+    `);
+
+    let coveredSpec = 0;
+    for (const row of specAnchorsRows) {
+      const res = checkCovered.get(row.id) as { count: number } | undefined;
+      if (res && res.count > 0) {
+        coveredSpec++;
+      }
+    }
+
+    let coveredDoc = 0;
+    if (docGate !== 'off') {
+      for (const row of docAnchorsRows) {
+        const res = checkCovered.get(row.id) as { count: number } | undefined;
+        if (res && res.count > 0) {
+          coveredDoc++;
+        }
+      }
+    }
+
+    const specRate = totalSpecAnchors > 0 ? (coveredSpec / totalSpecAnchors) * 100 : 100.0;
+    const docRate = totalDocAnchors > 0 ? (coveredDoc / totalDocAnchors) * 100 : 100.0;
+
+    const specPass = specRate >= specThreshold;
+    const docPass = docGate === 'off' ? true : (docRate >= docThreshold);
+
+    const combinedHealth = docGate === 'off' ? specRate : (specRate + docRate) / 2;
+
+    // Dangling edges
     const danglingRows = db.prepare(`
       SELECT e.source_id, e.target_id, e.source_file, e.source_line 
       FROM edges e 
@@ -380,12 +456,37 @@ export class SqliteManager {
       sourceFile: row.source_file || '',
       sourceLine: row.source_line || 0,
     }));
-    
+
     return {
-      totalAnchors,
-      coveredAnchors,
-      coverageRate,
-      danglingEdges,
+      // Legacy compatibility fields
+      totalAnchors: totalSpecAnchors + totalDocAnchors,
+      coveredAnchors: coveredSpec + coveredDoc,
+      coverageRate: totalSpecAnchors + totalDocAnchors > 0 ? ((coveredSpec + coveredDoc) / (totalSpecAnchors + totalDocAnchors)) * 100 : 100.0,
+      
+      // Tiered fields
+      config: {
+        specThreshold,
+        docThreshold,
+        docGate
+      },
+      specCoverage: {
+        totalAnchors: totalSpecAnchors,
+        coveredAnchors: coveredSpec,
+        coverageRate: specRate,
+        threshold: specThreshold,
+        gate: 'hard',
+        pass: specPass
+      },
+      docCoverage: {
+        totalAnchors: totalDocAnchors,
+        coveredAnchors: coveredDoc,
+        coverageRate: docRate,
+        threshold: docThreshold,
+        gate: docGate,
+        pass: docPass
+      },
+      combinedHealth,
+      danglingEdges
     };
   }
 
