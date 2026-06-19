@@ -84,6 +84,8 @@ describe('MCP Tool: project_session_compact', () => {
     expect(compactedText).toContain('Workspace Rules Index');
     expect(compactedText).toContain('Project Rules Index');
     expect(compactedText).toContain('Agent Guidelines');
+    expect(compactedText).toContain('CRITICAL AGENT COMPLIANCE & SAFETY RULES');
+    expect(compactedText).toContain('Plan Checklist Verification');
   });
 
   it('should degrade gracefully if some optional files are missing', async () => {

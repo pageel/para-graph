@@ -1030,6 +1030,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       compactedText += `# Session Context Compaction\n\n`;
       compactedText += `> **Generated:** ${new Date().toISOString()}\n`;
       compactedText += `> **Project:** ${projectName}\n\n`;
+      compactedText += `## ⚠️ CRITICAL AGENT COMPLIANCE & SAFETY RULES\n\n`;
+      compactedText += `- **Plan Checklist Verification:** You MUST check that the task checklist in the active plan/phase is marked as completed (\`[x]\`) BEFORE proposing or executing a git commit or push. For details, you MUST read the para_implementation_plan_guidelines KI.\n\n`;
 
       // 2. Read project.md (Contract)
       const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
