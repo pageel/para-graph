@@ -31,7 +31,8 @@ export async function runFix({ projectPath, auto = false, dryRun = false }: FixC
     process.exit(1);
   }
 
-  const normalizedTarget = projectPath.replace(/\\/g, '/');
+  const absoluteProjectPath = path.resolve(projectPath);
+  const normalizedTarget = absoluteProjectPath.replace(/\\/g, '/');
   let projectName = 'unknown';
   const parts = normalizedTarget.split('/');
   const projectIdx = parts.lastIndexOf('Projects');

@@ -378,6 +378,7 @@ export class SqliteManager {
     transaction();
   }
 
+  // @para-doc [artifacts/specs/spec-2026-06-19-csa-loophole-guard.md#csa-loophole-guard]
   public runCsaAudit(config?: Partial<CsaConfig>): CsaAuditResult {
     const db = this.getConnection();
     
@@ -429,10 +430,15 @@ export class SqliteManager {
       }
     }
 
-    const specRate = totalSpecAnchors > 0 ? (coveredSpec / totalSpecAnchors) * 100 : 100.0;
+    const hasExplicitSpecThreshold = config?.specThreshold !== undefined;
+    const specRate = totalSpecAnchors > 0
+      ? (coveredSpec / totalSpecAnchors) * 100
+      : (hasExplicitSpecThreshold && specThreshold > 0 ? 0.0 : 100.0);
     const docRate = totalDocAnchors > 0 ? (coveredDoc / totalDocAnchors) * 100 : 100.0;
 
-    const specPass = specRate >= specThreshold;
+    const specPass = totalSpecAnchors > 0
+      ? specRate >= specThreshold
+      : !(hasExplicitSpecThreshold && specThreshold > 0);
     const docPass = docGate === 'off' ? true : (docRate >= docThreshold);
 
     const combinedHealth = docGate === 'off' ? specRate : (specRate + docRate) / 2;

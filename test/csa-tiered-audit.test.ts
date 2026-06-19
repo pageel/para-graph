@@ -160,4 +160,30 @@ describe('Tiered CSA Audit Integration Tests', () => {
     expect(result.docCoverage.pass).toBe(false);
     expect(result.config.docGate).toBe('hard');
   });
+
+  it('should fail spec compliance when threshold > 0 but there are 0 spec anchors (loophole guard)', () => {
+    const mockNodes = [
+      { id: 'src/main.ts::run', name: 'run', type: NodeType.FUNCTION, filePath: 'src/main.ts', signature: 'function run() {}' },
+    ];
+    manager.persistGraph(mockNodes, []);
+
+    const result = manager.runCsaAudit({ specThreshold: 90, docThreshold: 50, docGate: 'soft' });
+
+    expect(result.specCoverage.totalAnchors).toBe(0);
+    expect(result.specCoverage.coverageRate).toBe(0.0);
+    expect(result.specCoverage.pass).toBe(false);
+  });
+
+  it('should pass spec compliance when threshold is 0 and there are 0 spec anchors (opt-out)', () => {
+    const mockNodes = [
+      { id: 'src/main.ts::run', name: 'run', type: NodeType.FUNCTION, filePath: 'src/main.ts', signature: 'function run() {}' },
+    ];
+    manager.persistGraph(mockNodes, []);
+
+    const result = manager.runCsaAudit({ specThreshold: 0, docThreshold: 50, docGate: 'soft' });
+
+    expect(result.specCoverage.totalAnchors).toBe(0);
+    expect(result.specCoverage.coverageRate).toBe(100.0);
+    expect(result.specCoverage.pass).toBe(true);
+  });
 });

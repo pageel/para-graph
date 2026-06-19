@@ -28,6 +28,7 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
   return config;
 }
 
+// @para-doc [artifacts/specs/spec-2026-06-19-csa-loophole-guard.md#csa-loophole-guard]
 export function runAudit({ projectPath }: AuditCsaOptions): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {
@@ -35,7 +36,8 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
     process.exit(1);
   }
 
-  const normalizedTarget = projectPath.replace(/\\/g, '/');
+  const absoluteProjectPath = path.resolve(projectPath);
+  const normalizedTarget = absoluteProjectPath.replace(/\\/g, '/');
   let projectName = 'unknown';
   const parts = normalizedTarget.split('/');
   const projectIdx = parts.lastIndexOf('Projects');
@@ -76,25 +78,26 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
       console.log(`  Status:         ${auditResult.docCoverage.pass ? 'PASS' : 'FAIL'}`);
     }
 
+    // Record warning as a "risk" insight
+    const specFail = !auditResult.specCoverage.pass;
+    const docFail = auditResult.docCoverage.gate !== 'off' && !auditResult.docCoverage.pass;
+    const hasDangling = auditResult.danglingEdges.length > 0;
+
     // If total anchors is 0, CSA is opt-out (0 total edges/anchors -> exit code 0)
-    // Meaning the project does not apply CSA, we handle gracefully
-    if (auditResult.totalAnchors === 0 && auditResult.danglingEdges.length === 0) {
+    // Meaning the project does not apply CSA, we handle gracefully.
+    // However, if the loophole guard failed (specFail is true), we must NOT exit with 0.
+    if (auditResult.totalAnchors === 0 && auditResult.danglingEdges.length === 0 && !specFail) {
       console.log('\n[CSA Audit] No CSA anchors or undocumented elements found. CSA is strictly Opt-In. Exit code 0.');
       dbManager.close();
       process.exit(0);
     }
 
-    if (auditResult.danglingEdges.length > 0) {
+    if (hasDangling) {
       console.error('\n[CSA Audit] Dangling Edges Detected:');
       for (const edge of auditResult.danglingEdges) {
         console.error(`  - Source node "${edge.sourceId}" links to missing anchor "${edge.targetId}" in ${edge.sourceFile}:${edge.sourceLine}`);
       }
     }
-
-    // Record warning as a "risk" insight
-    const specFail = !auditResult.specCoverage.pass;
-    const docFail = auditResult.docCoverage.gate !== 'off' && !auditResult.docCoverage.pass;
-    const hasDangling = auditResult.danglingEdges.length > 0;
 
     if (specFail || docFail || hasDangling) {
       const graph = GraphStore.getGraph(wsRoot, projectName);
