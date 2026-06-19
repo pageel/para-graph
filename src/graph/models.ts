@@ -349,3 +349,21 @@ export interface ProjectInsight {
   updatedAt: number;
 }
 
+// --- RRF Score Fusion Types (P2: RRF Search) ---
+
+/** Configuration options for Reciprocal Rank Fusion (RRF) */
+export interface RrfConfig {
+  /** Smoothing constant to prevent rank inflation (default: 60) */
+  k: number;
+}
+
+/** Result structure for an item fused via RRF */
+export interface FusedResult<T> {
+  /** The original item being ranked */
+  item: T;
+  /** The final fused RRF score */
+  score: number;
+  /** The original 0-indexed ranks of this item across input lists (-1 if not present) */
+  ranks: number[];
+}
+

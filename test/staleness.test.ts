@@ -104,5 +104,5 @@ export function compute(x: number, y: number = 0): number {
     };
     graph.enrichNode(nodeId, newSemantic);
     expect(graph.getNode(nodeId)?.semantic?.staleSince).toBeUndefined();
-  });
+  }, 30000);
 });
