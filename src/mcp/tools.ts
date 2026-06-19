@@ -135,7 +135,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       summary: z.string().describe('Human-readable summary of what this code entity does. MUST NOT use pronouns (Lossless Restatement).'),
       complexity: z.enum(['low', 'medium', 'high']).describe('Estimated complexity level'),
       domainConcepts: z.array(z.string()).describe('Domain concepts this entity relates to'),
-      docAnchors: z.array(z.string()).optional().describe('Paths of doc files referencing this node'),
+      docAnchors: z.array(z.string()).optional().describe('Paths of doc files referencing this node (Deprecated: use CSA double-binding instead)'),
     },
     async ({ projectName, nodeId, summary, complexity, domainConcepts, docAnchors }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
@@ -338,6 +338,9 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       })).describe('Array of node-document links to establish'),
     },
     async ({ projectName, links }) => {
+      console.warn(
+        `⚠️ graph_link_docs is deprecated since v0.17.2. Use CSA <span> + @para-doc instead. Will be removed in v0.19.0.`
+      );
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
 
       const result = graph.linkDocs(links);

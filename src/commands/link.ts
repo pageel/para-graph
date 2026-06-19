@@ -3,6 +3,9 @@ import { join, relative } from 'node:path';
 import { GraphStore } from '../graph/store/GraphStore.js';
 
 export function runLink(projectName: string, workspaceRoot: string): void {
+  console.warn(
+    `⚠️ Warning: The "link" command is deprecated since v0.17.2 and will be removed in v0.19.0. Use CSA <span> + @para-doc instead.`
+  );
   if (!projectName) {
     console.error('❌ Error: Project name is required.');
     process.exit(1);
