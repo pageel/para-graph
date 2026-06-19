@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.2] - 2026-06-19
+
+### Added
+- **Tiered CSA Compliance Auditing** — Refactored `runCsaAudit()` in `sqlite-manager.ts` and the `graph_audit_csa` MCP tool to separate spec-anchors (hard gate, default 90% threshold) from doc-anchors (soft/hard/off gate, default 50% threshold), configurable via `csa` block in `project.md`.
+- **Expanded CSA Spec Scanner** — Updated `build.ts` to scan `artifacts/specs/` directories for spec anchors, resolving the gap where actual specs were ignored by the audit tool.
+- **Auto-Sync Knowledge Items** — Integrated automatic `ki sync` execution into the `post_install()` hook of `install-hooks.sh` to seamlessly distribute updated domain templates to the IDE agent context during tool upgrades.
+
+### Deprecated
+- **Manual Doc-Anchoring Tool** — Deprecated `graph_link_docs` MCP tool, `docAnchors` property in `SemanticAttributes`, and `@graph-node` comment markers in favor of the unified CSA `<span>` + `@para-doc` syntax. Added console warnings to `graph_link_docs` and `link.ts` CLI.
+- **Migration Script** — Added `scripts/migrate-graph-node-to-csa.sh` to automate the transition from `@graph-node` comment tags to CSA anchor spans.
+
 ## [0.17.1] - 2026-06-19
 
 ### Added
