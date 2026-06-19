@@ -1,4 +1,5 @@
 import type { MemoryEvent, SemanticSlice } from '../models.js';
+import { fuseRankedLists } from '../query/index.js';
 
 export class MemoryStore {
   public readonly projectName: string;
@@ -36,16 +37,27 @@ export class MemoryStore {
   }
 
   public searchEvents(query: string, limit: number = 50, since?: number, includeArchived: boolean = false): MemoryEvent[] {
+    const toMemoryEvent = (row: any): MemoryEvent => ({
+      id: row.id,
+      sessionId: row.session_id,
+      kind: row.kind,
+      content: row.content,
+      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
+      timestamp: new Date(row.timestamp).toISOString(),
+      weight: row.weight,
+      archived: row.archived === 1
+    });
+
     if (this.sqliteManager) {
       try {
         const db = this.sqliteManager.getConnection();
         const sanitized = MemoryStore.sanitizeFtsQuery(query);
-        let stmt;
-        let rows;
         const archiveFilter = includeArchived ? '' : 'AND m.archived = 0';
         
+        // 1. FTS5 Search Channel
+        let ftsRows = [];
         if (since !== undefined) {
-          stmt = db.prepare(`
+          const stmt = db.prepare(`
             SELECT m.* 
             FROM memory_events m
             JOIN fts_memory_events f ON m.rowid = f.rowid
@@ -53,31 +65,50 @@ export class MemoryStore {
               AND m.timestamp >= ?
               ${archiveFilter}
             ORDER BY m.weight DESC, f.rank
-            LIMIT ?
           `);
-          rows = stmt.all(sanitized, since, limit);
+          ftsRows = stmt.all(sanitized, since);
         } else {
-          stmt = db.prepare(`
+          const stmt = db.prepare(`
             SELECT m.* 
             FROM memory_events m
             JOIN fts_memory_events f ON m.rowid = f.rowid
             WHERE f.fts_memory_events MATCH ?
               ${archiveFilter}
             ORDER BY m.weight DESC, f.rank
-            LIMIT ?
           `);
-          rows = stmt.all(sanitized, limit);
+          ftsRows = stmt.all(sanitized);
         }
-        return rows.map((row: any) => ({
-          id: row.id,
-          sessionId: row.session_id,
-          kind: row.kind,
-          content: row.content,
-          metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-          timestamp: new Date(row.timestamp).toISOString(),
-          weight: row.weight,
-          archived: row.archived === 1
-        }));
+
+        // 2. Substring (LIKE) Content-Based Similarity Channel
+        let substringRows = [];
+        const likeFilter = includeArchived ? '' : 'AND archived = 0';
+        if (since !== undefined) {
+          const stmt = db.prepare(`
+            SELECT * 
+            FROM memory_events
+            WHERE (content LIKE ? OR kind LIKE ?)
+              AND timestamp >= ?
+              ${likeFilter}
+            ORDER BY weight DESC
+          `);
+          substringRows = stmt.all(`%${query}%`, `%${query}%`, since);
+        } else {
+          const stmt = db.prepare(`
+            SELECT * 
+            FROM memory_events
+            WHERE (content LIKE ? OR kind LIKE ?)
+              ${likeFilter}
+            ORDER BY weight DESC
+          `);
+          substringRows = stmt.all(`%${query}%`, `%${query}%`);
+        }
+
+        const ftsResults: MemoryEvent[] = ftsRows.map(toMemoryEvent);
+        const substringResults: MemoryEvent[] = substringRows.map(toMemoryEvent);
+
+        // Rank fusion via RRF
+        const fused = fuseRankedLists<MemoryEvent>([ftsResults, substringResults], (e: MemoryEvent) => e.id, { k: 60 });
+        return fused.map((f) => f.item).slice(0, limit);
       } catch (e) {
         // Fallback on SQLite error
       }
@@ -85,10 +116,10 @@ export class MemoryStore {
 
     // Fallback to array loop
     const q = query.toLowerCase();
-    const results: MemoryEvent[] = [];
+    const contentMatches: MemoryEvent[] = [];
+    const kindMatches: MemoryEvent[] = [];
     
     for (const event of this.eventsList) {
-      if (results.length >= limit) break;
       if (!includeArchived && event.archived) continue;
       
       if (since !== undefined) {
@@ -96,16 +127,28 @@ export class MemoryStore {
         if (eventTime < since) continue;
       }
       
-      if (
-        event.content.toLowerCase().includes(q) ||
-        event.kind.toLowerCase().includes(q) ||
-        event.sessionId.toLowerCase().includes(q)
-      ) {
-        results.push(event);
+      if (event.content.toLowerCase().includes(q)) {
+        contentMatches.push(event);
+      }
+      if (event.kind.toLowerCase().includes(q)) {
+        kindMatches.push(event);
       }
     }
-    
-    return results;
+
+    // Sort by weight descending to align original order
+    contentMatches.sort((a, b) => {
+      const wa = a.weight !== undefined ? a.weight : 0;
+      const wb = b.weight !== undefined ? b.weight : 0;
+      return wb - wa;
+    });
+    kindMatches.sort((a, b) => {
+      const wa = a.weight !== undefined ? a.weight : 0;
+      const wb = b.weight !== undefined ? b.weight : 0;
+      return wb - wa;
+    });
+
+    const fused = fuseRankedLists<MemoryEvent>([contentMatches, kindMatches], (e: MemoryEvent) => e.id, { k: 60 });
+    return fused.map((f) => f.item).slice(0, limit);
   }
 
   /** Add a curated semantic slice */

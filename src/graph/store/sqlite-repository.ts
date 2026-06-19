@@ -1,5 +1,6 @@
 import { SqliteManager } from './sqlite-manager.js';
 import type { ProjectInsight } from '../models.js';
+import { fuseRankedLists } from '../query/index.js';
 
 function calculateJaccardSimilarity(text1: string, text2: string): number {
   const words1 = new Set(text1.toLowerCase().match(/\w+/g) || []);
@@ -247,32 +248,57 @@ export class SqliteGraphRepository {
     const clauses: string[] = ['f.fts_insights MATCH ?'];
     const params: any[] = [sanitized];
 
+    const extraClauses: string[] = ['(title LIKE ? OR description LIKE ? OR domain LIKE ?)'];
+    const extraParams: any[] = [`%${query}%`, `%${query}%`, `%${query}%`];
+
     if (opts?.category) {
       clauses.push('m.category = ?');
       params.push(opts.category);
+      extraClauses.push('category = ?');
+      extraParams.push(opts.category);
     }
 
     if (opts?.domain) {
       clauses.push('m.domain = ?');
       params.push(opts.domain);
+      extraClauses.push('domain = ?');
+      extraParams.push(opts.domain);
     }
 
     const whereClause = clauses.join(' AND ');
-    params.push(limit);
+    const extraWhereClause = extraClauses.length > 0 ? 'WHERE ' + extraClauses.join(' AND ') : '';
 
-    const sql = `
+    // 1. FTS5 Search Channel
+    const ftsSql = `
       SELECT m.*
       FROM project_insights m
       JOIN fts_insights f ON m.rowid = f.rowid
       WHERE ${whereClause}
       ORDER BY f.rank
-      LIMIT ?
     `;
+    const ftsStmt = db.prepare(ftsSql);
+    const ftsRows = ftsStmt.all(...params);
 
-    const stmt = db.prepare(sql);
-    const rows = stmt.all(...params);
+    // 2. Category-Weighted Search Channel
+    const weightSql = `
+      SELECT *
+      FROM project_insights
+      ${extraWhereClause}
+      ORDER BY 
+        CASE category 
+          WHEN 'risk' THEN 4
+          WHEN 'gotcha' THEN 3
+          WHEN 'decision' THEN 2
+          WHEN 'lesson' THEN 1
+          WHEN 'pattern' THEN 1
+          ELSE 0
+        END DESC, 
+        created_at DESC
+    `;
+    const weightStmt = db.prepare(weightSql);
+    const weightRows = weightStmt.all(...extraParams);
 
-    return rows.map((row: any) => ({
+    const toInsight = (row: any): ProjectInsight => ({
       id: row.id,
       category: row.category as any,
       domain: row.domain,
@@ -286,6 +312,13 @@ export class SqliteGraphRepository {
       validatedAt: row.validated_at || undefined,
       createdAt: row.created_at,
       updatedAt: row.updated_at
-    }));
+    });
+
+    const ftsResults = ftsRows.map(toInsight);
+    const weightResults = weightRows.map(toInsight);
+
+    // Rank fusion via RRF
+    const fused = fuseRankedLists<ProjectInsight>([ftsResults, weightResults], (i) => i.id, { k: 60 });
+    return fused.map((f) => f.item).slice(0, limit);
   }
 }

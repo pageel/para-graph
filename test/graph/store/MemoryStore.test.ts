@@ -35,21 +35,30 @@ describe('MemoryStore FTS5 Integration', () => {
   });
 
   it('should delegate to sqliteManager if available and use sanitized query', () => {
-    const mockManager = {
-      getConnection: vi.fn().mockReturnValue({
-        prepare: vi.fn().mockReturnValue({
-          all: vi.fn().mockReturnValue([
-            {
-              id: 'e2',
-              kind: 'observation',
-              session_id: 's2',
-              content: 'test content sqlite',
-              metadata: null,
-              timestamp: 1000
-            }
-          ])
-        })
+    const ftsAllMock = vi.fn().mockReturnValue([
+      {
+        id: 'e2',
+        kind: 'observation',
+        session_id: 's2',
+        content: 'test content sqlite',
+        metadata: null,
+        timestamp: 1000,
+        archived: 0
+      }
+    ]);
+    const likeAllMock = vi.fn().mockReturnValue([]);
+
+    const mockDb = {
+      prepare: vi.fn().mockImplementation((sql: string) => {
+        if (sql.includes('MATCH')) {
+          return { all: ftsAllMock };
+        }
+        return { all: likeAllMock };
       })
+    };
+
+    const mockManager = {
+      getConnection: vi.fn().mockReturnValue(mockDb)
     };
     
     // Use any to bypass private/typing if necessary, or add a public method
@@ -62,10 +71,9 @@ describe('MemoryStore FTS5 Integration', () => {
     
     // Verify it called sqlite
     expect(mockManager.getConnection).toHaveBeenCalled();
-    const prepareMock = mockManager.getConnection().prepare as any;
-    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining('MATCH ?'));
-    // By default without since, we expect only query and limit
-    expect(prepareMock().all).toHaveBeenCalledWith(expect.stringContaining('sqlite ""query""'), 50);
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('MATCH ?'));
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('LIKE ?'));
+    expect(ftsAllMock).toHaveBeenCalledWith(expect.stringContaining('sqlite ""query""'));
   });
 
   it('should use since filter if provided in fallback array loop', () => {
@@ -85,14 +93,22 @@ describe('MemoryStore FTS5 Integration', () => {
   });
 
   it('should delegate to sqlite with since filter and sort by timestamp, weight', () => {
-    const mockManager = {
-      getConnection: vi.fn().mockReturnValue({
-        prepare: vi.fn().mockReturnValue({
-          all: vi.fn().mockReturnValue([
-            { id: 'e1', kind: 'obs', session_id: 's1', content: 'hit', timestamp: 2000, weight: 1.5, archived: 0 }
-          ])
-        })
+    const ftsAllMock = vi.fn().mockReturnValue([
+      { id: 'e1', kind: 'obs', session_id: 's1', content: 'hit', timestamp: 2000, weight: 1.5, archived: 0 }
+    ]);
+    const likeAllMock = vi.fn().mockReturnValue([]);
+
+    const mockDb = {
+      prepare: vi.fn().mockImplementation((sql: string) => {
+        if (sql.includes('MATCH')) {
+          return { all: ftsAllMock };
+        }
+        return { all: likeAllMock };
       })
+    };
+
+    const mockManager = {
+      getConnection: vi.fn().mockReturnValue(mockDb)
     };
     (memoryStore as any).setSqliteManager(mockManager);
     
@@ -102,9 +118,8 @@ describe('MemoryStore FTS5 Integration', () => {
     expect(results.length).toBe(1);
     expect(results[0].weight).toBe(1.5);
     
-    const prepareMock = mockManager.getConnection().prepare as any;
-    expect(prepareMock).toHaveBeenCalledWith(expect.stringContaining('timestamp >= ?'));
-    expect(prepareMock().all).toHaveBeenCalledWith(expect.stringContaining('"hit"*'), since, 50);
+    expect(mockDb.prepare).toHaveBeenCalledWith(expect.stringContaining('timestamp >= ?'));
+    expect(ftsAllMock).toHaveBeenCalledWith(expect.stringContaining('"hit"*'), since);
   });
 
   it('should archive old ephemeral and durable events, but keep permanent ones', () => {

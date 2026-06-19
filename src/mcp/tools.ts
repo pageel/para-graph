@@ -29,6 +29,7 @@ import { CurationWorker } from '../graph/curation-worker.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
 import { findFuzzyMatch } from '../utils/fuzzy-match.js';
+import { fuseRankedLists } from '../graph/query/index.js';
 
 /**
  * Validate SemanticAttributes structure.
@@ -64,6 +65,7 @@ function validateSemantic(data: unknown): string | null {
 export function registerTools(server: McpServer, workspaceRoot: string): void {
 
   // --- graph_query: Filter and search graph nodes ---
+  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-mcp-integration]
   server.tool(
     'graph_query',
     'Query graph nodes with optional filters by type and name pattern',
@@ -77,8 +79,21 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       let nodes: GraphNode[];
 
       if (namePattern) {
-        const result = graph.search(namePattern, nodeType);
-        nodes = result.nodes;
+        // Substring match on name
+        const nameMatches = graph.getAllNodes().filter((n) => 
+          n.name.toLowerCase().includes(namePattern.toLowerCase()) &&
+          (!nodeType || n.type === nodeType)
+        );
+        // Substring match on semantic summary
+        const semanticMatches = graph.getAllNodes().filter((n) => 
+          n.semantic?.summary &&
+          n.semantic.summary.toLowerCase().includes(namePattern.toLowerCase()) &&
+          (!nodeType || n.type === nodeType)
+        );
+
+        // Rank fusion via RRF
+        const fused = fuseRankedLists([nameMatches, semanticMatches], (n) => n.id, { k: 60 });
+        nodes = fused.map((f) => f.item);
       } else {
         nodes = graph.getAllNodes();
         if (nodeType) {
@@ -222,12 +237,13 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- graph_context_bundle: Get comprehensive context for a code entity ---
+  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-mcp-integration]
   server.tool(
     'graph_context_bundle',
     'Get a comprehensive context bundle for a code entity — includes source code, callers, callees, imports, and related tests',
     {
       projectName: z.string().describe('Name of the PARA project'),
-      nodeId: z.string().describe('ID of the entity to get context for'),
+      nodeId: z.union([z.string(), z.array(z.string())]).describe('ID(s) of the entity to get context for'),
       previewOnly: z.boolean().optional().describe('If true, skips source code read to save tokens'),
     },
     async ({ projectName, nodeId, previewOnly }) => {

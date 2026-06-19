@@ -320,3 +320,75 @@ describe('MCP Tools: graph_fix_csa', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('MCP Tools: graph_context_bundle (Array support)', () => {
+  it('should accept array of nodeIds and call getContextBundle', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const handler = handlers['graph_context_bundle'];
+    expect(handler).toBeDefined();
+
+    const mockGraph = {
+      getContextBundle: vi.fn().mockReturnValue({
+        target: { id: 'node1', name: 'testNode', type: 'function', filePath: 'test.ts', startLine: 1, endLine: 1 },
+        sourceCode: 'function testNode() {}',
+        truncated: false,
+        callers: [],
+        callees: [],
+        imports: [],
+        relatedTests: [],
+        warnings: [],
+      })
+    };
+    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+    vi.spyOn(pathResolver, 'resolveSourceDir').mockReturnValue('/workspace/repo');
+
+    const result = await handler({ projectName: 'test', nodeId: ['node1', 'node2'] });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(mockGraph.getContextBundle).toHaveBeenCalledWith(['node1', 'node2'], '/workspace/repo', undefined);
+    expect(content.target.id).toBe('node1');
+    
+    vi.restoreAllMocks();
+  });
+});
+
+describe('MCP Tools: graph_query (Hybrid Search)', () => {
+  it('should fuse keyword and semantic matches via RRF', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const handler = handlers['graph_query'];
+    expect(handler).toBeDefined();
+
+    const nodes = [
+      { id: 'node1', name: 'processData', type: 'function', semantic: { summary: 'Calculates logic' } },
+      { id: 'node2', name: 'save', type: 'function', semantic: { summary: 'Saves processed output' } },
+    ];
+
+    const mockGraph = {
+      getAllNodes: vi.fn().mockReturnValue(nodes),
+    };
+    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+
+    const result = await handler({ projectName: 'test', namePattern: 'process' });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(content).toHaveLength(2);
+    expect(content.map((n: any) => n.id)).toContain('node1');
+    expect(content.map((n: any) => n.id)).toContain('node2');
+
+    vi.restoreAllMocks();
+  });
+});
