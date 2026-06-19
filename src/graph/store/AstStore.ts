@@ -386,15 +386,27 @@ export class AstStore {
    * @returns ContextBundle with source, callers, callees, imports, tests
    * @throws Error if nodeId is not found in the graph
    */
-  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false, includeTestFixtures: boolean = false): ContextBundle {
-    const target = this.nodesById.get(nodeId);
+  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-multiseed-context]
+  public getContextBundle(
+    nodeId: string | string[],
+    rootDir: string,
+    previewOnly: boolean = false,
+    includeTestFixtures: boolean = false
+  ): ContextBundle {
+    const seeds = Array.isArray(nodeId) ? nodeId : [nodeId];
+    if (seeds.length === 0) {
+      throw new Error(`At least one nodeId must be provided`);
+    }
+
+    const firstSeedId = seeds[0];
+    const target = this.nodesById.get(firstSeedId);
     if (!target) {
-      throw new Error(`Node not found: ${nodeId}`);
+      throw new Error(`Node not found: ${firstSeedId}`);
     }
 
     const warnings: string[] = [];
 
-    // 1. Read source code from actual file
+    // 1. Read source code from actual file (only for the first target seed)
     let sourceCode: string | null = null;
     let truncated = false;
     
@@ -423,53 +435,83 @@ export class AstStore {
       }
     }
 
-    // 2. Callers: nodes that CALL this entity (incoming CALLS edges)
-    const incomingEdges = this.edgesByTarget.get(nodeId) || [];
-    const callers: GraphNode[] = [];
-    for (const edge of incomingEdges) {
-      if (edge.relation === EdgeRelation.CALLS) {
-        const caller = this.nodesById.get(edge.sourceId);
-        if (caller) callers.push(caller);
-      }
-    }
+    const callersMap = new Map<string, GraphNode>();
+    const calleesMap = new Map<string, GraphNode>();
+    const importsMap = new Map<string, GraphEdge>();
+    const relatedTestsMap = new Map<string, GraphNode>();
 
-    // 3. Callees: nodes that this entity CALLS (outgoing CALLS edges)
-    const outgoingEdges = this.edgesBySource.get(nodeId) || [];
-    const callees: GraphNode[] = [];
-    for (const edge of outgoingEdges) {
-      if (edge.relation === EdgeRelation.CALLS) {
-        const callee = this.nodesById.get(edge.targetId);
-        if (callee) {
-          if (!includeTestFixtures && callee.filePath.startsWith('test/fixtures/')) {
-            continue;
+    for (const seedId of seeds) {
+      const seedNode = this.nodesById.get(seedId);
+      if (!seedNode) {
+        warnings.push(`Seed node not found in graph: ${seedId}`);
+        continue;
+      }
+
+      // Collect callers for this seed (capped at 20)
+      const incomingEdges = this.edgesByTarget.get(seedId) || [];
+      let seedCallersCount = 0;
+      for (const edge of incomingEdges) {
+        if (seedCallersCount >= 20) break;
+        if (edge.relation === EdgeRelation.CALLS) {
+          const caller = this.nodesById.get(edge.sourceId);
+          if (caller) {
+            callersMap.set(caller.id, caller);
+            seedCallersCount++;
           }
-          callees.push(callee);
+        }
+      }
+
+      // Collect callees for this seed (capped at 20)
+      const outgoingEdges = this.edgesBySource.get(seedId) || [];
+      let seedCalleesCount = 0;
+      for (const edge of outgoingEdges) {
+        if (seedCalleesCount >= 20) break;
+        if (edge.relation === EdgeRelation.CALLS) {
+          const callee = this.nodesById.get(edge.targetId);
+          if (callee) {
+            if (!includeTestFixtures && callee.filePath.startsWith('test/fixtures/')) {
+              continue;
+            }
+            calleesMap.set(callee.id, callee);
+            seedCalleesCount++;
+          }
+        }
+      }
+
+      // Collect imports for this seed (capped at 20)
+      const fileEdges = this.edgesBySource.get(seedNode.filePath) || [];
+      let seedImportsCount = 0;
+      for (const edge of fileEdges) {
+        if (seedImportsCount >= 20) break;
+        if (edge.relation === EdgeRelation.IMPORTS_FROM) {
+          const edgeKey = `${edge.sourceId}->${edge.targetId}::${edge.relation}`;
+          importsMap.set(edgeKey, edge);
+          seedImportsCount++;
+        }
+      }
+
+      // Collect related tests for this seed (capped at 20)
+      const seedNameLower = seedNode.name.toLowerCase();
+      let seedTestsCount = 0;
+      for (const node of this.nodesById.values()) {
+        if (seedTestsCount >= 20) break;
+        const fp = node.filePath.toLowerCase();
+        if (
+          (fp.includes('test/') || fp.includes('.test.') || fp.includes('.spec.')) &&
+          node.name.toLowerCase().includes(seedNameLower) &&
+          node.id !== seedId
+        ) {
+          relatedTestsMap.set(node.id, node);
+          seedTestsCount++;
         }
       }
     }
 
-    // 4. Imports: IMPORTS_FROM edges originating from the file containing this entity
-    const imports: GraphEdge[] = [];
-    const fileEdges = this.edgesBySource.get(target.filePath) || [];
-    for (const edge of fileEdges) {
-      if (edge.relation === EdgeRelation.IMPORTS_FROM) {
-        imports.push(edge);
-      }
-    }
-
-    // 5. Related tests: nodes in test files whose name matches the target
-    const relatedTests: GraphNode[] = [];
-    const targetNameLower = target.name.toLowerCase();
-    for (const node of this.nodesById.values()) {
-      const fp = node.filePath.toLowerCase();
-      if (
-        (fp.includes('test/') || fp.includes('.test.') || fp.includes('.spec.')) &&
-        node.name.toLowerCase().includes(targetNameLower) &&
-        node.id !== nodeId
-      ) {
-        relatedTests.push(node);
-      }
-    }
+    // Apply global cap (50) to the deduplicated collections
+    const callers = Array.from(callersMap.values()).slice(0, 50);
+    const callees = Array.from(calleesMap.values()).slice(0, 50);
+    const imports = Array.from(importsMap.values()).slice(0, 50);
+    const relatedTests = Array.from(relatedTestsMap.values()).slice(0, 50);
 
     return {
       target,

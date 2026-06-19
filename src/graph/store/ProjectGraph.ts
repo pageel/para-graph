@@ -207,7 +207,8 @@ export class ProjectGraph {
 
   // --- Facade Orchestration ---
 
-  public getContextBundle(nodeId: string, rootDir: string, previewOnly: boolean = false, includeTestFixtures: boolean = false): ContextBundle {
+  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-multiseed-context]
+  public getContextBundle(nodeId: string | string[], rootDir: string, previewOnly: boolean = false, includeTestFixtures: boolean = false): ContextBundle {
     const bundle = this.astStore.getContextBundle(nodeId, rootDir, previewOnly, includeTestFixtures);
     
     // Find related memory slices
@@ -215,7 +216,8 @@ export class ProjectGraph {
     const callers = new Set(bundle.callers.map(c => c.id));
     const callees = new Set(bundle.callees.map(c => c.id));
     
-    const nodeIds = [nodeId, ...Array.from(callers), ...Array.from(callees)];
+    const seeds = Array.isArray(nodeId) ? nodeId : [nodeId];
+    const nodeIds = [...seeds, ...Array.from(callers), ...Array.from(callees)];
     
     if (this.repository) {
       for (const slice of this.repository.getRelatedSlices(nodeIds)) {
