@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.17.0-brightgreen.svg" alt="Version 0.17.0">
+    <img src="https://img.shields.io/badge/version-0.17.1-brightgreen.svg" alt="Version 0.17.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -69,6 +69,9 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Agent Auto-trigger Hooks** — BeforeTool hooks that nudge the AI Agent to use Knowledge Graph before file scanning
 - **Atomic File Structure Snapshots (v0.17.0+)** — Captures project directory tree snapshots, hashing files (sha256) into SQLite for version tracking.
 - **Protected Files Guard (v0.17.0+)** — Manages protected files list and alerts if any critical files are missing during snapshot verification.
+- **Session Context Compaction (v0.17.1+)** — Scans and compacts active session rules, skills, and project contract, writing a summary to `vibecode_session/artifacts/session.md` for context recovery.
+- **RRF Hybrid Search Scorer (v0.17.1+)** — Integrates Reciprocal Rank Fusion (RRF) to merge FTS5 keyword results and LIKE similarity matches.
+- **Multi-seed Context Retrieval (v0.17.1+)** — Gathers comprehensive context from multiple seed node IDs with topological distance capping (20 per seed, 50 globally).
 
 ## 🚀 Quick Start
 
@@ -240,7 +243,7 @@ Once connected, your AI Agent gains access to the following tools:
 - `graph_edges`: Find function callers and imports connected to a node.
 - `graph_enrich`: Save semantic documentation, complexity, and domain concepts to a node.
 - `graph_impact_analysis`: Discover upstream/downstream affected files and nodes (blast radius) when changing code.
-- `graph_context_bundle`: Get the entire context of a code snippet (source code, callers, callees, imports, tests) in one call.
+- `graph_context_bundle`: Get the entire context of a code snippet (source code, callers, callees, imports, tests) in one call. Supports multi-seed node IDs.
 - `graph_add_edges`: Batch inject edges (CALLS, IMPORTS_FROM) to resolve relationships for weak AST-linking languages (e.g. Bash).
 - `graph_god_nodes`: Retrieve the most connected nodes in the graph to prioritize AI enrichment.
 - `graph_expand_node`: Retrieve only the source code for a specific node with AST bounds checking.
@@ -254,8 +257,9 @@ Once connected, your AI Agent gains access to the following tools:
 - `graph_audit_csa`: Run Convergent Specification Architecture (CSA) compliance audit for a project.
 - `graph_fix_csa`: Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files).
 - `project_snapshot`: Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files.
-- `project_diff`: Compare two project snapshots to identify added, removed, and modified files.
+- `project_diff`: Compare two project snapshots to identify added, removed, and modified files (physical drift detection).
 - `project_protected_files`: List, add, or remove protected files for a project.
+- `project_session_compact`: Scan rules, skills, and project contract, and write a compacted context summary for agent recovery.
 
 ### Library Usage
 

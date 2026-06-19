@@ -1,6 +1,6 @@
 {
   "title": "PARA Graph MCP Tools Guide",
-  "summary": "Instruction guide on using MCP tools (graph_query, graph_context_bundle, etc.) to query and interact with the code graph.",
+  "summary": "Complete reference for all 20 MCP tools across 5 domains: Graph Core (query, edges, enrich, impact, context, add_edges, link_docs, god_nodes, expand_node), Memory Engine (push, search, curate), Project Insights (push, search, validate), CSA Governance (audit_csa, fix_csa), and Project Safety L2 (snapshot, diff, protected_files). Documents the two distinct traceability systems: CSA Double-Binding for Specs and Graph Doc-Anchoring for Docs.",
   "owner": "para",
   "scope": "workspace",
   "domain": "tools",

@@ -1,6 +1,6 @@
 {
   "title": "PARA Graph Core Architecture",
-  "summary": "Describes the core architecture of the hybrid code-knowledge graph, nodes and edges schemas, and directory layout inside the .beads/graph folder.",
+  "summary": "Core architecture of the hybrid code-knowledge graph: node schema (GraphNode with SemanticAttributes including docAnchors), edge schema (GraphEdge with confidence levels), two distinct traceability mechanisms (CSA Double-Binding for Specs, Graph Doc-Anchoring for Docs), SQLite storage layout (.beads/graph/), Memory Engine (events + semantic slices), Project Insights (lessons/risks/patterns), and L2 File Structure safety (snapshots, diff, protected files).",
   "owner": "para",
   "scope": "workspace",
   "domain": "architecture",

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.1] - 2026-06-19
+
+### Added
+- **Session Context Compaction** — Implemented the `project_session_compact` MCP tool to scan, compact, and write active session rules, skills, and project guidelines into `vibecode_session/artifacts/session.md` for context recovery.
+- **Multi-seed Context Retrieval** — Upgraded `getContextBundle` to support multi-seed arrays of node IDs. Performs independent AST resolution, merges results, deduplicates nodes, and applies topological distance pruning (capping at 20 nodes per seed and 50 nodes globally).
+- **RRF Score Fusion & Hybrid Search** — Integrated Reciprocal Rank Fusion (RRF) algorithm to merge results from FTS5 keyword matches and substring LIKE similarity matching for `graph_query`, `memory_search`, and `insight_search` tools.
+
+### Fixed
+- **SQLite Search Filtering** — Resolved search filtering mismatch in `insight_search` and `memory_search` by applying query-keyword filtering (LIKE clause) to the secondary category-weighted search channel before RRF ranking.
+- **SQLite Delegation Mock Tests** — Updated vitest suite to handle dual-channel SQLite calls in `MemoryStore.test.ts`.
+
 ## [0.17.0] - 2026-06-17
 
 ### Added

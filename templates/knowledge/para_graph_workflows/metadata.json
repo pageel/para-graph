@@ -1,6 +1,6 @@
 {
   "title": "PARA Graph Workflows & CLI Integration",
-  "summary": "Guides on integrating para-graph CLI commands (build, serve, link) with the PARA workspace workflows.",
+  "summary": "CLI commands (build, serve, link, ki sync, audit csa) and their integration with PARA workflows (/para-graph, /docs, CSA plan phases). Covers doc-anchoring workflow via graph_link_docs and CSA audit gates in plan checkpoints.",
   "owner": "para",
   "scope": "workspace",
   "domain": "workflows",

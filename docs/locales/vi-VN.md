@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.17.0-brightgreen.svg" alt="Version 0.17.0">
+    <img src="https://img.shields.io/badge/version-0.17.1-brightgreen.svg" alt="Version 0.17.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -65,6 +65,9 @@ Công cụ sử dụng [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 - **MCP Auto-Setup** — Manifest-declared `mcp:` block cho phép cấu hình tự động cho IDE qua lệnh `./para mcp-setup`
 - **Ảnh cấu trúc tệp tin nguyên tử (v0.17.0+)** — Chụp ảnh cấu trúc cây thư mục mã nguồn dự án, băm mã SHA256 từng tệp tin vào SQLite để theo dõi phiên bản.
 - **Bảo vệ tệp tin quan trọng (v0.17.0+)** — Quản lý danh sách tệp tin được bảo vệ và cảnh báo nếu phát hiện thiếu hụt tệp tin khi xác thực snapshot.
+- **Nén bối cảnh phiên làm việc (v0.17.1+)** — Tự động quét và nén các tệp quy tắc, kỹ năng, và hợp đồng dự án của phiên hoạt động, ghi tóm tắt vào `vibecode_session/artifacts/session.md` để Agent khôi phục bối cảnh.
+- **Tìm kiếm lai RRF (v0.17.1+)** — Tích hợp thuật toán Reciprocal Rank Fusion (RRF) để kết hợp kết quả khớp từ khóa FTS5 và tìm kiếm LIKE.
+- **Truy xuất bối cảnh đa nguồn (v0.17.1+)** — Hỗ trợ thu thập callers, callees, imports, tests từ nhiều node ID (multi-seed) đồng thời, tự động loại bỏ trùng lặp và tỉa theo khoảng cách tô-pô (giới hạn 20 mỗi seed, 50 toàn cục).
 
 <a name="bat-dau-nhanh"></a>
 ## 🚀 Bắt đầu nhanh
@@ -224,11 +227,11 @@ Vào **Cursor Settings** > **Features** > **MCP Servers** > **Add New MCP Server
 
 ### Các công cụ MCP có sẵn
 Sau khi kết nối, AI Agent của bạn sẽ có quyền truy cập vào các công cụ sau:
-- `graph_query`: Tìm kiếm các thực thể theo tên hoặc theo loại node (file, class, function, interface, variable) trong đồ thị.
+- `graph_query`: Tìm kiếm các thực thể theo tên hoặc theo loại node trong đồ thị.
 - `graph_edges`: Tìm tất cả mối quan hệ (cạnh) được kết nối đến/đi từ một node cụ thể.
 - `graph_enrich`: Lưu trữ thông tin làm giàu ngữ nghĩa (tóm tắt, độ phức tạp, domain concepts, docAnchors) cho một node.
 - `graph_impact_analysis`: Phân tích tác động khi sửa đổi thực thể code, trả về tất cả các node/file bị ảnh hưởng ngược dòng (upstream) hoặc xuôi dòng (downstream).
-- `graph_context_bundle`: Lấy gói ngữ cảnh đầy đủ cho thực thể code (mã nguồn, callers, callees, imports, tests liên quan) trong một lần gọi duy nhất.
+- `graph_context_bundle`: Lấy gói ngữ cảnh đầy đủ cho thực thể code (mã nguồn, callers, callees, imports, tests liên quan). Hỗ trợ danh sách đa nguồn (multi-seed).
 - `graph_add_edges`: Thêm hàng loạt các mối quan hệ (CALLS, IMPORTS_FROM) vào đồ thị để giải quyết liên kết yếu đối với các ngôn ngữ có AST yếu (ví dụ: Bash).
 - `graph_god_nodes`: Lấy các thực thể kết nối nhiều nhất trong đồ thị (God nodes) để ưu tiên làm giàu ngữ nghĩa trước.
 - `graph_expand_node`: Chỉ lấy mã nguồn cho một thực thể code cụ thể với cơ chế kiểm tra giới hạn AST.
@@ -242,8 +245,9 @@ Sau khi kết nối, AI Agent của bạn sẽ có quyền truy cập vào các 
 - `graph_audit_csa`: Chạy kiểm tra tuân thủ Kiến trúc Đặc tả Đồng quy (CSA) cho dự án.
 - `graph_fix_csa`: Tự động sửa chữa các liên kết spec bị hỏng (thay thế thẻ neo spec bị trôi lệch trong mã nguồn).
 - `project_snapshot`: Chụp ảnh cấu trúc thư mục dự án, ghi nhận metadata vào SQLite, và kiểm tra các tệp tin bảo vệ.
-- `project_diff`: So khớp hai bản chụp snapshot để tìm ra các file thêm mới, bị xoá, hoặc bị chỉnh sửa.
+- `project_diff`: So khớp hai bản chụp snapshot để tìm ra các file thêm mới, bị xoá, hoặc bị chỉnh sửa (phát hiện sai lệch vật lý).
 - `project_protected_files`: Liệt kê, thêm hoặc xoá các file thuộc danh sách bảo vệ của dự án.
+- `project_session_compact`: Quét rules, skills, và project contract, rồi ghi tóm tắt bối cảnh tinh gọn để Agent khôi phục.
 
 ### Sử dụng như Thư viện
 
