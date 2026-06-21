@@ -8,6 +8,7 @@
 // --- Enums ---
 
 /** Type of code entity represented by a graph node */
+// @para-doc [docs/references/schema.md#csa-data-schema]
 export enum NodeType {
   FILE = 'file',
   CLASS = 'class',

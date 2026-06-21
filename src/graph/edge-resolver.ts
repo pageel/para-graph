@@ -92,6 +92,7 @@ function extractMethodName(targetId: string): string | null {
  * @param graph - The CodeGraph to resolve edges in
  * @returns Resolution statistics
  */
+// @para-doc [docs/architecture/para-graph-core.md#csa-edge-resolution]
 export function resolveEdges(graph: CodeGraph): EdgeResolverResult {
   const allNodes = graph.getAllNodes();
   const allEdges = graph.getAllEdges();

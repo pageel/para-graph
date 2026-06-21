@@ -39,6 +39,7 @@ export interface CsaAuditResult {
   }>;
 }
 
+// @para-doc [docs/architecture/para-graph-core.md#csa-sqlite-database]
 export class SqliteManager {
   private dbPath: string;
   private db: any | null = null;
@@ -55,6 +56,7 @@ export class SqliteManager {
     return this.dbPath;
   }
 
+  // @para-doc [docs/references/sqlite-schema.md#csa-sqlite-schema]
   public initSchema(): void {
     const db = this.getConnection();
 

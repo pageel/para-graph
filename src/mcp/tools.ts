@@ -61,6 +61,7 @@ function validateSemantic(data: unknown): string | null {
  *
  * @param server - MCP server instance
  * @param workspaceRoot - Root directory of the PARA Workspace
+ * @para-doc [docs/features/mcp-tools.md#csa-mcp-tools-register]
  */
 export function registerTools(server: McpServer, workspaceRoot: string): void {
 
@@ -664,6 +665,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
   // --- graph_audit_csa: Run CSA compliance audit ---
   // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+  // @para-doc [docs/strategy/strategy-csa.md#csa-tiered-gate]
   server.tool(
     'graph_audit_csa',
     'Run Convergent Specification Architecture (CSA) compliance audit for a project',

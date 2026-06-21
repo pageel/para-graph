@@ -24,6 +24,8 @@ function askQuestion(query: string): Promise<string> {
   }));
 }
 
+// @para-doc [docs/guides/cli.md#csa-cli-fix]
+// @para-doc [docs/strategy/strategy-csa.md#csa-self-healing]
 export async function runFix({ projectPath, auto = false, dryRun = false }: FixCsaOptions): Promise<void> {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {

@@ -51,6 +51,7 @@ export interface BuildOptions {
 
 /**
  * Execute the build command — scan, parse, merge, export.
+ * @para-doc [docs/architecture/para-graph-core.md#csa-core-build-flow]
  */
 export function runBuild(options: BuildOptions): void {
   const targetDir = resolve(options.targetDir);

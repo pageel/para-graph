@@ -29,6 +29,8 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
 }
 
 // @para-doc [artifacts/specs/spec-2026-06-19-csa-loophole-guard.md#csa-loophole-guard]
+// @para-doc [docs/guides/cli.md#csa-cli-audit]
+// @para-doc [docs/strategy/strategy-csa.md#csa-tiered-gate]
 export function runAudit({ projectPath }: AuditCsaOptions): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {
