@@ -11,6 +11,14 @@ The graph database is stored in a PARA project directory under `.beads/graph/`:
 - `<project-name>.db`: SQLite database optimized for relational queries, FTS5 searching, MCP tools performance, memory storage, project insights, CSA audit tracking, and file tree snapshots.
 - `metadata.json`: Graph statistics, enrichment progress, health score, and edge resolution metrics.
 
+### SQLite Round-trip Integrity Guard
+
+To prevent field drift between the JSONL flat files and the SQLite relational database, the graph engine enforces a strict round-trip field integrity guard:
+- **Field Manifest Parity**: Validates that all fields declared in the active codebase schema match the SQLite table columns (using `PRAGMA table_info`).
+- **Null Safety**: Ensures that missing or optional fields in nodes/edges are gracefully written as database `NULL` values and read back correctly.
+- **Case Conversion**: Automatically maps property cases between JSONL (which may contain mixed casing e.g. `file_path` or `filePath`) and the SQLite store to ensure field consistency.
+- **Round-trip Integration Tests**: Verified via `:memory:` SQLite tests (`sqlite-roundtrip.test.ts`) validating `insertNode` / `persistGraph` -> `getAllNodes` behavior.
+
 ## Node Schema (`GraphNode`)
 
 Nodes represent code entities and files. Key fields:
