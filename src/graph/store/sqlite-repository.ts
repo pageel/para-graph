@@ -20,8 +20,8 @@ export class SqliteGraphRepository {
   public insertNode(node: any): void {
     const db = this.manager.getConnection();
     const stmt = db.prepare(`
-      INSERT OR REPLACE INTO nodes (id, name, type, semantic, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT OR REPLACE INTO nodes (id, name, type, semantic, file_path, created_at, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `);
     
     const now = Date.now();
@@ -30,6 +30,7 @@ export class SqliteGraphRepository {
       node.name,
       node.type,
       node.semantic ? JSON.stringify(node.semantic) : null,
+      node.filePath || node.file_path || null,
       node.createdAt || node.created_at || now,
       node.updatedAt || node.updated_at || now
     );
@@ -45,6 +46,7 @@ export class SqliteGraphRepository {
         name: node.name,
         type: node.type,
         semantic: node.semantic ? JSON.parse(node.semantic) : undefined,
+        filePath: node.file_path,
         createdAt: node.created_at,
         updatedAt: node.updated_at
       };

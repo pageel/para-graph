@@ -38,18 +38,20 @@ describe('SqliteGraphRepository', () => {
       name: 'Test Node',
       type: 'test',
       semantic: { summary: 'A summary', complexity: 'low' },
+      filePath: 'src/file.ts',
       createdAt: 1000,
       updatedAt: 1000
     };
     
     repo.insertNode(node);
     
-    // The run function should be called with stringified semantic
+    // The run function should be called with stringified semantic and filePath
     expect(mockRun).toHaveBeenCalledWith(
       'n1',
       'Test Node',
       'test',
       JSON.stringify(node.semantic),
+      'src/file.ts',
       1000,
       1000
     );
@@ -59,12 +61,13 @@ describe('SqliteGraphRepository', () => {
     const manager = new SqliteManager('test');
     const repo = new SqliteGraphRepository(manager);
     
-    // Mock iterate to yield a row with JSON string
+    // Mock iterate to yield a row with JSON string and file_path
     mockIterate.mockReturnValueOnce([{
       id: 'n1',
       name: 'Test Node',
       type: 'test',
       semantic: '{"summary":"A summary","complexity":"low"}',
+      file_path: 'src/file.ts',
       created_at: 1000,
       updated_at: 1000
     }]);
@@ -74,6 +77,7 @@ describe('SqliteGraphRepository', () => {
     
     expect(nodes.length).toBe(1);
     expect(nodes[0].semantic).toEqual({ summary: 'A summary', complexity: 'low' });
+    expect(nodes[0].filePath).toBe('src/file.ts');
   });
 
   it('should delegate getRelatedSlices to repository with an IN clause', () => {
