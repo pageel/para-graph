@@ -12,6 +12,8 @@ import type {
   EnrichmentStats,
 } from '../models.js';
 import { EdgeRelation } from '../models.js';
+import { BeamSearchTraverser } from '../query/traverser.js';
+import type { PruningConfig } from '../query/traverser.js';
 
 export class AstStore {
   public readonly projectName: string;
@@ -319,7 +321,20 @@ export class AstStore {
     nodeId: string,
     depth: number = 2,
     direction: TraversalDirection = 'upstream',
+    pruningConfig?: PruningConfig,
   ): TraversalResult {
+    if (pruningConfig) {
+      const traverser = new BeamSearchTraverser(this);
+      const config = {} as PruningConfig;
+      config.maxDepth = pruningConfig.maxDepth ?? depth;
+      config.topologyBarrierThreshold = pruningConfig.topologyBarrierThreshold ?? 1000;
+      config.semanticBarrierConcept = pruningConfig.semanticBarrierConcept;
+      config.hop2Limit = pruningConfig.hop2Limit;
+      config.beamWidth = pruningConfig.beamWidth;
+      config.utilityPatterns = pruningConfig.utilityPatterns;
+      return traverser.traverseBeam(nodeId, config, direction);
+    }
+
     const effectiveDepth = Math.min(depth, AstStore.TRAVERSAL_MAX_DEPTH);
     const startNode = this.nodesById.get(nodeId);
     if (!startNode) {

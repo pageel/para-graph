@@ -79,3 +79,5 @@ Since v0.17.2, the two legacy doc-code systems have been merged into a single **
 
 - **RRF Score Fusion**: Combines search results from FTS5 keyword query matching and substring LIKE similarity matching (e.g. for `graph_query`, `memory_search`, `insight_search`) using Reciprocal Rank Fusion (RRF) (default $k=60$).
 - **Multi-seed Context Retrieval**: Upgrades `getContextBundle` to accept multiple seed nodes (arrays of node IDs). Gathers callers, callees, imports, tests from all seeds, deduplicates them, and trims to a hard cap of 20 nodes per seed and 50 nodes globally using topological distance pruning.
+- **Beam Search Traverser**: Implements heuristic-guided Beam Search traversal in `BeamSearchTraverser` with dynamic candidate pruning (`beamWidth` support) and early termination barriers (such as `topologyBarrierThreshold` and `semanticBarrierConcept`).
+- **ACORN 2-hop Leap**: Bypasses utility helper nodes (detected via path glob patterns or topology metrics) while preserving path linkages during traversal.

@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.3] - 2026-06-23
+
+### Added
+- **Beam Search Traverser** — Implemented heuristic-guided Beam Search in `BeamSearchTraverser` with dynamic candidate pruning (`beamWidth` support) and early termination barriers.
+- **ACORN 2-hop Leap** — Integrated automatic utility node detection (via path patterns or topology metrics) to bypass helper nodes while preserving path linkages.
+- **Backward Compatibility** — Maintained legacy BFS traversal in `AstStore.traverseReverse` by default, executing Beam Search only when explicit pruning configurations are provided.
+
+### Fixed
+- **CSA Multiple Anchors Per Line** — Resolved a Regex parsing limitation in `csa-parser.ts` by replacing `if` logic with a `while` loop, ensuring multiple anchors on a single line are successfully extracted.
+
 ## [0.17.2.3] - 2026-06-23
 
 ### Added

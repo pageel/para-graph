@@ -363,6 +363,7 @@ export interface RrfConfig {
 }
 
 /** Result structure for an item fused via RRF */
+// @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-FusedResult]
 export interface FusedResult<T> {
   /** The original item being ranked */
   item: T;

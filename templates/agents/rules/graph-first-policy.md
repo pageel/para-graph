@@ -66,6 +66,16 @@ Agent MUST follow this priority order when investigating code:
 - Before submitting code changes or completing a plan phase, Agent **MUST** run `npx para-graph audit csa --project .` to verify that code-specification double-binding coverage is >= 90.0% and no dangling spec links exist.
 - If the audit fails, Agent **MUST** run `npx para-graph fix csa --project .` (or use the `graph_fix_csa` MCP tool) to auto-heal references before proceeding.
 
+### 7. Mandatory Physical Drift & Junk File Verification
+
+- Before proposing or executing a git commit or staging files, the Agent **MUST** verify the physical integrity of the project directory structure using the `project_snapshot` and `project_diff` MCP tools.
+- Agent **MUST** compare the list of physical file modifications/additions against the active Plan File Inventory.
+- Any file detected in the diff that is not registered in the active Plan phase's file inventory or covered by `.gitignore` **MUST NOT** be ignored:
+  - **Temporary/Scratch Files**: Propose deleting them immediately (e.g., helper scripts, logs).
+  - **Personal Configs/States**: Propose adding them to `.gitignore`.
+  - **Missing Planned Entities**: Halt the commit process, report the omission, and update the plan file first before proceeding.
+- Agent **MUST** obtain explicit user confirmation before bypass or proceeding with the git commit.
+
 ## Related
 
 - Skill: `para-graph` — Centralized Graph Intelligence Router with enrichment workflow and workflow integration snippets.

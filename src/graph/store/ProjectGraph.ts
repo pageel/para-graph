@@ -18,6 +18,7 @@ import { EdgeRelation, isTestNode } from '../models.js';
 import { AstStore } from './AstStore.js';
 import { MemoryStore } from './MemoryStore.js';
 import type { SqliteGraphRepository } from './sqlite-repository.js';
+import type { PruningConfig } from '../query/traverser.js';
 
 function calculateJaccardSimilarity(text1: string, text2: string): number {
   const words1 = new Set(text1.toLowerCase().match(/\w+/g) || []);
@@ -179,8 +180,9 @@ export class ProjectGraph {
     nodeId: string,
     depth: number = 2,
     direction: TraversalDirection = 'upstream',
+    pruningConfig?: PruningConfig,
   ): TraversalResult {
-    return this.astStore.traverseReverse(nodeId, depth, direction);
+    return this.astStore.traverseReverse(nodeId, depth, direction, pruningConfig);
   }
 
   // --- MemoryStore Delegation ---

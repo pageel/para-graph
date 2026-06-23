@@ -179,6 +179,36 @@ memory_curate(
 )
 ```
 
+## §3.1 Project Safety & Physical Integrity (Snapshot & Diff)
+
+This section guides the use of `para-graph` L2 Safety MCP tools (`project_snapshot`, `project_diff`, `project_protected_files`) to enforce physical integrity and prevent junk file accumulation.
+
+### Step 1: Capture Baseline / Target Snapshot (`project_snapshot`)
+Before starting a phase or before committing changes, capture the project's physical state:
+```
+project_snapshot(projectName: "para-graph")
+```
+This tool records all files, sizes, and hashes, and cross-checks the watchlist of protected files (`project.md`, `.agents/rules.md`, etc.), warning if any critical configuration files are modified or deleted.
+
+### Step 2: Compare Snapshots (`project_diff`)
+To detect unauthorized modifications, junk files, or untracked test scripts, compare the target snapshot (newer) with a baseline snapshot (older):
+```
+project_diff(
+  projectName: "para-graph",
+  sourceSnapshotId: "snap-baseline-id",
+  targetSnapshotId: "snap-target-id"
+)
+```
+
+### Step 3: Junk File & Physical Drift Reconciliation
+Agent MUST analyze the output of `project_diff` and cross-reference with the Plan File Inventory:
+1. **Unregistered Files**: Any added or modified file NOT listed in the active plan phase's file list or `.gitignore` MUST NOT be ignored.
+2. **Action Plan**:
+   - **Scratch/Temporary Scripts/Logs**: Propose deleting them immediately (e.g., test outputs, helper scripts like `.cjs` / `.js` created during debugging).
+   - **Environment/Local Configurations**: Propose adding them to `.gitignore`.
+   - **Missing Planned Entities**: If the file is part of the implementation, halt the commit process, report the omission, and update the plan first.
+3. **User Confirmation**: Propose the action to the user and wait for approval before running file operations or git commit.
+
 ## §4. Workflow Integration Router
 
 > **Purpose:** Centralized graph intelligence snippets for sidecar skills.
@@ -223,6 +253,9 @@ Reusable pipeline that workflows call when graph is available:
 | J    | `insight_search(projectName, query, category?, domain?, limit?)`         | Search project insights with full-text search                |
 | K    | `graph_audit_csa(projectName)`                                           | Run CSA compliance audit for a project                       |
 | L    | `graph_fix_csa(projectName, dryRun?)`                                    | Run self-healing fix for csa dangling links                  |
+| M    | `project_snapshot(projectName)`                                           | Capture project physical directory tree snapshot            |
+| N    | `project_diff(projectName, sourceSnapshotId, targetSnapshotId)`           | Identify added, removed, and modified files between snapshots|
+| O    | `project_protected_files(action, projectName, filePath?)`                 | List, add, or remove files in the protected watchlist        |
 
 > **Not all steps are needed for every workflow.** Each §4.3 snippet specifies which steps to use.
 >

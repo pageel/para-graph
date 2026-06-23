@@ -20,7 +20,7 @@ export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
     let match;
     // Reset regex state
     anchorRegex.lastIndex = 0;
-    if ((match = anchorRegex.exec(lines[i])) !== null) {
+    while ((match = anchorRegex.exec(lines[i])) !== null) {
       const id = match[1];
       if (id.includes('...')) {
         continue;
