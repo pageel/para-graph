@@ -355,6 +355,7 @@ export interface ProjectInsight {
 
 // --- RRF Score Fusion Types (P2: RRF Search) ---
 
+// @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-RrfConfig]
 /** Configuration options for Reciprocal Rank Fusion (RRF) */
 export interface RrfConfig {
   /** Smoothing constant to prevent rank inflation (default: 60) */

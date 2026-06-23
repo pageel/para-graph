@@ -419,6 +419,7 @@ export class TreeSitterParser {
 
   /**
    * Scan lines for @para-doc references and link to the most specific matching node.
+   * @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-TreeSitterParser.extractCsaComments]
    * @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-comments]
    */
   private extractCsaComments(lines: string[], relPath: string, graph: CodeGraph): void {

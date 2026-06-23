@@ -1,11 +1,13 @@
 import { readFileSync } from 'node:fs';
 
+// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-SpecAnchorNode]
 export interface SpecAnchorNode {
   id: string;
   title: string;
   line: number;
 }
 
+// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-src/parser/csa-parser.ts]
 // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-markdown]
 export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
   const content = readFileSync(filePath, 'utf-8');

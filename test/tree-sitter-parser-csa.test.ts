@@ -23,7 +23,12 @@ describe('TreeSitterParser CSA comments extraction', () => {
     parser.parseFile(filePath, graph);
 
     const edges = graph.getAllEdges().filter(e => e.relation === EdgeRelation.DOCUMENTED_BY);
-    expect(edges).toHaveLength(3);
+    expect(edges).toHaveLength(4);
+
+    // 0. Spec anchor file-level edge
+    const specEdge = edges.find(e => e.targetId === 'csa-test/fixtures/csa-comments.ts');
+    expect(specEdge).toBeDefined();
+    expect(specEdge?.sourceId).toBe('csa-comments.ts');
 
     // 1. File-level edge
     const fileEdge = edges.find(e => e.targetId === 'csa-file-level');

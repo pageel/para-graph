@@ -1,3 +1,4 @@
+// @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-src/graph/query/rrf.ts]
 import type { FusedResult, RrfConfig } from '../models.js';
 
 // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-rrf-scorer]
