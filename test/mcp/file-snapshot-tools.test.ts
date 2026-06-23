@@ -74,6 +74,71 @@ describe('MCP Tools: project_snapshot', () => {
 
     vi.restoreAllMocks();
   });
+
+  it('should exclude .beads, artifacts, sessions, docs when rootDir is not a repo subdir', async () => {
+    const snapshotHandler = handlers['project_snapshot'];
+    const existsSyncSpy = vi.spyOn(fs, 'existsSync').mockReturnValue(false); // Make /repo not exist
+    const scanSpy = vi.spyOn(fileScanner, 'scanDirectory').mockReturnValue([
+      '/workspace/Projects/test-project/mock-file.txt',
+    ]);
+
+    const mockDb = {
+      prepare: vi.fn().mockReturnValue({
+        all: vi.fn().mockReturnValue([])
+      })
+    };
+    const initSchemaSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const getConnectionSpy = vi.spyOn(SqliteManager.prototype, 'getConnection').mockReturnValue(mockDb as any);
+    const insertSnapshotSpy = vi.spyOn(SqliteManager.prototype, 'insertSnapshot').mockImplementation(() => {});
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    await snapshotHandler({ projectName: 'test-project' });
+
+    expect(scanSpy).toHaveBeenCalledWith('/workspace/Projects/test-project', expect.objectContaining({
+      excludePatterns: expect.arrayContaining([
+        '.beads/**',
+        'artifacts/**',
+        'sessions/**',
+        'docs/**'
+      ])
+    }));
+
+    vi.restoreAllMocks();
+  });
+
+  it('should NOT exclude .beads, artifacts, sessions, docs when rootDir is a repo subdir', async () => {
+    const snapshotHandler = handlers['project_snapshot'];
+    const existsSyncSpy = vi.spyOn(fs, 'existsSync').mockImplementation((p) => {
+      if (typeof p === 'string' && p.endsWith('repo')) return true;
+      return false;
+    });
+    const scanSpy = vi.spyOn(fileScanner, 'scanDirectory').mockReturnValue([
+      '/workspace/Projects/test-project/repo/mock-file.txt',
+    ]);
+
+    const mockDb = {
+      prepare: vi.fn().mockReturnValue({
+        all: vi.fn().mockReturnValue([])
+      })
+    };
+    const initSchemaSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const getConnectionSpy = vi.spyOn(SqliteManager.prototype, 'getConnection').mockReturnValue(mockDb as any);
+    const insertSnapshotSpy = vi.spyOn(SqliteManager.prototype, 'insertSnapshot').mockImplementation(() => {});
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    await snapshotHandler({ projectName: 'test-project' });
+
+    expect(scanSpy).toHaveBeenCalledWith('/workspace/Projects/test-project/repo', expect.objectContaining({
+      excludePatterns: expect.not.arrayContaining([
+        '.beads/**',
+        'artifacts/**',
+        'sessions/**',
+        'docs/**'
+      ])
+    }));
+
+    vi.restoreAllMocks();
+  });
 });
 
 describe('MCP Tools: project_diff', () => {

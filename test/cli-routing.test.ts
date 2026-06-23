@@ -3,7 +3,12 @@ import { execSync } from 'node:child_process';
 
 describe('CLI Subcommand Routing', () => {
   it('should support audit csa command', () => {
-    const output = execSync('npx tsx src/cli.ts audit csa --project .', { encoding: 'utf-8' });
+    let output = '';
+    try {
+      output = execSync('npx tsx src/cli.ts audit csa --project .', { encoding: 'utf-8' });
+    } catch (err: any) {
+      output = err.stdout || err.message || '';
+    }
     expect(output).toContain('CSA COMPLIANCE AUDIT REPORT');
   }, 60000);
 

@@ -45,4 +45,40 @@ describe('CSA Markdown Parser', () => {
       } catch (e) {}
     }
   });
+
+  it('should support complex anchors with uppercase and special characters', () => {
+    const tempFile = join(FIXTURES_DIR, 'temp-complex-spec.md');
+    try {
+      writeFileSync(
+        tempFile,
+        `# Complex Spec\n## Sec 1 <span id="csa-My.Class:Method_Name"></span>\n## Sec 2 <span id="csa-Namespace/Module:Class.Field_1"></span>\n`,
+        'utf-8'
+      );
+      const anchors = extractSpecAnchors(tempFile);
+      expect(anchors).toHaveLength(2);
+      expect(anchors[0].id).toBe('csa-My.Class:Method_Name');
+      expect(anchors[1].id).toBe('csa-Namespace/Module:Class.Field_1');
+    } finally {
+      try {
+        unlinkSync(tempFile);
+      } catch (e) {}
+    }
+  });
+
+  it('should ignore placeholder anchors containing ellipsis ...', () => {
+    const tempFile = join(FIXTURES_DIR, 'temp-placeholder-spec.md');
+    try {
+      writeFileSync(
+        tempFile,
+        `# Spec\nExample 1: <span id="csa-..."></span>\nExample 2: <span id="csa-..."></span>\n`,
+        'utf-8'
+      );
+      const anchors = extractSpecAnchors(tempFile);
+      expect(anchors).toHaveLength(0); // Should ignore both
+    } finally {
+      try {
+        unlinkSync(tempFile);
+      } catch (e) {}
+    }
+  });
 });

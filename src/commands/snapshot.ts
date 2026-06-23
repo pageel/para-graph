@@ -1,5 +1,5 @@
 import { readFileSync, existsSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, basename } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { findWorkspaceRoot } from '../utils/workspace.js';
 import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.js';
@@ -22,18 +22,24 @@ export function runProjectSnapshot(projectName: string): void {
 
     dbManager.initSchema();
 
+    const isRepoSubdir = basename(rootDir) === 'repo';
     const excludePatterns = [
       '**/node_modules/**',
       '**/dist/**',
       '**/build/**',
       '**/.git/**',
       '**/test-output/**',
-      '**/.beads/**',
-      '**/artifacts/**',
-      '**/sessions/**',
-      '**/docs/**',
       '**/*.log'
     ];
+
+    if (!isRepoSubdir) {
+      excludePatterns.push(
+        '.beads/**',
+        'artifacts/**',
+        'sessions/**',
+        'docs/**'
+      );
+    }
 
     const filePaths = scanDirectory(rootDir, { excludePatterns, rootDir });
     const snapshotId = `snap-${randomUUID()}`;

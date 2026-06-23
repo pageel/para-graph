@@ -9,7 +9,7 @@ export interface SpecAnchorNode {
 // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-markdown]
 export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
   const content = readFileSync(filePath, 'utf-8');
-  const anchorRegex = /<span\s+id=["'](csa-[a-z0-9-]+)["'][^>]*><\/span>/g;
+  const anchorRegex = /<span\s+id=["'](csa-[a-zA-Z0-9.:\/_-]+)["'][^>]*><\/span>/g;
   const results: SpecAnchorNode[] = [];
   const lines = content.split(/\r?\n/);
   const seenIds = new Set<string>();
@@ -20,6 +20,9 @@ export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
     anchorRegex.lastIndex = 0;
     if ((match = anchorRegex.exec(lines[i])) !== null) {
       const id = match[1];
+      if (id.includes('...')) {
+        continue;
+      }
       if (seenIds.has(id)) {
         throw new Error(`Duplicate CSA anchor ID: "${id}" in file ${filePath}`);
       }
