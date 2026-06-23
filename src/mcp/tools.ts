@@ -819,18 +819,24 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       try {
         dbManager.initSchema();
         
+        const isRepoSubdir = path.basename(rootDir) === 'repo';
         const excludePatterns = [
           '**/node_modules/**',
           '**/dist/**',
           '**/build/**',
           '**/.git/**',
           '**/test-output/**',
-          '**/.beads/**',
-          '**/artifacts/**',
-          '**/sessions/**',
-          '**/docs/**',
           '**/*.log'
         ];
+
+        if (!isRepoSubdir) {
+          excludePatterns.push(
+            '.beads/**',
+            'artifacts/**',
+            'sessions/**',
+            'docs/**'
+          );
+        }
         
         const filePaths = scanDirectory(rootDir, { excludePatterns, rootDir });
         const snapshotId = `snap-${randomUUID()}`;
@@ -1034,6 +1040,16 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       compactedText += `> **Project:** ${projectName}\n\n`;
       compactedText += `## ⚠️ CRITICAL AGENT COMPLIANCE & SAFETY RULES\n\n`;
       compactedText += `- **Plan Checklist Verification:** You MUST check that the task checklist in the active plan/phase is marked as completed (\`[x]\`) BEFORE proposing or executing a git commit or push. For details, you MUST read the para_implementation_plan_guidelines KI.\n\n`;
+      compactedText += `## ⛔ Platform Harness Guards\n\n`;
+      compactedText += `### Checkpoint Gate (Interactive Pause)\n`;
+      compactedText += `- Whenever a task description, workflow block, or plan phase contains a line prefixed with \`⛔ CHECKPOINT\` (e.g., \`⛔ CHECKPOINT:\` or \`⛔ CHECKPOINT (Interactive Pause)\`), the Agent MUST immediately stop calling tools and end its turn to await user confirmation.\n`;
+      compactedText += `- The Agent MUST NOT execute any further tool calls (specifically file modifications like \`write_to_file\`, \`replace_file_content\`, or terminal commands via \`run_command\`) in the same turn before receiving explicit user approval or input in the chat.\n\n`;
+      compactedText += `### Roadmap Sync Gate (Roadmap Hardening)\n`;
+      compactedText += `- When a user initiates plan creation (e.g., via \`/plan create [version]\`), the Agent MUST read the active project's roadmap specified in \`project.md\`.\n`;
+      compactedText += `- **Conflict Prevention:** If the target \`[version]\` already exists in the completed plans directory (\`plans/done/\`) or is marked as \`✅ Done\` on the Roadmap, the Agent MUST abort plan generation, print a warning, and stop to wait for user instructions. It MUST NOT overwrite or rename the plan file.\n`;
+      compactedText += `- **Alignment Verification:** If the target \`[version]\` matches a pending phase (\`📋 Planned\` or \`⏳ Pending\`) on the Roadmap, the Agent MUST display the phase details and ask the user to explicitly select a plan template:\n`;
+      compactedText += `  \`"Roadmap phase detected: Phase [N]: [Phase Name] (v[Version]). Which plan template would you like to use? (e.g. detail-plan.md, detail-plan-tdd.md, detail-plan-hardened.md)"\`\n`;
+      compactedText += `  The Agent MUST NOT generate or write any plan file until the user explicitly selects a template.\n\n`;
 
       // 2. Read project.md (Contract)
       const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');

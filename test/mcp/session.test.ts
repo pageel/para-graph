@@ -86,6 +86,8 @@ describe('MCP Tool: project_session_compact', () => {
     expect(compactedText).toContain('Agent Guidelines');
     expect(compactedText).toContain('CRITICAL AGENT COMPLIANCE & SAFETY RULES');
     expect(compactedText).toContain('Plan Checklist Verification');
+    expect(compactedText).toContain('Platform Harness Guards');
+    expect(compactedText).toContain('Checkpoint Gate');
   });
 
   it('should degrade gracefully if some optional files are missing', async () => {
