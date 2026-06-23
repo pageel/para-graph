@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.2.3] - 2026-06-23
+
+### Added
+- **Platform Harness Gates** — Injected Section 7 "Platform Harness Guards" (Checkpoint Gate, Roadmap Sync Gate) directly into the MCP `project_session_compact` tool output, preventing agent execution from bypassing crucial decision checkpoints.
+
+### Fixed
+- **BUG-11 Snapshot Exclusions** — Resolved overly broad snapshot behavior by restricting folder exclusions (`.beads`, `artifacts`, `sessions`, `docs`) to the project level only, allowing temporary beads directories within the `repo/` subdirectory to be properly tracked.
+- **BUG-12 CSA Regex Case-Sensitivity** — Upgraded Regex patterns in both `csa-parser.ts` and `render.js` to support uppercase letters, colons, dots, and slashes in path-scoped anchors.
+- **CSA Anchor Ellipsis Bug** — Upgraded the parser logic to ignore placeholder anchors (e.g. `csa-...`) used in specification examples, preventing duplicate ID errors.
+- **Vitest CLI Routing Test** — Wrapped the `audit csa` routing test in a try-catch block to handle non-zero exit codes gracefully when project spec coverage is below the threshold.
+
 ## [0.17.2] - 2026-06-19
 
 ### Added
