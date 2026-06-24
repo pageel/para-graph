@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.4] - 2026-06-24
+
+### Added
+- **Unified CSA Codebase-to-SQLite ID Resolution** — Upgraded `tree-sitter-parser.ts` to support both short-form `@para-doc [csa-anchor]` comments and long-form `@para-doc [file.md#csa-anchor]` comment links. Resolved them dynamically via spec_anchor nodes in SQLite.
+- **Unified CSA Calibration Settings** — Integrated `csa.calibration` configuration in `project.md` (defining directory exclusions and custom node weights) to sync CLI audit gates and Web Dashboard calculation logic.
+- **Dangling CSA Links Highlighting & Filtering** — Added visual warning cues (red color, alert icons, detailed tooltips) for dangling comments in the Dashboard. Added interactive filtering (click to filter dangling links) and a dedicated filter bar button.
+- **AI Task Prompts for Dangling Links** — Integrated warning context into single-entity AI review prompts and created a new batch action "🚨 Sửa lỗi neo mồ côi (Fix Dangling CSA)" in the Dashboard.
+
+### Deprecated
+- **Manual Doc-Linking CLI & Tool** — Completely disabled the deprecated `link` CLI command and `graph_link_docs` MCP tool, raising warning/deprecation errors to prevent obsolete usage.
+
 ## [0.17.3] - 2026-06-23
 
 ### Added
