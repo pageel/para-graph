@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.5] - 2026-06-24
+
+### Added
+- **Project State Cache (L3)** — Implemented cache storage for project configuration status (project.md, backlog.md, sprint-current.md, roadmap.md) in SQLite table `project_state` to optimize I/O and token costs.
+- **State Cache Freshness Protocol** — Integrated file hash comparison (MD5-based) to detect stale configurations instead of relying only on mtime, preventing false cache invalidations.
+- **Junk Audit Tool Integration** — Built a new utility module `junk-auditor.ts` executing safe Git CLI commands (`execFileSync`) with defensive path sanitization, cross-platform path compatibility, and robust fallback error handling.
+- **Automatic Snapshot Junk Auditing** — Added flag `auditJunk: true` to MCP tool `project_snapshot` to automatically alert users about untracked junk files in the workspace.
+- **SQLite Windows Lock Safeguard** — Configured Database busy connection timeout of 10s (`{ timeout: 10000 }`) in `sqlite-manager.ts` to automatically queue and retry transactions, resolving SQLITE_BUSY locking conflicts.
+
 ## [0.17.4] - 2026-06-24
 
 ### Added

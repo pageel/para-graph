@@ -3,6 +3,7 @@ import { registerTools } from '../../src/mcp/tools.js';
 import { SqliteManager } from '../../src/graph/store/sqlite-manager.js';
 import * as fileScanner from '../../src/utils/file-scanner.js';
 import * as fs from 'node:fs';
+import * as junkAuditor from '../../src/utils/junk-auditor.js';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -71,6 +72,49 @@ describe('MCP Tools: project_snapshot', () => {
     expect(scanSpy).toHaveBeenCalled();
     expect(insertSnapshotSpy).toHaveBeenCalled();
     expect(closeSpy).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  it('should call auditJunk and return junk warnings if auditJunk is true', async () => {
+    const snapshotHandler = handlers['project_snapshot'];
+    expect(snapshotHandler).toBeDefined();
+
+    const scanSpy = vi.spyOn(fileScanner, 'scanDirectory').mockReturnValue([
+      '/workspace/Projects/test-project/repo/mock-file.txt',
+    ]);
+
+    const mockDb = {
+      prepare: vi.fn().mockReturnValue({
+        all: vi.fn().mockReturnValue([])
+      })
+    };
+
+    const initSchemaSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const getConnectionSpy = vi.spyOn(SqliteManager.prototype, 'getConnection').mockReturnValue(mockDb as any);
+    const insertSnapshotSpy = vi.spyOn(SqliteManager.prototype, 'insertSnapshot').mockImplementation(() => {});
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    // Mock auditJunk module
+    const auditJunkSpy = vi.spyOn(junkAuditor, 'auditJunk').mockReturnValue([
+      'junk-file-1.tmp',
+      'junk-file-2.log'
+    ]);
+
+    const result = await snapshotHandler({ 
+      projectName: 'test-project',
+      auditJunk: true 
+    });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(content.success).toBe(true);
+    expect(content.junkFiles).toContain('junk-file-1.tmp');
+    expect(content.junkFiles).toContain('junk-file-2.log');
+    expect(content.junkFiles.length).toBe(2);
+    expect(auditJunkSpy).toHaveBeenCalledWith(
+      '/workspace/Projects/test-project',
+      expect.any(Array)
+    );
 
     vi.restoreAllMocks();
   });

@@ -29,6 +29,7 @@ import { CurationWorker } from '../graph/curation-worker.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
 import { findFuzzyMatch } from '../utils/fuzzy-match.js';
+import * as junkAuditor from '../utils/junk-auditor.js';
 import { fuseRankedLists } from '../graph/query/index.js';
 
 /**
@@ -803,8 +804,9 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     'Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files',
     {
       projectName: z.string().describe('Name of the PARA project'),
+      auditJunk: z.boolean().optional().describe('Audit directory for untracked/ignored junk files'),
     },
-    async ({ projectName }) => {
+    async ({ projectName, auditJunk }) => {
       const rootDir = resolveSourceDir(workspaceRoot, projectName);
       const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
       const dbManager = new SqliteManager(projectName, dbPath);
@@ -863,6 +865,34 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           }
         }
 
+        let junkFiles: string[] = [];
+        if (auditJunk) {
+          const defaultAllowlist = [
+            'package.json',
+            'package-lock.json',
+            'tsconfig.json',
+            'tsconfig.build.json',
+            '.gitignore',
+            'tool.manifest.yml',
+            'install-hooks.sh',
+            'project.md',
+            '^src\\/.*$',
+            '^test\\/.*$',
+            '^docs\\/.*$',
+            '^artifacts\\/.*$',
+            '^.agents\\/.*$',
+            '^.beads\\/.*$',
+            '^sessions\\/.*$',
+            'README.md',
+            'LICENSE',
+            'CHANGELOG.md'
+          ];
+          junkFiles = junkAuditor.auditJunk(rootDir, defaultAllowlist);
+          for (const junk of junkFiles) {
+            warnings.push(`[JUNK] Untracked/ignored file detected: ${junk}`);
+          }
+        }
+
         dbManager.insertSnapshot(snapshotId, filesToInsert);
         dbManager.close();
 
@@ -874,7 +904,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
               snapshotId,
               totalFiles: filesToInsert.length,
               totalSize: filesToInsert.reduce((sum, f) => sum + f.size, 0),
-              warnings
+              warnings,
+              ...(auditJunk ? { junkFiles } : {})
             }, null, 2)
           }],
         };
