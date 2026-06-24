@@ -24,7 +24,7 @@ describe('Deprecation and Compatibility Tests', () => {
     vi.restoreAllMocks();
   });
 
-  it('should print a deprecation warning when calling graph_link_docs but still succeed', async () => {
+  it('should return error indicating graph_link_docs is deprecated and disabled', async () => {
     const handlers: Record<string, any> = {};
     const mockServer = {
       tool: (name: string, desc: string, schema: any, handler: any) => {
@@ -36,14 +36,6 @@ describe('Deprecation and Compatibility Tests', () => {
     const linkDocsHandler = handlers['graph_link_docs'];
     expect(linkDocsHandler).toBeDefined();
 
-    const mockGraph = {
-      linkDocs: vi.fn().mockReturnValue({ linked: 2, skipped: 0, errors: [] })
-    };
-    vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
-    vi.spyOn(GraphStore, 'saveGraph').mockImplementation(() => {});
-
-    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
     const result = await linkDocsHandler({
       projectName: 'test',
       links: [
@@ -51,11 +43,8 @@ describe('Deprecation and Compatibility Tests', () => {
       ]
     });
 
-    const content = JSON.parse(result.content[0].text);
-    expect(content.linked).toBe(2);
-    expect(consoleWarnSpy).toHaveBeenCalledWith(
-      expect.stringContaining('graph_link_docs is deprecated')
-    );
+    expect(result.isError).toBe(true);
+    expect(result.content[0].text).toContain('graph_link_docs MCP tool is deprecated and disabled');
   });
 
   it('should accept docAnchors in graph_enrich and preserve it in semantic data', async () => {

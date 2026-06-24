@@ -339,19 +339,12 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       })).describe('Array of node-document links to establish'),
     },
     async ({ projectName, links }) => {
-      console.warn(
-        `⚠️ graph_link_docs is deprecated since v0.17.2. Use CSA <span> + @para-doc instead. Will be removed in v0.19.0.`
-      );
-      const graph = GraphStore.getGraph(workspaceRoot, projectName);
-
-      const result = graph.linkDocs(links);
-
-      if (result.linked > 0) {
-        GraphStore.saveGraph(workspaceRoot, projectName);
-      }
-
       return {
-        content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        isError: true,
+        content: [{
+          type: 'text' as const,
+          text: 'Error: The graph_link_docs MCP tool is deprecated and disabled in v0.17.4, and will be removed in v0.19.0. Please use the Unified CSA ID Resolution framework.'
+        }],
       };
     },
   );

@@ -246,19 +246,8 @@ export function runBuild(options: BuildOptions): void {
     console.warn(`[para-graph] Failed to persist graph to SQLite DB:`, err);
   }
 
-  // Step 10: Auto-link documents after successful build if docs folder exists
-  try {
-    const wsRoot = findWorkspaceRoot(targetDir) ?? dirname(dirname(targetDir));
-    const projectRoot = targetDir;
-    const docsDirProj = join(projectRoot, 'docs');
-    const docsDirRepo = join(dirname(projectRoot), 'docs');
-    
-    if (existsSync(docsDirProj) || existsSync(docsDirRepo)) {
-      runLink(options.projectName, wsRoot);
-    }
-  } catch (err: any) {
-    console.warn(`[para-graph] Warning: Auto-linking documents failed: ${err.message}`);
-  }
+  // Step 10: Auto-linking has been deprecated and disabled in v0.17.4.
+  // We no longer call runLink here.
 
   console.log(`[para-graph] Done. Output at: ${outputDir}`);
 }
