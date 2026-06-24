@@ -244,10 +244,12 @@ Sau khi kết nối, AI Agent của bạn sẽ có quyền truy cập vào các 
 - `memory_curate`: Gom cụm các sự kiện bộ nhớ thô thành các lát cắt ngữ nghĩa dựa trên phiên làm việc.
 - `graph_audit_csa`: Chạy kiểm tra tuân thủ Kiến trúc Đặc tả Đồng quy (CSA) cho dự án.
 - `graph_fix_csa`: Tự động sửa chữa các liên kết spec bị hỏng (thay thế thẻ neo spec bị trôi lệch trong mã nguồn).
-- `project_snapshot`: Chụp ảnh cấu trúc thư mục dự án, ghi nhận metadata vào SQLite, và kiểm tra các tệp tin bảo vệ.
+- `project_snapshot`: Chụp ảnh cấu trúc thư mục dự án, ghi nhận metadata vào SQLite, và kiểm tra các tệp tin bảo vệ. Hỗ trợ quét phát hiện file rác vật lý nếu được yêu cầu (`auditJunk: true`).
 - `project_diff`: So khớp hai bản chụp snapshot để tìm ra các file thêm mới, bị xoá, hoặc bị chỉnh sửa (phát hiện sai lệch vật lý).
 - `project_protected_files`: Liệt kê, thêm hoặc xoá các file thuộc danh sách bảo vệ của dự án.
 - `project_session_compact`: Quét rules, skills, và project contract, rồi ghi tóm tắt bối cảnh tinh gọn để Agent khôi phục.
+- `project_state_get`: Lấy siêu dữ liệu và số lượng task đã lưu cache từ SQLite. Kiểm tra tính tươi mới (freshness) đối với các file cấu hình thông qua mã hash MD5.
+- `project_state_sync`: Đồng bộ và lưu cache siêu dữ liệu cũng như số lượng task từ các file cấu hình (`project.md`, `backlog.md`, `sprint-current.md`) vào cơ sở dữ liệu SQLite.
 
 ### Sử dụng như Thư viện
 

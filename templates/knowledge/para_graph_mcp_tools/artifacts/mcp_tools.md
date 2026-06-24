@@ -1,6 +1,6 @@
 # PARA Graph MCP Tools Guide
 
-The `para-graph` MCP server registers **21 tools** across 5 functional domains. AI Agents use these tools to query, enrich, analyze, and govern codebase structures.
+The `para-graph` MCP server registers **23 tools** across 6 functional domains. AI Agents use these tools to query, enrich, analyze, and govern codebase structures.
 
 ## Domain 1: Graph Core (9 tools)
 
@@ -84,8 +84,8 @@ The `para-graph` MCP server registers **21 tools** across 5 functional domains. 
 ## Domain 5: Project Safety — L2 File Structure (4 tools)
 
 ### 18. `project_snapshot`
-- **Purpose**: Take a snapshot of the project directory structure, record file tree metadata to SQLite, and verify protected files.
-- **Key Params**: `projectName`
+- **Purpose**: Take a snapshot of the project directory structure, record file tree metadata to SQLite, and verify protected files. Also detects untracked/ignored physical junk files if requested.
+- **Key Params**: `projectName`, `auditJunk?` (boolean, triggers Junk Audit scan via git CLI allowlist)
 
 ### 19. `project_diff`
 - **Purpose**: Compare two project snapshots to identify added, removed, and modified files (physical drift detection).
@@ -97,6 +97,16 @@ The `para-graph` MCP server registers **21 tools** across 5 functional domains. 
 
 ### 21. `project_session_compact`
 - **Purpose**: Scan rules, skills, and project contract, then write a compacted markdown context summary to `para_vibecode_session/artifacts/session.md` for context recovery.
+- **Key Params**: `projectName`
+
+## Domain 6: Project State Cache (2 tools)
+
+### 22. `project_state_get`
+- **Purpose**: Get cached project metadata and task counts from SQLite. Checks freshness against configuration files via MD5 hashes.
+- **Key Params**: `projectName`
+
+### 23. `project_state_sync`
+- **Purpose**: Sync and cache project metadata and task counts from config files (`project.md`, `backlog.md`, `sprint-current.md`) into SQLite database.
 - **Key Params**: `projectName`
 
 ## Unified CSA Traceability (v0.17.2+)

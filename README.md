@@ -256,10 +256,12 @@ Once connected, your AI Agent gains access to the following tools:
 - `memory_curate`: Cluster raw events into semantic slices using session-based curation.
 - `graph_audit_csa`: Run Convergent Specification Architecture (CSA) compliance audit for a project.
 - `graph_fix_csa`: Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files).
-- `project_snapshot`: Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files.
+- `project_snapshot`: Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files. Also detects untracked/ignored physical junk files if requested (`auditJunk: true`).
 - `project_diff`: Compare two project snapshots to identify added, removed, and modified files (physical drift detection).
 - `project_protected_files`: List, add, or remove protected files for a project.
 - `project_session_compact`: Scan rules, skills, and project contract, and write a compacted context summary for agent recovery.
+- `project_state_get`: Get cached project metadata and task counts from SQLite. Checks freshness against configuration files via MD5 hashes.
+- `project_state_sync`: Sync and cache project metadata and task counts from config files (`project.md`, `backlog.md`, `sprint-current.md`) into SQLite database.
 
 ### Library Usage
 
