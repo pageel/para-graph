@@ -315,6 +315,35 @@ export class SqliteManager {
     seedProtected.run('.agents/rules.md', 'Workspace rules trigger index', seedTime);
     seedProtected.run('project.md', 'Project contract definition', seedTime);
     seedProtected.run('.gitignore', 'Git exclude patterns', seedTime);
+
+    // Project state cache table
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS project_state (
+        project_name TEXT PRIMARY KEY,
+        active_plan TEXT DEFAULT NULL,
+        version TEXT DEFAULT NULL,
+        status TEXT DEFAULT NULL,
+        backlog_active_count INTEGER DEFAULT 0,
+        backlog_completed_count INTEGER DEFAULT 0,
+        sprint_pending_count INTEGER DEFAULT 0,
+        sprint_completed_count INTEGER DEFAULT 0,
+        project_hash TEXT DEFAULT NULL,
+        backlog_hash TEXT DEFAULT NULL,
+        sprint_hash TEXT DEFAULT NULL,
+        synced_at INTEGER NOT NULL
+      )
+    `);
+
+    // Migration for older database instances
+    try {
+      db.exec(`ALTER TABLE project_state ADD COLUMN project_hash TEXT DEFAULT NULL;`);
+    } catch (e) {}
+    try {
+      db.exec(`ALTER TABLE project_state ADD COLUMN backlog_hash TEXT DEFAULT NULL;`);
+    } catch (e) {}
+    try {
+      db.exec(`ALTER TABLE project_state ADD COLUMN sprint_hash TEXT DEFAULT NULL;`);
+    } catch (e) {}
   }
 
   public static DatabaseConstructor: any = null;
@@ -660,6 +689,83 @@ export class SqliteManager {
     }
 
     return { added, removed, modified };
+  }
+
+  public saveProjectState(projectName: string, state: {
+    active_plan: string | null;
+    version: string | null;
+    status: string | null;
+    backlog_active_count: number;
+    backlog_completed_count: number;
+    sprint_pending_count: number;
+    sprint_completed_count: number;
+    project_hash?: string | null;
+    backlog_hash?: string | null;
+    sprint_hash?: string | null;
+    synced_at: number;
+  }): void {
+    const db = this.getConnection();
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO project_state (
+        project_name, active_plan, version, status,
+        backlog_active_count, backlog_completed_count,
+        sprint_pending_count, sprint_completed_count,
+        project_hash, backlog_hash, sprint_hash, synced_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    stmt.run(
+      projectName,
+      state.active_plan,
+      state.version,
+      state.status,
+      state.backlog_active_count,
+      state.backlog_completed_count,
+      state.sprint_pending_count,
+      state.sprint_completed_count,
+      state.project_hash || null,
+      state.backlog_hash || null,
+      state.sprint_hash || null,
+      state.synced_at
+    );
+  }
+
+  public getProjectState(projectName: string): {
+    active_plan: string | null;
+    version: string | null;
+    status: string | null;
+    backlog_active_count: number;
+    backlog_completed_count: number;
+    sprint_pending_count: number;
+    sprint_completed_count: number;
+    project_hash: string | null;
+    backlog_hash: string | null;
+    sprint_hash: string | null;
+    synced_at: number;
+  } | null {
+    const db = this.getConnection();
+    const row = db.prepare(`
+      SELECT active_plan, version, status,
+             backlog_active_count, backlog_completed_count,
+             sprint_pending_count, sprint_completed_count,
+             project_hash, backlog_hash, sprint_hash, synced_at
+      FROM project_state WHERE project_name = ?
+    `).get(projectName);
+    
+    if (!row) return null;
+    
+    return {
+      active_plan: row.active_plan,
+      version: row.version,
+      status: row.status,
+      backlog_active_count: row.backlog_active_count,
+      backlog_completed_count: row.backlog_completed_count,
+      sprint_pending_count: row.sprint_pending_count,
+      sprint_completed_count: row.sprint_completed_count,
+      project_hash: row.project_hash,
+      backlog_hash: row.backlog_hash,
+      sprint_hash: row.sprint_hash,
+      synced_at: row.synced_at
+    };
   }
 
   public close(): void {

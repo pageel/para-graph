@@ -30,6 +30,7 @@ import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
 import { findFuzzyMatch } from '../utils/fuzzy-match.js';
 import * as junkAuditor from '../utils/junk-auditor.js';
+import { parseProjectFile, parseBacklogFile, parseSprintFile } from '../utils/project-parser.js';
 import { fuseRankedLists } from '../graph/query/index.js';
 
 /**
@@ -1149,6 +1150,158 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         content: [{ type: 'text' as const, text: JSON.stringify(response, null, 2) }],
         isError: !response.success,
       };
+    }
+  );
+
+  // --- project_state_get: Get cached project state from SQLite ---
+  server.tool(
+    'project_state_get',
+    'Get cached project metadata and task counts from SQLite. Checks freshness against config files.',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+    },
+    async ({ projectName }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      
+      try {
+        dbManager.initSchema();
+        const cached = dbManager.getProjectState(projectName);
+        dbManager.close();
+
+        if (!cached) {
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({ fresh: false, state: null, reason: 'No cached state found in database' }, null, 2)
+            }]
+          };
+        }
+
+        // Calculate current hashes
+        const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
+        const backlogMdPath = join(workspaceRoot, 'Projects', projectName, 'artifacts', 'tasks', 'backlog.md');
+        const sprintMdPath = join(workspaceRoot, 'Projects', projectName, 'artifacts', 'tasks', 'sprint-current.md');
+
+        const getFileHashSafe = (p: string) => {
+          if (!existsSync(p)) return '';
+          try {
+            return createHash('md5').update(readFileSync(p)).digest('hex');
+          } catch (e) {
+            return '';
+          }
+        };
+
+        const currentProjHash = getFileHashSafe(projectMdPath);
+        const currentBacklogHash = getFileHashSafe(backlogMdPath);
+        const currentSprintHash = getFileHashSafe(sprintMdPath);
+
+        const isFresh = 
+          cached.project_hash === currentProjHash &&
+          cached.backlog_hash === currentBacklogHash &&
+          cached.sprint_hash === currentSprintHash;
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              fresh: isFresh,
+              state: cached,
+              reason: isFresh ? 'Cache is fresh' : 'Cache is stale'
+            }, null, 2)
+          }]
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- project_state_sync: Sync project config files to SQLite cache ---
+  server.tool(
+    'project_state_sync',
+    'Sync and cache project metadata and task counts from config files into SQLite database.',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+    },
+    async ({ projectName }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      
+      try {
+        dbManager.initSchema();
+
+        const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
+        const backlogMdPath = join(workspaceRoot, 'Projects', projectName, 'artifacts', 'tasks', 'backlog.md');
+        const sprintMdPath = join(workspaceRoot, 'Projects', projectName, 'artifacts', 'tasks', 'sprint-current.md');
+
+        const readFileSafe = (p: string) => {
+          if (!existsSync(p)) return '';
+          try {
+            return readFileSync(p, 'utf-8');
+          } catch (e) {
+            return '';
+          }
+        };
+
+        const getFileHashSafe = (p: string) => {
+          if (!existsSync(p)) return '';
+          try {
+            return createHash('md5').update(readFileSync(p)).digest('hex');
+          } catch (e) {
+            return '';
+          }
+        };
+
+        const projectContent = readFileSafe(projectMdPath);
+        const backlogContent = readFileSafe(backlogMdPath);
+        const sprintContent = readFileSafe(sprintMdPath);
+
+        const projectInfo = parseProjectFile(projectContent);
+        const backlogInfo = parseBacklogFile(backlogContent);
+        const sprintInfo = parseSprintFile(sprintContent);
+
+        const projectHash = getFileHashSafe(projectMdPath);
+        const backlogHash = getFileHashSafe(backlogMdPath);
+        const sprintHash = getFileHashSafe(sprintMdPath);
+
+        const newState = {
+          active_plan: projectInfo.active_plan || null,
+          version: projectInfo.version || null,
+          status: projectInfo.status || null,
+          backlog_active_count: backlogInfo.activeCount,
+          backlog_completed_count: backlogInfo.completedCount,
+          sprint_pending_count: sprintInfo.pendingCount,
+          sprint_completed_count: sprintInfo.completedCount,
+          project_hash: projectHash,
+          backlog_hash: backlogHash,
+          sprint_hash: sprintHash,
+          synced_at: Date.now()
+        };
+
+        dbManager.saveProjectState(projectName, newState);
+        dbManager.close();
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              success: true,
+              state: newState
+            }, null, 2)
+          }]
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
     }
   );
 }
