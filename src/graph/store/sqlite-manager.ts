@@ -317,6 +317,7 @@ export class SqliteManager {
     seedProtected.run('.gitignore', 'Git exclude patterns', seedTime);
 
     // Project state cache table
+    // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-db-project-state]
     db.exec(`
       CREATE TABLE IF NOT EXISTS project_state (
         project_name TEXT PRIMARY KEY,

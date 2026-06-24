@@ -13,7 +13,7 @@ import { getSupportedExtensions } from './registry.js';
 const MAX_FILES = 10_000;
 
 /** Directories to skip during traversal */
-const EXCLUDED_DIRS = new Set(['node_modules', 'dist', '.git', 'output', 'coverage']);
+const EXCLUDED_DIRS = new Set(['node_modules', 'dist', '.git', 'output', 'coverage', 'test', 'tests', 'fixtures']);
 
 /** Supported extensions — loaded once from Registry */
 let _supportedExtensions: Set<string> | null = null;

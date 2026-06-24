@@ -18,7 +18,7 @@ describe('CSA ID Resolution - AST Parser Comments Extraction', () => {
     parser = new TreeSitterParser(FIXTURES_DIR);
   });
 
-  it('should parse both short and long @para-doc comments and add correct DOCUMENTED_BY edges', () => {
+  it('should parse both short and long para-doc comments and add correct DOCUMENTED_BY edges', () => {
     const filePath = join(FIXTURES_DIR, 'csa-short-syntax.ts');
     parser.parseFile(filePath, graph);
 

@@ -800,6 +800,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_snapshot: Take a project file structure snapshot and verify protected files ---
+  // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-project-snapshot]
   server.tool(
     'project_snapshot',
     'Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files',
@@ -1154,6 +1155,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_state_get: Get cached project state from SQLite ---
+  // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-state-get]
   server.tool(
     'project_state_get',
     'Get cached project metadata and task counts from SQLite. Checks freshness against config files.',
@@ -1222,6 +1224,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_state_sync: Sync project config files to SQLite cache ---
+  // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-state-sync]
   server.tool(
     'project_state_sync',
     'Sync and cache project metadata and task counts from config files into SQLite database.',

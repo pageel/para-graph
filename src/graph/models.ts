@@ -56,7 +56,7 @@ export interface SemanticAttributes {
   enrichedBy?: 'agent' | 'manual';
   /** 
    * Paths of doc files referencing this node, format: "docs/path.md#section-slug" 
-   * @deprecated since v0.17.2. Use CSA <span> + @para-doc edges instead.
+   * @deprecated since v0.17.2. Use CSA <span> + DOCUMENTED_BY edges instead.
    */
   docAnchors?: string[];
   /** ISO 8601 timestamp — when node code changed since last enrichment */

@@ -11,6 +11,7 @@ import { join } from 'node:path';
  * @param allowlist - List of allowed files or regex patterns
  * @returns List of identified junk file paths relative to repoPath
  */
+// @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-junk-auditor]
 export function auditJunk(repoPath: string, allowlist: string[]): string[] {
   // Pre-flight check: Verify if it is a git repository by checking for .git directory
   if (!existsSync(join(repoPath, '.git'))) {

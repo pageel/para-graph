@@ -18,7 +18,7 @@ describe('TreeSitterParser CSA comments extraction', () => {
     parser = new TreeSitterParser(FIXTURES_DIR);
   });
 
-  it('should parse @para-doc comments and add DOCUMENTED_BY edges', () => {
+  it('should parse para-doc comments and add DOCUMENTED_BY edges', () => {
     const filePath = join(FIXTURES_DIR, 'csa-comments.ts');
     parser.parseFile(filePath, graph);
 
