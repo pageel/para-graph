@@ -35,6 +35,32 @@ When writing or modifying code entities:
    | **HTML / Markdown** | `<!-- ... -->` | `<!-- @para-doc [specs/doc.md#anchor] -->` |
    | **CSS / SCSS** | `/* ... */` | `/* @para-doc [specs/doc.md#anchor] */` |
 
+### Anchor Granularity Floor (Micro-Anchoring)
+
+Before placing an anchor, the Agent **MUST** validate its granularity against these three criteria:
+
+| ID | Criterion | Rule |
+|:---|:---|:---|
+| **G1** | **One-to-One Mapping** | Each anchor MUST map to exactly **one design decision** or **one functional requirement**. If a heading (H2/H3) contains a table or list with N distinct items, then N separate anchors are required — one per item. |
+| **G2** | **Reverse Validation** | Before inserting `// @para-doc [#csa-xxx]` in a code file, ask: *"If I change this code file, would the ENTIRE content described by `csa-xxx` be affected?"* If the answer is **"only partially"** → the anchor must be decomposed into a more specific sub-section. |
+| **G3** | **No Blanket Anchors** | It is **prohibited** to place an anchor at an aggregate-level heading (H1/H2 containing summary tables, enumerated lists, or multiple unrelated concepts) and assign it to a single code file. Anchors must be placed at H3/H4 level or inline next to the specific table row, bullet point, or paragraph that the code entity implements. |
+
+**Anti-pattern example:**
+```markdown
+## 3. Technology Decisions <span id="csa-3-technology-decisions"></span>
+<!-- ❌ WRONG: This H2 covers Runtime, ORM, Test Framework, etc.
+     A single code file (vitest.config.ts) only relates to Test Framework. -->
+```
+
+**Correct pattern:**
+```markdown
+## 3. Technology Decisions
+### 3.1 Runtime <span id="csa-3-1-runtime"></span>
+### 3.2 ORM <span id="csa-3-2-orm"></span>
+### 3.3 Test Framework <span id="csa-3-3-test-framework"></span>
+<!-- ✅ CORRECT: Each decision has its own anchor. vitest.config.ts links to csa-3-3-test-framework only. -->
+```
+
 ### Execution Loop & Verification
 After editing code or specifications, the Agent must run:
 ```bash
@@ -123,6 +149,11 @@ Create a file at `.agents/rules/csa-compliance.md` using the template below:
 ### C4: Source-Verified Verification Gate
 - Every modified or created documentation file **MUST** pass the anti-hallucination verification step.
 - The file **MUST** carry the `<!-- ⚠️ SOURCE-VERIFIED — Cross-referenced with [files] on YYYY-MM-DD -->` guard header comment immediately below the main title.
+
+### C5: Anchor Granularity Floor (Micro-Anchoring)
+- Each CSA anchor **MUST** map to exactly **one design decision** or **one functional requirement** (G1: One-to-One Mapping).
+- Agent **MUST NOT** place anchors at aggregate-level headings (H1/H2 that contain tables, lists, or multiple unrelated concepts) and assign them to a single code file (G3: No Blanket Anchors).
+- Before inserting `// @para-doc [#csa-xxx]`, Agent **MUST** apply **Reverse Validation** (G2): *"If I change this code file, would the ENTIRE content described by `csa-xxx` be affected?"* If the answer is **"only partially"** → the anchor **MUST** be decomposed to a more specific sub-section (H3/H4 or inline `<span>` next to the relevant table row or bullet).
 ```
 
 ---
@@ -161,6 +192,7 @@ Whenever concluding or updating an active plan/phase, the Agent must perform the
   ```markdown
   ### Section Title <span id="csa-target-entity"></span>
   ```
+* **Granularity check (Reverse Validation):** Before assigning an anchor to a code entity, verify: *"If this code file changes, would ALL content under this anchor be affected?"* If only partially → decompose the anchor to a more specific sub-section (H3/H4 or inline `<span>` next to the specific table row/bullet). Each anchor must map to exactly one design decision (G1: One-to-One). Never use aggregate-level blanket anchors (G3).
 
 ### 3. Automated Verification Gate
 * Run graph rebuild: `npx para-graph build <project-name>`
