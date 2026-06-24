@@ -423,7 +423,7 @@ export class TreeSitterParser {
    * @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-comments]
    */
   private extractCsaComments(lines: string[], relPath: string, graph: CodeGraph): void {
-    const csaRegex = /@para-doc\s+\[?([^\]#\s]+)#([^\]\s]+)\]?/g;
+    const csaRegex = /@para-doc\s+\[?(?:([^\]#\s]+)#)?([^\]\s]+)\]?/g;
     const allNodes = graph.getAllNodes();
 
     for (let i = 0; i < lines.length; i++) {

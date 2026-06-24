@@ -12,6 +12,7 @@ export interface PruningConfig {
   utilityPatterns?: string[];        // Glob patterns to detect utility files
 }
 
+// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-ScoredNode]
 export interface ScoredNode {
   node: GraphNode;
   score: number;
@@ -31,6 +32,7 @@ export interface SearchContext {
  * Simple glob matching using regex.
  * Supports standard wildcards: ** (recursive) and * (single level).
  */
+// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-matchGlob]
 function matchGlob(path: string, pattern: string): boolean {
   let regexPattern = pattern
     .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape regex special chars
@@ -64,6 +66,7 @@ function getTopologyMetrics(store: AstStore, nodeId: string): { fanIn: number; f
 /**
  * Heuristic Scorer for a candidate node.
  */
+// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-scoreNode]
 function scoreNode(
   node: GraphNode,
   edge: GraphEdge | undefined,
@@ -92,6 +95,7 @@ function scoreNode(
 /**
  * Classify if a node is a Utility Node.
  */
+// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-isUtilityNode]
 function isUtilityNode(store: AstStore, node: GraphNode, config: PruningConfig): boolean {
   const patterns = config.utilityPatterns || ['**/utils/**', '**/helpers/**', '**/constants/**', '**/types.ts', '**/*.d.ts'];
   const matchesPattern = patterns.some(pattern => matchGlob(node.filePath, pattern));

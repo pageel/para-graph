@@ -13,6 +13,7 @@ export interface CsaAuditResult {
     specThreshold: number;
     docThreshold: number;
     docGate: 'soft' | 'hard' | 'off';
+    calibration?: any;
   };
   specCoverage: {
     totalAnchors: number;
@@ -389,67 +390,152 @@ export class SqliteManager {
     const docThreshold = config?.docThreshold ?? 50;
     const docGate = config?.docGate ?? 'soft';
     
+    // Calibration config defaults
+    const calibration = config?.calibration || {};
+    const excludeFolders = calibration.exclude_folders || [];
+    const weights = calibration.weights || {
+      critical: 5.0,
+      medium: 2.0,
+      low: 0.5,
+      god_node_degree_threshold: 20
+    };
+    const criticalW = weights.critical ?? 5.0;
+    const mediumW = weights.medium ?? 2.0;
+    const lowW = weights.low ?? 0.5;
+    const godThreshold = weights.god_node_degree_threshold ?? 20;
+
+    const isExcluded = (filePath: string | null) => {
+      if (!filePath) return false;
+      return excludeFolders.some(folder => filePath.startsWith(folder));
+    };
+
     // 1. Fetch spec anchors (defined as anchors in artifacts/specs/ or having no filePath/null)
-    const specAnchorsRows = db.prepare(`
-      SELECT id FROM nodes 
+    const rawSpecAnchors = db.prepare(`
+      SELECT id, file_path FROM nodes 
       WHERE type = 'spec_anchor' 
         AND (file_path LIKE 'artifacts/specs/%' OR file_path IS NULL OR file_path = '')
-    `).all() as Array<{ id: string }>;
-    const totalSpecAnchors = specAnchorsRows.length;
+    `).all() as Array<{ id: string; file_path: string | null }>;
+    
+    const specAnchorsRows = rawSpecAnchors.filter(row => !isExcluded(row.file_path));
+    const totalSpecAnchorsCount = specAnchorsRows.length;
     
     // 2. Fetch doc anchors (defined as anchors NOT in artifacts/specs/ and having a valid filePath)
-    const docAnchorsRows = db.prepare(`
-      SELECT id FROM nodes 
+    const rawDocAnchors = db.prepare(`
+      SELECT id, file_path FROM nodes 
       WHERE type = 'spec_anchor' 
         AND file_path NOT LIKE 'artifacts/specs/%' 
         AND file_path IS NOT NULL 
         AND file_path != ''
-    `).all() as Array<{ id: string }>;
-    const totalDocAnchors = docGate === 'off' ? 0 : docAnchorsRows.length;
+    `).all() as Array<{ id: string; file_path: string | null }>;
+    
+    const docAnchorsRows = rawDocAnchors.filter(row => !isExcluded(row.file_path));
+    const totalDocAnchorsCount = docGate === 'off' ? 0 : docAnchorsRows.length;
 
-    // Check which anchors have DOCUMENTED_BY edge
+    // Check which anchors have DOCUMENTED_BY edge (resolving both short and long syntax)
     const checkCovered = db.prepare(`
       SELECT COUNT(*) as count 
       FROM edges 
-      WHERE target_id = ? AND relation = 'DOCUMENTED_BY'
+      WHERE (target_id = ? OR target_id LIKE '%#' || ?) AND relation = 'DOCUMENTED_BY'
     `);
 
-    let coveredSpec = 0;
+    // Helper to calculate weight of an anchor based on related code nodes
+    const findRelatedCodeNodes = db.prepare(`
+      SELECT id, type, semantic FROM nodes 
+      WHERE id IN (
+        SELECT source_id FROM edges 
+        WHERE (target_id = ? OR target_id LIKE '%#' || ?) AND relation = 'DOCUMENTED_BY'
+      )
+    `);
+
+    const getDegree = db.prepare(`
+      SELECT COUNT(*) as count FROM edges WHERE source_id = ? OR target_id = ?
+    `);
+
+    const getAnchorWeight = (anchorId: string): number => {
+      const relatedNodes = findRelatedCodeNodes.all(anchorId, anchorId) as Array<{ id: string; type: string; semantic: string | null }>;
+      if (relatedNodes.length === 0) {
+        return lowW; // Default weight for uncovered anchors
+      }
+
+      let maxWeight = lowW;
+      for (const node of relatedNodes) {
+        // Check degree
+        const degRes = getDegree.get(node.id, node.id) as { count: number } | undefined;
+        const degree = degRes ? degRes.count : 0;
+        if (degree >= godThreshold) {
+          return criticalW; // Maximum possible weight
+        }
+
+        // Check complexity
+        let complexity = 'low';
+        try {
+          if (node.semantic) {
+            const sem = JSON.parse(node.semantic);
+            complexity = sem.complexity || 'low';
+          }
+        } catch {}
+
+        if (complexity === 'high' || complexity === 'medium' || node.type === 'class' || node.type === 'interface') {
+          maxWeight = Math.max(maxWeight, mediumW);
+        }
+      }
+      return maxWeight;
+    };
+
+    let coveredSpecCount = 0;
+    let totalSpecWeight = 0;
+    let coveredSpecWeight = 0;
+
     for (const row of specAnchorsRows) {
-      const res = checkCovered.get(row.id) as { count: number } | undefined;
+      const weight = getAnchorWeight(row.id);
+      totalSpecWeight += weight;
+
+      const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
       if (res && res.count > 0) {
-        coveredSpec++;
+        coveredSpecCount++;
+        coveredSpecWeight += weight;
       }
     }
 
-    let coveredDoc = 0;
+    let coveredDocCount = 0;
+    let totalDocWeight = 0;
+    let coveredDocWeight = 0;
+
     if (docGate !== 'off') {
       for (const row of docAnchorsRows) {
-        const res = checkCovered.get(row.id) as { count: number } | undefined;
+        const weight = getAnchorWeight(row.id);
+        totalDocWeight += weight;
+
+        const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
         if (res && res.count > 0) {
-          coveredDoc++;
+          coveredDocCount++;
+          coveredDocWeight += weight;
         }
       }
     }
 
     const hasExplicitSpecThreshold = config?.specThreshold !== undefined;
-    const specRate = totalSpecAnchors > 0
-      ? (coveredSpec / totalSpecAnchors) * 100
+    const specRate = totalSpecWeight > 0
+      ? (coveredSpecWeight / totalSpecWeight) * 100
       : (hasExplicitSpecThreshold && specThreshold > 0 ? 0.0 : 100.0);
-    const docRate = totalDocAnchors > 0 ? (coveredDoc / totalDocAnchors) * 100 : 100.0;
+    const docRate = totalDocWeight > 0 ? (coveredDocWeight / totalDocWeight) * 100 : 100.0;
 
-    const specPass = totalSpecAnchors > 0
+    const specPass = totalSpecAnchorsCount > 0
       ? specRate >= specThreshold
       : !(hasExplicitSpecThreshold && specThreshold > 0);
     const docPass = docGate === 'off' ? true : (docRate >= docThreshold);
 
     const combinedHealth = docGate === 'off' ? specRate : (specRate + docRate) / 2;
 
-    // Dangling edges
+    // Dangling edges (resolving both short and long syntax dynamically via SQLite substring)
     const danglingRows = db.prepare(`
       SELECT e.source_id, e.target_id, e.source_file, e.source_line 
       FROM edges e 
-      LEFT JOIN nodes n ON e.target_id = n.id AND n.type = 'spec_anchor'
+      LEFT JOIN nodes n ON 
+        (CASE 
+          WHEN instr(e.target_id, '#') > 0 THEN substr(e.target_id, instr(e.target_id, '#') + 1)
+          ELSE e.target_id
+        END) = n.id AND n.type = 'spec_anchor'
       WHERE e.relation = 'DOCUMENTED_BY' AND n.id IS NULL
     `).all() as Array<{
       source_id: string;
@@ -467,33 +553,36 @@ export class SqliteManager {
 
     return {
       // Legacy compatibility fields
-      totalAnchors: totalSpecAnchors + totalDocAnchors,
-      coveredAnchors: coveredSpec + coveredDoc,
-      coverageRate: totalSpecAnchors + totalDocAnchors > 0 ? ((coveredSpec + coveredDoc) / (totalSpecAnchors + totalDocAnchors)) * 100 : 100.0,
+      totalAnchors: totalSpecAnchorsCount + totalDocAnchorsCount,
+      coveredAnchors: coveredSpecCount + coveredDocCount,
+      coverageRate: totalSpecWeight + totalDocWeight > 0 
+        ? ((coveredSpecWeight + coveredDocWeight) / (totalSpecWeight + totalDocWeight)) * 100 
+        : 100.0,
       
       // Tiered fields
       config: {
         specThreshold,
         docThreshold,
-        docGate
+        docGate,
+        calibration
       },
       specCoverage: {
-        totalAnchors: totalSpecAnchors,
-        coveredAnchors: coveredSpec,
+        totalAnchors: totalSpecAnchorsCount,
+        coveredAnchors: coveredSpecCount,
         coverageRate: specRate,
         threshold: specThreshold,
         gate: 'hard',
         pass: specPass
       },
       docCoverage: {
-        totalAnchors: totalDocAnchors,
-        coveredAnchors: coveredDoc,
+        totalAnchors: totalDocAnchorsCount,
+        coveredAnchors: coveredDocCount,
         coverageRate: docRate,
         threshold: docThreshold,
         gate: docGate,
         pass: docPass
       },
-      combinedHealth,
+      combinedHealth: Math.round(combinedHealth),
       danglingEdges
     };
   }

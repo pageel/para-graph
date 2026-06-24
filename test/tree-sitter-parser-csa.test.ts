@@ -23,7 +23,7 @@ describe('TreeSitterParser CSA comments extraction', () => {
     parser.parseFile(filePath, graph);
 
     const edges = graph.getAllEdges().filter(e => e.relation === EdgeRelation.DOCUMENTED_BY);
-    expect(edges).toHaveLength(4);
+    expect(edges).toHaveLength(6);
 
     // 0. Spec anchor file-level edge
     const specEdge = edges.find(e => e.targetId === 'csa-test/fixtures/csa-comments.ts');
@@ -35,12 +35,22 @@ describe('TreeSitterParser CSA comments extraction', () => {
     expect(fileEdge).toBeDefined();
     expect(fileEdge?.sourceId).toBe('csa-comments.ts');
 
-    // 2. Class-level edge
+    // 2. Class-level edge (spec-anchor spec)
+    const classSpecEdge = edges.find(e => e.targetId === 'csa-OrderProcessor');
+    expect(classSpecEdge).toBeDefined();
+    expect(classSpecEdge?.sourceId).toBe('csa-comments.ts::OrderProcessor');
+
+    // 3. Class-level edge (doc spec)
     const classEdge = edges.find(e => e.targetId === 'csa-class-level');
     expect(classEdge).toBeDefined();
     expect(classEdge?.sourceId).toBe('csa-comments.ts::OrderProcessor');
 
-    // 3. Method-level edge
+    // 4. Method-level edge (spec-anchor spec)
+    const methodSpecEdge = edges.find(e => e.targetId === 'csa-OrderProcessor.process');
+    expect(methodSpecEdge).toBeDefined();
+    expect(methodSpecEdge?.sourceId).toBe('csa-comments.ts::OrderProcessor.process');
+
+    // 5. Method-level edge (doc spec)
     const methodEdge = edges.find(e => e.targetId === 'csa-method-level');
     expect(methodEdge).toBeDefined();
     expect(methodEdge?.sourceId).toBe('csa-comments.ts::OrderProcessor.process');

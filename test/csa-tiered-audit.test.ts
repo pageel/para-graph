@@ -186,4 +186,28 @@ describe('Tiered CSA Audit Integration Tests', () => {
     expect(result.specCoverage.coverageRate).toBe(100.0);
     expect(result.specCoverage.pass).toBe(true);
   });
+
+  it('should resolve dynamic CSA ID resolution with both short and long targetId in edges', () => {
+    const mockNodes = [
+      { id: 'src/main.ts::run', name: 'run', type: NodeType.FUNCTION, filePath: 'src/main.ts', signature: 'function run() {}' },
+      // Node has ID as short syntax
+      { id: 'csa-test-anchor', name: 'csa-test-anchor', type: NodeType.SPEC_ANCHOR, filePath: 'artifacts/specs/spec.md', signature: '## Spec 1' },
+    ];
+
+    const mockEdges = [
+      // Short syntax edge
+      { sourceId: 'src/main.ts::run', targetId: 'csa-test-anchor', relation: EdgeRelation.DOCUMENTED_BY, sourceFile: 'src/main.ts', sourceLine: 5 },
+      // Long syntax edge
+      { sourceId: 'src/main.ts::run', targetId: 'artifacts/specs/spec.md#csa-test-anchor', relation: EdgeRelation.DOCUMENTED_BY, sourceFile: 'src/main.ts', sourceLine: 10 },
+    ];
+
+    manager.persistGraph(mockNodes, mockEdges);
+
+    const result = manager.runCsaAudit({ specThreshold: 90, docThreshold: 50, docGate: 'soft' });
+
+    // Both edges should resolve to the node 'csa-test-anchor', so there should be NO dangling edges
+    expect(result.danglingEdges).toHaveLength(0);
+    expect(result.specCoverage.coveredAnchors).toBe(1);
+    expect(result.specCoverage.coverageRate).toBe(100);
+  });
 });

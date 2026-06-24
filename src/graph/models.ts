@@ -374,11 +374,22 @@ export interface FusedResult<T> {
 }
 // --- CSA Compliance & Tiered Audit Types (v0.17.2) ---
 
+export interface CsaCalibration {
+  exclude_folders?: string[];
+  weights?: {
+    critical?: number;
+    medium?: number;
+    low?: number;
+    god_node_degree_threshold?: number;
+  };
+}
+
 /** Configuration options for Tiered CSA audit */
 export interface CsaConfig {
   specThreshold: number;     // e.g. 90 (Hard Gate)
   docThreshold: number;      // e.g. 50 (Soft Gate)
   docGate: 'soft' | 'hard' | 'off'; // default: 'soft'
+  calibration?: CsaCalibration;
 }
 
 /** Details about coverage within a single tier (Spec or Doc) */
