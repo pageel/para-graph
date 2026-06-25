@@ -132,5 +132,63 @@ describe('SqliteManager', () => {
       manager.close();
     });
   });
+
+  describe('Session Telemetry API', () => {
+    const mockTelemetry = {
+      id: 'telemetry-1',
+      projectName: 'test',
+      conversationId: 'conv-123',
+      modelUsed: 'gemini-pro',
+      workflow: '/end',
+      toolCallsTotal: 15,
+      toolCallsBreakdown: { view_file: 10, replace_file_content: 5 },
+      filesReadCount: 2,
+      filesReadList: ['src/graph/models.ts', 'src/graph/store/sqlite-manager.ts'],
+      filesChangedCount: 1,
+      filesChangedList: ['src/graph/models.ts'],
+      tokenEstimateInput: 5000,
+      tokenEstimateOutput: 2000,
+      frictionCount: 1,
+      frictionDetails: [{ type: 'build_error', message: 'Compilation failed', timestamp: 1234567890 }],
+      durationSeconds: 120,
+      capturedAt: 1719323400000 // Stable timestamp
+    };
+
+    // @para-doc [#csa-test-schema]
+    it('verifies session_telemetry table and indexes are created', () => {
+      const db = dbManager.getConnection();
+      const stmt = db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='session_telemetry'");
+      const result = stmt.get();
+      expect(result).toBeDefined();
+      expect(result?.name).toBe('session_telemetry');
+    });
+
+    // @para-doc [#csa-test-push]
+    it('allows pushing telemetry data successfully', () => {
+      // Proactively cast to any before implementation is completed (stub state)
+      (dbManager as any).pushTelemetry(mockTelemetry);
+
+      const db = dbManager.getConnection();
+      const row = db.prepare("SELECT * FROM session_telemetry WHERE id = ?").get(mockTelemetry.id) as any;
+      expect(row).toBeDefined();
+      expect(row.project_name).toBe(mockTelemetry.projectName);
+      expect(row.conversation_id).toBe(mockTelemetry.conversationId);
+      expect(JSON.parse(row.tool_calls_breakdown)).toEqual(mockTelemetry.toolCallsBreakdown);
+      expect(JSON.parse(row.files_read_list)).toEqual(mockTelemetry.filesReadList);
+      expect(JSON.parse(row.files_changed_list)).toEqual(mockTelemetry.filesChangedList);
+      expect(JSON.parse(row.friction_details)).toEqual(mockTelemetry.frictionDetails);
+    });
+
+    // @para-doc [#csa-test-query-trends]
+    it('queries telemetry data correctly', () => {
+      (dbManager as any).pushTelemetry(mockTelemetry);
+      
+      const results = (dbManager as any).queryTelemetry('test', 10);
+      expect(results.length).toBe(1);
+      expect(results[0].id).toBe(mockTelemetry.id);
+      expect(results[0].projectName).toBe(mockTelemetry.projectName);
+      expect(results[0].toolCallsBreakdown).toEqual(mockTelemetry.toolCallsBreakdown);
+    });
+  });
 });
 

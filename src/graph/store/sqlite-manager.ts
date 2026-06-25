@@ -1,7 +1,7 @@
 import { createRequire } from 'module';
 import path from 'path';
 import fs from 'fs';
-import { CsaConfig } from '../models.js';
+import { CsaConfig, SessionTelemetryData, SessionTelemetryRow } from '../models.js';
 
 const require = createRequire(import.meta.url);
 
@@ -794,6 +794,73 @@ export class SqliteManager {
       sprint_hash: row.sprint_hash,
       synced_at: row.synced_at
     };
+  }
+
+  // @para-doc [#csa-db-session-telemetry]
+  public pushTelemetry(data: SessionTelemetryData): void {
+    const db = this.getConnection();
+    const stmt = db.prepare(`
+      INSERT OR REPLACE INTO session_telemetry (
+        id, project_name, conversation_id, model_used, workflow,
+        tool_calls_total, tool_calls_breakdown,
+        files_read_count, files_read_list,
+        files_changed_count, files_changed_list,
+        token_estimate_input, token_estimate_output,
+        friction_count, friction_details,
+        duration_seconds, captured_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    
+    stmt.run(
+      data.id,
+      data.projectName,
+      data.conversationId,
+      data.modelUsed || null,
+      data.workflow || null,
+      data.toolCallsTotal || 0,
+      data.toolCallsBreakdown ? JSON.stringify(data.toolCallsBreakdown) : '{}',
+      data.filesReadCount || 0,
+      data.filesReadList ? JSON.stringify(data.filesReadList) : '[]',
+      data.filesChangedCount || 0,
+      data.filesChangedList ? JSON.stringify(data.filesChangedList) : '[]',
+      data.tokenEstimateInput || 0,
+      data.tokenEstimateOutput || 0,
+      data.frictionCount || 0,
+      data.frictionDetails ? JSON.stringify(data.frictionDetails) : '[]',
+      data.durationSeconds !== undefined ? data.durationSeconds : null,
+      data.capturedAt
+    );
+  }
+
+  // @para-doc [#csa-db-session-telemetry]
+  public queryTelemetry(projectName: string, limit: number = 10): SessionTelemetryData[] {
+    const db = this.getConnection();
+    const rows = db.prepare(`
+      SELECT * FROM session_telemetry
+      WHERE project_name = ?
+      ORDER BY captured_at DESC
+      LIMIT ?
+    `).all(projectName, limit) as SessionTelemetryRow[];
+
+    return rows.map(row => ({
+      id: row.id,
+      projectName: row.project_name,
+      conversationId: row.conversation_id,
+      modelUsed: row.model_used || undefined,
+      workflow: row.workflow || undefined,
+      toolCallsTotal: row.tool_calls_total,
+      toolCallsBreakdown: row.tool_calls_breakdown ? JSON.parse(row.tool_calls_breakdown) : {},
+      filesReadCount: row.files_read_count,
+      filesReadList: row.files_read_list ? JSON.parse(row.files_read_list) : [],
+      filesChangedCount: row.files_changed_count,
+      filesChangedList: row.files_changed_list ? JSON.parse(row.files_changed_list) : [],
+      tokenEstimateInput: row.token_estimate_input,
+      tokenEstimateOutput: row.token_estimate_output,
+      frictionCount: row.friction_count,
+      frictionDetails: row.friction_details ? JSON.parse(row.friction_details) : [],
+      durationSeconds: row.duration_seconds !== null ? row.duration_seconds : undefined,
+      capturedAt: row.captured_at
+    }));
   }
 
   public close(): void {
