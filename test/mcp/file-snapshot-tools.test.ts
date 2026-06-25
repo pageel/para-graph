@@ -96,10 +96,17 @@ describe('MCP Tools: project_snapshot', () => {
     const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
 
     // Mock auditJunk module
-    const auditJunkSpy = vi.spyOn(junkAuditor, 'auditJunk').mockReturnValue([
-      'junk-file-1.tmp',
-      'junk-file-2.log'
-    ]);
+    const auditJunkSpy = vi.spyOn(junkAuditor, 'auditJunk').mockReturnValue({
+      classified: {
+        safe: ['junk-file-1.tmp'],
+        prompt: ['junk-file-2.log'],
+        report: []
+      },
+      totalFiles: 2,
+      totalSize: 100,
+      profileUsed: 'default',
+      autoDetected: true
+    });
 
     const result = await snapshotHandler({ 
       projectName: 'test-project',
@@ -113,7 +120,7 @@ describe('MCP Tools: project_snapshot', () => {
     expect(content.junkFiles.length).toBe(2);
     expect(auditJunkSpy).toHaveBeenCalledWith(
       '/workspace/Projects/test-project',
-      expect.any(Array)
+      expect.any(Object)
     );
 
     vi.restoreAllMocks();

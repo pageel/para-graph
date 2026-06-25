@@ -56,6 +56,8 @@ const HARDCODED_DEFAULT: JunkProfile = {
 };
 
 // @para-doc [#csa-junk-gov-profile-loader]
+// @para-doc [#csa-junk-gov-test-profile-loader]
+// @para-doc [#csa-junk-gov-test-integration]
 export function loadJunkProfile(rootDir: string, profileName?: string): JunkProfile {
   const templatesDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../templates/junk-profiles');
 
@@ -136,6 +138,7 @@ export function loadJunkProfile(rootDir: string, profileName?: string): JunkProf
 }
 
 // @para-doc [#csa-junk-gov-config-merger]
+// @para-doc [#csa-junk-gov-merge-strategy]
 export function mergeJunkConfig(
   profile: JunkProfile,
   projectConfig: ProjectJunkConfig | undefined,

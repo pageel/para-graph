@@ -1,0 +1,16 @@
+{
+  "name": "default",
+  "detect": [],
+  "allowlist": [
+    "package.json", "package-lock.json",
+    "tsconfig.json", "tsconfig.build.json",
+    ".gitignore", "tool.manifest.yml",
+    "install-hooks.sh", "project.md",
+    "README.md", "LICENSE", "CHANGELOG.md"
+  ],
+  "tiers": {
+    "safe": ["*.log"],
+    "prompt": ["*.tar.gz", "*.tgz"],
+    "report": []
+  }
+}

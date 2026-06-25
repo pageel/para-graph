@@ -31,6 +31,7 @@ import { TelemetryAnalyzer } from '../graph/store/telemetry-analyzer.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
 import { findFuzzyMatch } from '../utils/fuzzy-match.js';
 import * as junkAuditor from '../utils/junk-auditor.js';
+import { loadJunkProfile, mergeJunkConfig, ProjectJunkConfig } from '../utils/junk-profile-loader.js';
 import { parseProjectFile, parseBacklogFile, parseSprintFile } from '../utils/project-parser.js';
 import { fuseRankedLists } from '../graph/query/index.js';
 
@@ -662,6 +663,76 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     return config;
   }
 
+  function readJunkConfig(projectMdPath: string): ProjectJunkConfig | undefined {
+    if (!existsSync(projectMdPath)) return undefined;
+    try {
+      const content = readFileSync(projectMdPath, 'utf8');
+      const parts = content.split('---');
+      if (parts.length < 3) return undefined;
+      const frontmatter = parts[1];
+
+      const junkIndex = frontmatter.indexOf('junk:');
+      if (junkIndex === -1) return undefined;
+
+      const junkLines = frontmatter.slice(junkIndex).split(/\r?\n/);
+      const config: ProjectJunkConfig = {};
+      let currentField: 'allowlist' | 'safe' | 'prompt' | undefined = undefined;
+
+      for (let i = 1; i < junkLines.length; i++) {
+        const line = junkLines[i];
+        if (line.trim().length > 0 && !/^\s/.test(line)) {
+          break; // Exited the indented junk block
+        }
+        
+        const trimmed = line.trim();
+        if (trimmed.length === 0 || trimmed.startsWith('#')) continue;
+
+        if (trimmed.startsWith('-')) {
+          const item = trimmed.slice(1).trim().replace(/^['"]|['"]$/g, '');
+          if (currentField === 'allowlist') {
+            if (!config.extra_allowlist) config.extra_allowlist = [];
+            config.extra_allowlist.push(item);
+          } else if (currentField === 'safe') {
+            if (!config.extra_safe) config.extra_safe = [];
+            config.extra_safe.push(item);
+          } else if (currentField === 'prompt') {
+            if (!config.extra_prompt) config.extra_prompt = [];
+            config.extra_prompt.push(item);
+          }
+          continue;
+        }
+
+        const match = trimmed.match(/^([a-z_]+):\s*(.*)$/);
+        if (match) {
+          const key = match[1];
+          const val = match[2].trim().replace(/^['"]|['"]$/g, '');
+
+          if (key === 'profile') {
+            config.profile = val;
+            currentField = undefined;
+          } else if (key === 'auto_clean') {
+            config.auto_clean = val === 'true';
+            currentField = undefined;
+          } else if (key === 'clean_scope') {
+            config.clean_scope = val;
+            currentField = undefined;
+          } else if (key === 'extra_allowlist') {
+            currentField = 'allowlist';
+          } else if (key === 'extra_safe') {
+            currentField = 'safe';
+          } else if (key === 'extra_prompt') {
+            currentField = 'prompt';
+          } else {
+            currentField = undefined;
+          }
+        }
+      }
+      return config;
+    } catch {
+      return undefined;
+    }
+  }
+
   // --- graph_audit_csa: Run CSA compliance audit ---
   // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
   // @para-doc [docs/strategy/strategy-csa.md#csa-tiered-gate]
@@ -805,6 +876,9 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
   // --- project_snapshot: Take a project file structure snapshot and verify protected files ---
   // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-project-snapshot]
+  // @para-doc [#csa-junk-gov-snapshot-update]
+  // @para-doc [#csa-junk-gov-backward-compat]
+  // @para-doc [#csa-junk-gov-first-run]
   server.tool(
     'project_snapshot',
     'Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files',
@@ -872,30 +946,66 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         }
 
         let junkFiles: string[] = [];
+        let junkReport: any = undefined;
+
         if (auditJunk) {
-          const defaultAllowlist = [
-            'package.json',
-            'package-lock.json',
-            'tsconfig.json',
-            'tsconfig.build.json',
-            '.gitignore',
-            'tool.manifest.yml',
-            'install-hooks.sh',
-            'project.md',
-            '^src\\/.*$',
-            '^test\\/.*$',
-            '^docs\\/.*$',
-            '^artifacts\\/.*$',
-            '^.agents\\/.*$',
-            '^.beads\\/.*$',
-            '^sessions\\/.*$',
-            'README.md',
-            'LICENSE',
-            'CHANGELOG.md'
-          ];
-          junkFiles = junkAuditor.auditJunk(rootDir, defaultAllowlist);
-          for (const junk of junkFiles) {
-            warnings.push(`[JUNK] Untracked/ignored file detected: ${junk}`);
+          try {
+            const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
+            const projectConfig = readJunkConfig(projectMdPath);
+            const profile = loadJunkProfile(rootDir, projectConfig?.profile);
+            const isAuto = !projectConfig?.profile || projectConfig?.profile === 'auto';
+            const mergedConfig = mergeJunkConfig(
+              profile,
+              projectConfig,
+              profile.name,
+              isAuto
+            );
+
+            const auditResult = junkAuditor.auditJunk(rootDir, mergedConfig);
+            junkFiles = [
+              ...auditResult.classified.safe,
+              ...auditResult.classified.prompt,
+              ...auditResult.classified.report
+            ];
+
+            for (const junk of junkFiles) {
+              warnings.push(`[JUNK] Untracked/ignored file detected: ${junk}`);
+            }
+
+            junkReport = {
+              profileUsed: auditResult.profileUsed,
+              autoDetected: auditResult.autoDetected,
+              safe: auditResult.classified.safe,
+              prompt: auditResult.classified.prompt,
+              report: auditResult.classified.report,
+              totalSize: auditResult.totalSize,
+              cleanScope: mergedConfig.cleanScope,
+              autoClean: mergedConfig.autoClean
+            };
+
+            if (!projectConfig) {
+              junkReport.suggestion = {
+                message: `No junk config in project.md. Detected stack: ${profile.name}.`,
+                recommendedConfig: {
+                  junk: {
+                    auto_clean: true,
+                    clean_scope: 'safe'
+                  }
+                }
+              };
+            }
+          } catch (err: any) {
+            try { dbManager.close(); } catch {}
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  success: false,
+                  error: `Junk audit failure: ${err.message}`
+                }, null, 2)
+              }],
+              isError: true
+            };
           }
         }
 
@@ -911,7 +1021,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
               totalFiles: filesToInsert.length,
               totalSize: filesToInsert.reduce((sum, f) => sum + f.size, 0),
               warnings,
-              ...(auditJunk ? { junkFiles } : {})
+              ...(auditJunk ? { junkFiles, junkReport } : {})
             }, null, 2)
           }],
         };

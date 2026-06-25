@@ -1,0 +1,17 @@
+{
+  "name": "php",
+  "detect": ["composer.json"],
+  "allowlist": [
+    "vendor/", "composer.json", "composer.lock",
+    "phpunit.xml", "phpunit.xml.dist", ".php-cs-fixer.php",
+    "artisan", "wp-config.php",
+    ".gitignore", "README.md", "LICENSE", "CHANGELOG.md"
+  ],
+  "tiers": {
+    "safe": [
+      "*.log", ".phpunit.result.cache"
+    ],
+    "prompt": ["*.tar.gz", "*.zip"],
+    "report": []
+  }
+}

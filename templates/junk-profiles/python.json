@@ -1,0 +1,22 @@
+{
+  "name": "python",
+  "detect": ["pyproject.toml"],
+  "allowlist": [
+    ".venv/", "__pycache__/", "dist/",
+    "pyproject.toml", "setup.py", "setup.cfg",
+    "requirements.txt", "requirements-dev.txt",
+    ".gitignore", "Makefile",
+    "README.md", "LICENSE", "CHANGELOG.md",
+    "pytest.ini", "tox.ini", ".flake8",
+    "mypy.ini", ".pre-commit-config.yaml"
+  ],
+  "tiers": {
+    "safe": [
+      "*.pyc", "*.pyo", "*.egg-info/",
+      "__pycache__/", ".pytest_cache/", ".mypy_cache/",
+      "htmlcov/", "*.log"
+    ],
+    "prompt": ["*.whl", "*.tar.gz", "*.egg"],
+    "report": []
+  }
+}

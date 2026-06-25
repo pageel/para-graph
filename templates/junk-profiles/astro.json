@@ -1,0 +1,18 @@
+{
+  "name": "astro",
+  "detect": ["astro.config.mjs"],
+  "allowlist": [
+    "node_modules/", "dist/", ".astro/",
+    "package.json", "package-lock.json",
+    "tsconfig.json", ".gitignore",
+    "README.md", "LICENSE", "CHANGELOG.md",
+    "astro.config.mjs", "astro.config.ts",
+    "tailwind.config.mjs", "tailwind.config.js",
+    "postcss.config.cjs", "postcss.config.mjs"
+  ],
+  "tiers": {
+    "safe": [".wrangler/state/", "*.log"],
+    "prompt": [".wrangler/tmp/", "*.tar.gz"],
+    "report": []
+  }
+}

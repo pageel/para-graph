@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, rmSync, existsSync, writeFileSync, renameSync } from 'node:fs';
+import { mkdirSync, rmSync, existsSync, writeFileSync, renameSync, readdirSync, readFileSync } from 'node:fs';
 import { loadJunkProfile, mergeJunkConfig } from '../src/utils/junk-profile-loader.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -73,6 +73,7 @@ describe('Junk Profile Loader & Config Merger Tests', () => {
     }
   });
 
+  // @para-doc [#csa-junk-gov-test-profile-loader]
   describe('loadJunkProfile() auto-detection and loading', () => {
     it('should auto-detect typescript-node profile when package.json and tsconfig.json exist', () => {
       const projectDir = join(TEST_DIR, 'ts-node-project');
@@ -236,4 +237,29 @@ describe('Junk Profile Loader & Config Merger Tests', () => {
       expect(merged.autoDetected).toBe(false);
     });
   });
+
+  // @para-doc [#csa-junk-gov-test-integration]
+  describe('JSON Profile Templates Validation', () => {
+    it('should validate all real JSON profiles against JunkProfile schema', () => {
+      const targetDir = existsSync(TEMPLATES_BACKUP) ? TEMPLATES_BACKUP : TEMPLATES_DIR;
+      const files = readdirSync(targetDir);
+      
+      const jsonFiles = files.filter(f => f.endsWith('.json'));
+      expect(jsonFiles.length).toBe(6); // default, typescript-node, astro, cloudflare-workers, python, php
+      
+      for (const file of jsonFiles) {
+        const content = readFileSync(join(targetDir, file), 'utf8');
+        const profile = JSON.parse(content);
+        
+        expect(profile.name).toBeTypeOf('string');
+        expect(profile.detect).toBeInstanceOf(Array);
+        expect(profile.allowlist).toBeInstanceOf(Array);
+        expect(profile.tiers).toBeTypeOf('object');
+        expect(profile.tiers.safe).toBeInstanceOf(Array);
+        expect(profile.tiers.prompt).toBeInstanceOf(Array);
+        expect(profile.tiers.report).toBeInstanceOf(Array);
+      }
+    });
+  });
 });
+

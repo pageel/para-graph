@@ -33,6 +33,7 @@ function compilePatterns(patterns: string[]) {
 }
 
 // @para-doc [#csa-junk-gov-tier-classifier]
+// @para-doc [#csa-junk-gov-test-auditor]
 export function classifyJunkFiles(files: string[], config: MergedJunkConfig): ClassifiedJunk {
   const result: ClassifiedJunk = {
     safe: [],
@@ -66,6 +67,7 @@ export function classifyJunkFiles(files: string[], config: MergedJunkConfig): Cl
 }
 
 // @para-doc [#csa-junk-gov-audit-signature]
+// @para-doc [#csa-junk-auditor]
 export function auditJunk(repoPath: string, config: MergedJunkConfig): AuditJunkResult {
   // Pre-flight check: Verify if it is a git repository by checking for .git directory
   if (!fs.existsSync(join(repoPath, '.git'))) {

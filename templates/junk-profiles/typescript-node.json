@@ -1,0 +1,24 @@
+{
+  "name": "typescript-node",
+  "detect": ["package.json", "tsconfig.json"],
+  "allowlist": [
+    "node_modules/", "dist/", "build/", "coverage/",
+    "package.json", "package-lock.json",
+    "tsconfig.json", "tsconfig.build.json",
+    ".gitignore", ".npmrc", ".nvmrc",
+    "tool.manifest.yml", "install-hooks.sh",
+    "README.md", "LICENSE", "CHANGELOG.md",
+    "vitest.config.ts", "vitest.config.js",
+    "jest.config.ts", "jest.config.js",
+    ".eslintrc.json", ".eslintrc.js",
+    ".prettierrc", ".prettierrc.json"
+  ],
+  "tiers": {
+    "safe": [
+      "Projects/", ".beads/", "output/", "artifacts/",
+      "*.log", "*.db"
+    ],
+    "prompt": ["*.tar.gz", "*.tgz", "coverage/"],
+    "report": []
+  }
+}

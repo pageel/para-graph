@@ -10,6 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const TEST_DIR = resolve(__dirname, '.test-output', 'junk-auditor');
 
+// @para-doc [#csa-junk-gov-test-auditor]
 describe('Junk Auditor Tests', () => {
   beforeEach(() => {
     if (existsSync(TEST_DIR)) {
@@ -217,7 +218,9 @@ describe('Junk Auditor Tests', () => {
           report: []
         },
         autoClean: false,
-        cleanScope: 'safe'
+        cleanScope: 'safe',
+        profileUsed: 'default',
+        autoDetected: false
       };
 
       const files = [
@@ -245,7 +248,9 @@ describe('Junk Auditor Tests', () => {
         allowlist: [],
         tiers: { safe: ['*.log'], prompt: [], report: [] },
         autoClean: false,
-        cleanScope: 'safe'
+        cleanScope: 'safe',
+        profileUsed: 'default',
+        autoDetected: false
       };
       const result = classifyJunkFiles([], config);
       expect(result.safe).toEqual([]);
@@ -262,7 +267,9 @@ describe('Junk Auditor Tests', () => {
           report: []
         },
         autoClean: false,
-        cleanScope: 'safe'
+        cleanScope: 'safe',
+        profileUsed: 'default',
+        autoDetected: false
       };
 
       const result = classifyJunkFiles(['logs/archive.tar.gz'], config);
