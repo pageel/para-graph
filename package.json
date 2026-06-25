@@ -47,6 +47,7 @@
     "@types/better-sqlite3": "^7.6.12",
     "@types/fast-levenshtein": "^0.0.4",
     "@types/node": "^25.6.0",
+    "@types/picomatch": "^4.0.3",
     "better-sqlite3": "^12.10.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3",
@@ -55,6 +56,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "fast-levenshtein": "^3.0.0",
+    "picomatch": "^4.0.4",
     "tree-sitter": "^0.21.1",
     "tree-sitter-bash": "^0.21.0",
     "tree-sitter-go": "^0.21.0",

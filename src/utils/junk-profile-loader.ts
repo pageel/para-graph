@@ -34,6 +34,8 @@ export interface MergedJunkConfig {
   };
   autoClean: boolean;
   cleanScope: string;
+  profileUsed: string;
+  autoDetected: boolean;
 }
 
 const HARDCODED_DEFAULT: JunkProfile = {
@@ -134,7 +136,12 @@ export function loadJunkProfile(rootDir: string, profileName?: string): JunkProf
 }
 
 // @para-doc [#csa-junk-gov-config-merger]
-export function mergeJunkConfig(profile: JunkProfile, projectConfig: ProjectJunkConfig | undefined): MergedJunkConfig {
+export function mergeJunkConfig(
+  profile: JunkProfile,
+  projectConfig: ProjectJunkConfig | undefined,
+  profileUsed: string,
+  autoDetected: boolean
+): MergedJunkConfig {
   const extraAllowlist = projectConfig?.extra_allowlist ?? [];
   const extraSafe = projectConfig?.extra_safe ?? [];
   const extraPrompt = projectConfig?.extra_prompt ?? [];
@@ -149,6 +156,8 @@ export function mergeJunkConfig(profile: JunkProfile, projectConfig: ProjectJunk
       report: [...(profile.tiers.report ?? [])]
     },
     autoClean,
-    cleanScope
+    cleanScope,
+    profileUsed,
+    autoDetected
   };
 }

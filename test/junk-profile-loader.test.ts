@@ -189,10 +189,12 @@ describe('Junk Profile Loader & Config Merger Tests', () => {
         clean_scope: 'prompt'
       };
 
-      const merged = mergeJunkConfig(profile, projectConfig);
+      const merged = mergeJunkConfig(profile, projectConfig, 'test-profile', false);
       expect(merged.allowlist).toEqual(['a.txt', 'b.txt', 'c.txt', 'd.txt']);
       expect(merged.autoClean).toBe(true);
       expect(merged.cleanScope).toBe('prompt');
+      expect(merged.profileUsed).toBe('test-profile');
+      expect(merged.autoDetected).toBe(false);
     });
 
     it('should merge extra_safe and extra_prompt tiers additively', () => {
@@ -208,10 +210,12 @@ describe('Junk Profile Loader & Config Merger Tests', () => {
         extra_prompt: ['p2']
       };
 
-      const merged = mergeJunkConfig(profile, projectConfig);
+      const merged = mergeJunkConfig(profile, projectConfig, 'test-profile', false);
       expect(merged.tiers.safe).toEqual(['s1', 's2']);
       expect(merged.tiers.prompt).toEqual(['p1', 'p2']);
       expect(merged.tiers.report).toEqual(['r1']);
+      expect(merged.profileUsed).toBe('test-profile');
+      expect(merged.autoDetected).toBe(false);
     });
 
     it('should keep profile defaults untouched when projectConfig is undefined', () => {
@@ -222,12 +226,14 @@ describe('Junk Profile Loader & Config Merger Tests', () => {
         tiers: { safe: ['s1'], prompt: ['p1'], report: ['r1'] }
       };
 
-      const merged = mergeJunkConfig(profile, undefined);
+      const merged = mergeJunkConfig(profile, undefined, 'test-profile', false);
       expect(merged.allowlist).toEqual(['a.txt']);
       expect(merged.tiers.safe).toEqual(['s1']);
       expect(merged.tiers.prompt).toEqual(['p1']);
       expect(merged.autoClean).toBe(false);
       expect(merged.cleanScope).toBe('safe');
+      expect(merged.profileUsed).toBe('test-profile');
+      expect(merged.autoDetected).toBe(false);
     });
   });
 });

@@ -1,21 +1,81 @@
 import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import fs from 'node:fs';
 import { join } from 'node:path';
+import picomatch from 'picomatch';
+import { MergedJunkConfig } from './junk-profile-loader.js';
 
-/**
- * Audit directory for junk files (untracked or ignored) using Git CLI.
- * Gracefully handles non-git folders and executes without a shell wrapper
- * to prevent shell injection vulnerabilities.
- *
- * @param repoPath - Absolute path to the repository directory
- * @param allowlist - List of allowed files or regex patterns
- * @returns List of identified junk file paths relative to repoPath
- */
-// @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-junk-auditor]
-export function auditJunk(repoPath: string, allowlist: string[]): string[] {
+export interface ClassifiedJunk {
+  safe: string[];
+  prompt: string[];
+  report: string[];
+}
+
+export interface AuditJunkResult {
+  classified: ClassifiedJunk;
+  totalFiles: number;
+  totalSize: number;
+  profileUsed: string;
+  autoDetected: boolean;
+}
+
+function compilePatterns(patterns: string[]) {
+  if (patterns.length === 0) {
+    return () => false;
+  }
+  const matchers = patterns.map(p => {
+    const hasSlash = p.includes('/');
+    return picomatch(p, { dot: true, matchBase: !hasSlash });
+  });
+  return (file: string) => {
+    const normalized = file.replace(/\\/g, '/');
+    return matchers.some(m => m(normalized));
+  };
+}
+
+// @para-doc [#csa-junk-gov-tier-classifier]
+export function classifyJunkFiles(files: string[], config: MergedJunkConfig): ClassifiedJunk {
+  const result: ClassifiedJunk = {
+    safe: [],
+    prompt: [],
+    report: []
+  };
+
+  const safePatterns = config.tiers?.safe?.filter(p => p.trim().length > 0) ?? [];
+  const promptPatterns = config.tiers?.prompt?.filter(p => p.trim().length > 0) ?? [];
+  const reportPatterns = config.tiers?.report?.filter(p => p.trim().length > 0) ?? [];
+
+  const isSafe = compilePatterns(safePatterns);
+  const isPrompt = compilePatterns(promptPatterns);
+  const isReport = compilePatterns(reportPatterns);
+
+  for (const file of files) {
+    // Rule: prioritize prompt over safe (fail-safe wins)
+    if (isPrompt(file)) {
+      result.prompt.push(file);
+    } else if (isSafe(file)) {
+      result.safe.push(file);
+    } else if (isReport(file)) {
+      result.report.push(file);
+    } else {
+      // Default to report (Tier 3) for unknowns
+      result.report.push(file);
+    }
+  }
+
+  return result;
+}
+
+// @para-doc [#csa-junk-gov-audit-signature]
+export function auditJunk(repoPath: string, config: MergedJunkConfig): AuditJunkResult {
   // Pre-flight check: Verify if it is a git repository by checking for .git directory
-  if (!existsSync(join(repoPath, '.git'))) {
-    return [];
+  if (!fs.existsSync(join(repoPath, '.git'))) {
+    return {
+      classified: { safe: [], prompt: [], report: [] },
+      totalFiles: 0,
+      totalSize: 0,
+      profileUsed: config.profileUsed,
+      autoDetected: config.autoDetected
+    };
   }
 
   try {
@@ -47,15 +107,15 @@ export function auditJunk(repoPath: string, allowlist: string[]): string[] {
     const filesUntracked = stdoutUntracked.split(/\r?\n/).filter(line => line.trim().length > 0);
     const filesIgnored = stdoutIgnored.split(/\r?\n/).filter(line => line.trim().length > 0);
 
-    // Combine both list and remove duplicates
+    // Combine both lists and remove duplicates
     const allFiles = Array.from(new Set([...filesUntracked, ...filesIgnored]));
 
-    return allFiles.filter(file => {
-      // Normalize Windows backslashes to forward slashes
+    // Exclude allowed files before classification (allowlist priority)
+    const junkFiles = allFiles.filter(file => {
       const normalizedPath = file.replace(/\\/g, '/');
 
       // Check if file matches any pattern in the allowlist
-      const isAllowed = allowlist.some(pattern => {
+      const isAllowed = config.allowlist.some(pattern => {
         try {
           // If the pattern contains regex metadata, evaluate as regex
           if (
@@ -73,8 +133,39 @@ export function auditJunk(repoPath: string, allowlist: string[]): string[] {
 
       return !isAllowed;
     });
+
+    // Classify remaining junk files
+    const classified = classifyJunkFiles(junkFiles, config);
+
+    // Calculate total size safely (error-handled statSync)
+    let totalSize = 0;
+    for (const file of junkFiles) {
+      try {
+        const filePath = join(repoPath, file);
+        if (fs.existsSync(filePath)) {
+          const stat = fs.statSync(filePath);
+          totalSize += stat.size;
+        }
+      } catch {
+        // Safe fallback on error, size is treated as 0
+      }
+    }
+
+    return {
+      classified,
+      totalFiles: junkFiles.length,
+      totalSize,
+      profileUsed: config.profileUsed,
+      autoDetected: config.autoDetected
+    };
   } catch (error) {
     // Gracefully fallback on git command failure
-    return [];
+    return {
+      classified: { safe: [], prompt: [], report: [] },
+      totalFiles: 0,
+      totalSize: 0,
+      profileUsed: config.profileUsed,
+      autoDetected: config.autoDetected
+    };
   }
 }
