@@ -335,6 +335,33 @@ export class SqliteManager {
       )
     `);
 
+    // Session telemetry table (v0.17.6)
+    // @para-doc [#csa-db-session-telemetry]
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS session_telemetry (
+        id TEXT PRIMARY KEY,
+        project_name TEXT NOT NULL,
+        conversation_id TEXT NOT NULL,
+        model_used TEXT,
+        workflow TEXT,
+        tool_calls_total INTEGER DEFAULT 0,
+        tool_calls_breakdown TEXT,         -- JSON Object: {"view_file": 12}
+        files_read_count INTEGER DEFAULT 0,
+        files_read_list TEXT,              -- JSON Array: ["src/cli.ts"]
+        files_changed_count INTEGER DEFAULT 0,
+        files_changed_list TEXT,           -- JSON Array: ["package.json"]
+        token_estimate_input INTEGER DEFAULT 0,
+        token_estimate_output INTEGER DEFAULT 0,
+        friction_count INTEGER DEFAULT 0,
+        friction_details TEXT,             -- JSON Array: [{"type": "build_error"}]
+        duration_seconds INTEGER,
+        captured_at INTEGER NOT NULL
+      )
+    `);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_st_project ON session_telemetry(project_name)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_st_workflow ON session_telemetry(workflow)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_st_captured ON session_telemetry(captured_at)`);
+
     // Migration for older database instances
     try {
       db.exec(`ALTER TABLE project_state ADD COLUMN project_hash TEXT DEFAULT NULL;`);

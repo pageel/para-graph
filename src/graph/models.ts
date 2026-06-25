@@ -389,7 +389,56 @@ export interface CsaConfig {
   specThreshold: number;     // e.g. 90 (Hard Gate)
   docThreshold: number;      // e.g. 50 (Soft Gate)
   docGate: 'soft' | 'hard' | 'off'; // default: 'soft'
+  doubleBinding?: boolean;   // default: true. If false, skips double-binding check.
   calibration?: CsaCalibration;
+}
+
+// --- Session Telemetry Types (v0.17.6) ---
+
+// @para-doc [#csa-db-session-telemetry]
+export interface SessionTelemetryData {
+  id: string;
+  projectName: string;
+  conversationId: string;
+  modelUsed?: string;
+  workflow?: string;
+  toolCallsTotal: number;
+  toolCallsBreakdown: Record<string, number>;
+  filesReadCount: number;
+  filesReadList: string[];
+  filesChangedCount: number;
+  filesChangedList: string[];
+  tokenEstimateInput: number;
+  tokenEstimateOutput: number;
+  frictionCount: number;
+  frictionDetails: Array<{
+    type: string;
+    message: string;
+    timestamp: number;
+  }>;
+  durationSeconds?: number;
+  capturedAt: number;
+}
+
+// @para-doc [#csa-db-session-telemetry]
+export interface SessionTelemetryRow {
+  id: string;
+  project_name: string;
+  conversation_id: string;
+  model_used?: string;
+  workflow?: string;
+  tool_calls_total: number;
+  tool_calls_breakdown: string; // JSON string of Record<string, number>
+  files_read_count: number;
+  files_read_list: string; // JSON string of string[]
+  files_changed_count: number;
+  files_changed_list: string; // JSON string of string[]
+  token_estimate_input: number;
+  token_estimate_output: number;
+  friction_count: number;
+  friction_details: string; // JSON string of friction detail objects
+  duration_seconds?: number;
+  captured_at: number;
 }
 
 /** Details about coverage within a single tier (Spec or Doc) */
