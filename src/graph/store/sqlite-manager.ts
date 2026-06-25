@@ -14,6 +14,7 @@ export interface CsaAuditResult {
     docThreshold: number;
     docGate: 'soft' | 'hard' | 'off';
     calibration?: any;
+    doubleBinding?: boolean;
   };
   specCoverage: {
     totalAnchors: number;
@@ -58,6 +59,7 @@ export class SqliteManager {
   }
 
   // @para-doc [docs/references/sqlite-schema.md#csa-sqlite-schema]
+  // @para-doc [#csa-test-schema]
   public initSchema(): void {
     const db = this.getConnection();
 
@@ -446,6 +448,7 @@ export class SqliteManager {
     const specThreshold = config?.specThreshold ?? 90;
     const docThreshold = config?.docThreshold ?? 50;
     const docGate = config?.docGate ?? 'soft';
+    const doubleBinding = config?.doubleBinding ?? true;
     
     // Calibration config defaults
     const calibration = config?.calibration || {};
@@ -547,10 +550,15 @@ export class SqliteManager {
       const weight = getAnchorWeight(row.id);
       totalSpecWeight += weight;
 
-      const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
-      if (res && res.count > 0) {
+      if (!doubleBinding) {
         coveredSpecCount++;
         coveredSpecWeight += weight;
+      } else {
+        const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
+        if (res && res.count > 0) {
+          coveredSpecCount++;
+          coveredSpecWeight += weight;
+        }
       }
     }
 
@@ -563,10 +571,15 @@ export class SqliteManager {
         const weight = getAnchorWeight(row.id);
         totalDocWeight += weight;
 
-        const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
-        if (res && res.count > 0) {
+        if (!doubleBinding) {
           coveredDocCount++;
           coveredDocWeight += weight;
+        } else {
+          const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
+          if (res && res.count > 0) {
+            coveredDocCount++;
+            coveredDocWeight += weight;
+          }
         }
       }
     }
@@ -621,7 +634,8 @@ export class SqliteManager {
         specThreshold,
         docThreshold,
         docGate,
-        calibration
+        calibration,
+        doubleBinding
       },
       specCoverage: {
         totalAnchors: totalSpecAnchorsCount,
@@ -797,6 +811,7 @@ export class SqliteManager {
   }
 
   // @para-doc [#csa-db-session-telemetry]
+  // @para-doc [#csa-test-push]
   public pushTelemetry(data: SessionTelemetryData): void {
     const db = this.getConnection();
     const stmt = db.prepare(`
@@ -833,6 +848,7 @@ export class SqliteManager {
   }
 
   // @para-doc [#csa-db-session-telemetry]
+  // @para-doc [#csa-test-query-trends]
   public queryTelemetry(projectName: string, limit: number = 10): SessionTelemetryData[] {
     const db = this.getConnection();
     const rows = db.prepare(`

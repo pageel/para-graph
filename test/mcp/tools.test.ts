@@ -392,3 +392,129 @@ describe('MCP Tools: graph_query (Hybrid Search)', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('MCP Tools: Telemetry API', () => {
+  // @para-doc [#csa-mcp-telemetry-push]
+  it('should push session telemetry successfully', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const pushHandler = handlers['session_telemetry_push'];
+    expect(pushHandler).toBeDefined();
+
+    const pushSpy = vi.spyOn(SqliteManager.prototype, 'pushTelemetry').mockImplementation(() => {});
+    const initSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    const mockTelemetry = {
+      id: 'telemetry-123',
+      conversationId: 'conv-123',
+      modelUsed: 'gemini-pro',
+      workflow: '/end',
+      toolCallsTotal: 5,
+      toolCallsBreakdown: { view_file: 3 },
+      filesReadCount: 1,
+      filesReadList: ['src/main.ts'],
+      filesChangedCount: 1,
+      filesChangedList: ['src/main.ts'],
+      tokenEstimateInput: 100,
+      tokenEstimateOutput: 50,
+      frictionCount: 0,
+      frictionDetails: [],
+      durationSeconds: 10
+    };
+
+    const result = await pushHandler({
+      projectName: 'test-project',
+      telemetry: mockTelemetry
+    });
+
+    const content = JSON.parse(result.content[0].text);
+    expect(content.success).toBe(true);
+    expect(pushSpy).toHaveBeenCalled();
+    expect(initSpy).toHaveBeenCalled();
+    expect(closeSpy).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  // @para-doc [#csa-mcp-telemetry-query]
+  it('should query session telemetry and return trends', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const queryHandler = handlers['session_telemetry_query'];
+    expect(queryHandler).toBeDefined();
+
+    const mockData = [
+      {
+        id: 'telemetry-1',
+        projectName: 'test-project',
+        conversationId: 'conv-123',
+        modelUsed: 'gemini-pro',
+        workflow: '/end',
+        toolCallsTotal: 10,
+        toolCallsBreakdown: { view_file: 10 },
+        filesReadCount: 1,
+        filesReadList: ['src/main.ts'],
+        filesChangedCount: 1,
+        filesChangedList: ['src/main.ts'],
+        tokenEstimateInput: 100,
+        tokenEstimateOutput: 50,
+        frictionCount: 0,
+        frictionDetails: [],
+        durationSeconds: 10,
+        capturedAt: 1000
+      },
+      {
+        id: 'telemetry-2',
+        projectName: 'test-project',
+        conversationId: 'conv-123',
+        modelUsed: 'gemini-pro',
+        workflow: '/end',
+        toolCallsTotal: 20,
+        toolCallsBreakdown: { view_file: 20 },
+        filesReadCount: 1,
+        filesReadList: ['src/main.ts'],
+        filesChangedCount: 1,
+        filesChangedList: ['src/main.ts'],
+        tokenEstimateInput: 100,
+        tokenEstimateOutput: 50,
+        frictionCount: 2,
+        frictionDetails: [],
+        durationSeconds: 10,
+        capturedAt: 2000
+      }
+    ];
+
+    const querySpy = vi.spyOn(SqliteManager.prototype, 'queryTelemetry').mockReturnValue(mockData);
+    const initSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    const result = await queryHandler({
+      projectName: 'test-project',
+      limit: 10
+    });
+
+    const content = JSON.parse(result.content[0].text);
+    expect(content.sessions).toHaveLength(2);
+    expect(content.trends).toBeDefined();
+    expect(content.trends.avgToolCalls).toBe(15);
+    expect(content.trends.avgFriction).toBe(1);
+    expect(querySpy).toHaveBeenCalled();
+    expect(initSpy).toHaveBeenCalled();
+    expect(closeSpy).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+});

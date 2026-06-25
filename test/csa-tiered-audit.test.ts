@@ -210,4 +210,32 @@ describe('Tiered CSA Audit Integration Tests', () => {
     expect(result.specCoverage.coveredAnchors).toBe(1);
     expect(result.specCoverage.coverageRate).toBe(100);
   });
+
+  it('should support doubleBinding: false configuration to skip double-binding checks', () => {
+    const mockNodes = [
+      { id: 'src/main.ts::run', name: 'run', type: NodeType.FUNCTION, filePath: 'src/main.ts', signature: 'function run() {}' },
+      { id: 'csa-spec-1', name: 'csa-spec-1', type: NodeType.SPEC_ANCHOR, filePath: 'artifacts/specs/spec.md', signature: '## Spec 1' },
+      { id: 'csa-doc-1', name: 'csa-doc-1', type: NodeType.SPEC_ANCHOR, filePath: 'docs/guide.md', signature: '## Doc 1' },
+    ];
+
+    // Persist nodes without any edges (no double-binding edges exist)
+    manager.persistGraph(mockNodes, []);
+
+    // Case A: doubleBinding = true (default) -> should fail (0% coverage)
+    const resultDefault = manager.runCsaAudit({ specThreshold: 90, docThreshold: 50, docGate: 'soft' });
+    expect(resultDefault.specCoverage.coveredAnchors).toBe(0);
+    expect(resultDefault.specCoverage.pass).toBe(false);
+    expect(resultDefault.docCoverage.coveredAnchors).toBe(0);
+    expect(resultDefault.docCoverage.pass).toBe(false);
+
+    // Case B: doubleBinding = false -> should pass (100% coverage because check is bypassed)
+    const resultBypass = manager.runCsaAudit({ specThreshold: 90, docThreshold: 50, docGate: 'soft', doubleBinding: false });
+    expect(resultBypass.config.doubleBinding).toBe(false);
+    expect(resultBypass.specCoverage.coveredAnchors).toBe(1);
+    expect(resultBypass.specCoverage.coverageRate).toBe(100);
+    expect(resultBypass.specCoverage.pass).toBe(true);
+    expect(resultBypass.docCoverage.coveredAnchors).toBe(1);
+    expect(resultBypass.docCoverage.coverageRate).toBe(100);
+    expect(resultBypass.docCoverage.pass).toBe(true);
+  });
 });

@@ -19,7 +19,7 @@ import * as os from 'node:os';
 import { z } from 'zod';
 import { scanDirectory } from '../utils/file-scanner.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight, CsaConfig } from '../graph/models.js';
+import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight, CsaConfig, SessionTelemetryData } from '../graph/models.js';
 import { EdgeRelation } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
@@ -27,6 +27,7 @@ import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.j
 import { appendEnrichmentLog } from '../graph/logger.js';
 import { CurationWorker } from '../graph/curation-worker.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
+import { TelemetryAnalyzer } from '../graph/store/telemetry-analyzer.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
 import { findFuzzyMatch } from '../utils/fuzzy-match.js';
 import * as junkAuditor from '../utils/junk-auditor.js';
@@ -654,6 +655,9 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
       const gateMatch = content.match(/doc_gate:\s*['"]?(soft|hard|off)['"]?/);
       if (gateMatch) config.docGate = gateMatch[1] as 'soft' | 'hard' | 'off';
+
+      const doubleBindingMatch = content.match(/double_binding:\s*(true|false)/);
+      if (doubleBindingMatch) config.doubleBinding = doubleBindingMatch[1] === 'true';
     } catch {}
     return config;
   }
@@ -1295,6 +1299,138 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
             text: JSON.stringify({
               success: true,
               state: newState
+            }, null, 2)
+          }]
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- session_telemetry_push: Push session telemetry data to SQLite ---
+  // @para-doc [#csa-mcp-telemetry-push]
+  server.tool(
+    'session_telemetry_push',
+    'Push session telemetry data to local SQLite database.',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      telemetry: z.object({
+        id: z.string().describe('Telemetry session ID'),
+        conversationId: z.string().describe('IDE conversation ID'),
+        modelUsed: z.string().optional().describe('AI model used'),
+        workflow: z.string().optional().describe('Active workflow'),
+        toolCallsTotal: z.number().describe('Total number of tool calls'),
+        toolCallsBreakdown: z.record(z.string(), z.number()).describe('Frequency count of each tool called'),
+        filesReadCount: z.number().describe('Total files read'),
+        filesReadList: z.array(z.string()).describe('List of files read'),
+        filesChangedCount: z.number().describe('Total files modified'),
+        filesChangedList: z.array(z.string()).describe('List of files modified'),
+        tokenEstimateInput: z.number().describe('Estimated input tokens'),
+        tokenEstimateOutput: z.number().describe('Estimated output tokens'),
+        frictionCount: z.number().describe('Total friction events encountered'),
+        frictionDetails: z.array(
+          z.object({
+            type: z.string(),
+            message: z.string(),
+            timestamp: z.number(),
+          })
+        ).describe('Details of friction events'),
+        durationSeconds: z.number().optional().describe('Session duration in seconds'),
+      }),
+    },
+    async ({ projectName, telemetry }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      
+      try {
+        dbManager.initSchema();
+        
+        const data: SessionTelemetryData = {
+          ...telemetry,
+          projectName,
+          capturedAt: Date.now()
+        };
+        
+        dbManager.pushTelemetry(data);
+        dbManager.close();
+        
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({ success: true }, null, 2)
+          }]
+        };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- session_telemetry_query: Query telemetry history and analyze trends ---
+  // @para-doc [#csa-mcp-telemetry-query]
+  server.tool(
+    'session_telemetry_query',
+    'Query session telemetry data and analyze performance trends.',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      workflow: z.string().optional().describe('Optional workflow to filter by'),
+      limit: z.number().optional().describe('Maximum number of sessions to analyze (default: 10)'),
+    },
+    async ({ projectName, workflow, limit = 10 }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      
+      try {
+        dbManager.initSchema();
+        
+        const queryLimit = workflow ? 100 : limit;
+        let sessions = dbManager.queryTelemetry(projectName, queryLimit);
+        
+        if (workflow) {
+          sessions = sessions.filter(s => s.workflow === workflow);
+        }
+        
+        const limitedSessions = sessions.slice(0, limit);
+        const chronoOrderSessions = [...limitedSessions].reverse();
+        const analyzerTrends = TelemetryAnalyzer.analyzeTrends(chronoOrderSessions);
+        
+        let avgToolCalls = 0;
+        let avgTokens = 0;
+        let avgFriction = 0;
+        
+        if (limitedSessions.length > 0) {
+          const sumToolCalls = limitedSessions.reduce((sum, s) => sum + s.toolCallsTotal, 0);
+          const sumTokens = limitedSessions.reduce((sum, s) => sum + (s.tokenEstimateInput + s.tokenEstimateOutput), 0);
+          const sumFriction = limitedSessions.reduce((sum, s) => sum + s.frictionCount, 0);
+          
+          avgToolCalls = Number((sumToolCalls / limitedSessions.length).toFixed(2));
+          avgTokens = Number((sumTokens / limitedSessions.length).toFixed(2));
+          avgFriction = Number((sumFriction / limitedSessions.length).toFixed(2));
+        }
+        
+        dbManager.close();
+        
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              sessions: limitedSessions,
+              trends: {
+                avgToolCalls,
+                avgTokens,
+                avgFriction,
+                trendToolCalls: analyzerTrends.trendToolCalls,
+                trendFriction: analyzerTrends.trendFriction
+              }
             }, null, 2)
           }]
         };

@@ -24,6 +24,9 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
 
     const gateMatch = content.match(/doc_gate:\s*['"]?(soft|hard|off)['"]?/);
     if (gateMatch) config.docGate = gateMatch[1] as 'soft' | 'hard' | 'off';
+
+    const doubleBindingMatch = content.match(/double_binding:\s*(true|false)/);
+    if (doubleBindingMatch) config.doubleBinding = doubleBindingMatch[1] === 'true';
   } catch {}
   return config;
 }
