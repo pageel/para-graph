@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.6] - 2026-06-25
+
+### Added
+- **Session Telemetry DDL & Models (L4)** — Added SQLite table `session_telemetry` and indexes to store AI Agent workspace usage telemetry (model used, workflow, tool calls, files read/changed, token estimates, duration, and friction/ma sát).
+- **Session Telemetry MCP Tools** — Implemented two new MCP tools: `session_telemetry_push` (stores active session statistics) and `session_telemetry_query` (retrieves historical logs and outputs agent trend reports).
+- **Agent Trend Analyzer Algorithm** — Implemented mathematical trend calculation for tool calls and friction counts, using split-half average comparison with percentage delta thresholds (+/-10%) across historical telemetry.
+- **Double Binding Configuration Gate** — Added support for `double_binding` configuration flag (mapped from `project.md:double_binding`) to run CSA audits. If set to `false`, the compliance gate skips requiring code comment links and calculates scores based on document anchor existence alone.
+- **Dynamic HTML Renderer Resolution** — Refactored the dashboard and graph HTML renderer scripts (`render.js`) to build document-to-code traceability maps dynamically from `entities.jsonl` and `relations.jsonl` files instead of reading the deprecated `docAnchors` semantic property.
+- **Interactive Double-Binding UI Toggle** — Added a dynamic UI toggle checkbox on the Docs Quality Dashboard to turn on/off code comment verification, recalculating scores on the client side and completely hiding/showing the `Code ➔ Docs (Cmt)` column dynamically.
+
 ## [0.17.5] - 2026-06-24
 
 ### Added
