@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.6.1] - 2026-06-25
+
+### Added
+- **Profile-Driven Junk Governance** — Built profile loading, configuration merging, and pattern classification logic supporting auto-detected markers (Astro, TypeScript, CF Workers, Python, PHP) or explicit project override.
+- **Junk Classification Report** — Enhanced `project_snapshot` MCP tool to return a detailed `junkReport` dividing files into 3 safety tiers: Tier 1 (Safe to delete), Tier 2 (Prompt for confirmation), and Tier 3 (Report only), while maintaining backward compatibility with `junkFiles`.
+
+### Fixed
+- **QA Checklist & Guidelines** — Updated workspace-level QA Review Templates to enforce KI template synchronization and GitHub Release evaluation gates, avoiding knowledge and artifact distribution drift.
+
 ## [0.17.6] - 2026-06-25
 
 ### Added

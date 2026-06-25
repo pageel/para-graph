@@ -13,7 +13,7 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.17.6-brightgreen.svg" alt="Version 0.17.6">
+    <img src="https://img.shields.io/badge/version-0.17.6.1-brightgreen.svg" alt="Version 0.17.6.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -68,6 +68,7 @@ Công cụ sử dụng [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 - **Nén bối cảnh phiên làm việc (v0.17.1+)** — Tự động quét và nén các tệp quy tắc, kỹ năng, và hợp đồng dự án của phiên hoạt động, ghi tóm tắt vào `vibecode_session/artifacts/session.md` để Agent khôi phục bối cảnh.
 - **Tìm kiếm lai RRF (v0.17.1+)** — Tích hợp thuật toán Reciprocal Rank Fusion (RRF) để kết hợp kết quả khớp từ khóa FTS5 và tìm kiếm LIKE.
 - **Truy xuất bối cảnh đa nguồn (v0.17.1+)** — Hỗ trợ thu thập callers, callees, imports, tests từ nhiều node ID (multi-seed) đồng thời, tự động loại bỏ trùng lặp và tỉa theo khoảng cách tô-pô (giới hạn 20 mỗi seed, 50 toàn cục).
+- **Quản lý file rác theo Profile (v0.17.6.1+)** — Tự động nhận diện và phân loại các tệp tin rác không được theo dõi hoặc bị bỏ qua dựa trên các profile marker (Astro, TypeScript, CF Workers, Python, PHP) hoặc cấu hình dự án, chia thành 3 phân tầng an toàn để hỗ trợ dọn dẹp.
 
 <a name="bat-dau-nhanh"></a>
 ## 🚀 Bắt đầu nhanh
@@ -244,7 +245,7 @@ Sau khi kết nối, AI Agent của bạn sẽ có quyền truy cập vào các 
 - `memory_curate`: Gom cụm các sự kiện bộ nhớ thô thành các lát cắt ngữ nghĩa dựa trên phiên làm việc.
 - `graph_audit_csa`: Chạy kiểm tra tuân thủ Kiến trúc Đặc tả Đồng quy (CSA) cho dự án.
 - `graph_fix_csa`: Tự động sửa chữa các liên kết spec bị hỏng (thay thế thẻ neo spec bị trôi lệch trong mã nguồn).
-- `project_snapshot`: Chụp ảnh cấu trúc thư mục dự án, ghi nhận metadata vào SQLite, và kiểm tra các tệp tin bảo vệ. Hỗ trợ quét phát hiện file rác vật lý nếu được yêu cầu (`auditJunk: true`).
+- `project_snapshot`: Chụp ảnh cấu trúc thư mục dự án, ghi nhận metadata vào SQLite, và kiểm tra các tệp tin bảo vệ. Hỗ trợ phát hiện và phân loại file rác vật lý theo các profile hoạt động (`auditJunk: true`), trả về một mảng phẳng tương thích ngược và báo cáo chi tiết theo 3 phân tầng.
 - `project_diff`: So khớp hai bản chụp snapshot để tìm ra các file thêm mới, bị xoá, hoặc bị chỉnh sửa (phát hiện sai lệch vật lý).
 - `project_protected_files`: Liệt kê, thêm hoặc xoá các file thuộc danh sách bảo vệ của dự án.
 - `project_session_compact`: Quét rules, skills, và project contract, rồi ghi tóm tắt bối cảnh tinh gọn để Agent khôi phục.

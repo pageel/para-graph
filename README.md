@@ -13,7 +13,7 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.17.6-brightgreen.svg" alt="Version 0.17.6">
+    <img src="https://img.shields.io/badge/version-0.17.6.1-brightgreen.svg" alt="Version 0.17.6.1">
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -72,6 +72,7 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **Session Context Compaction (v0.17.1+)** — Scans and compacts active session rules, skills, and project contract, writing a summary to `vibecode_session/artifacts/session.md` for context recovery.
 - **RRF Hybrid Search Scorer (v0.17.1+)** — Integrates Reciprocal Rank Fusion (RRF) to merge FTS5 keyword results and LIKE similarity matches.
 - **Multi-seed Context Retrieval (v0.17.1+)** — Gathers comprehensive context from multiple seed node IDs with topological distance capping (20 per seed, 50 globally).
+- **Profile-Driven Junk Governance (v0.17.6.1+)** — Auto-detects and classifies untracked or ignored junk files based on profile markers (Astro, TypeScript, CF Workers, Python, PHP) or explicit configuration, categorizing them into 3 safety tiers.
 
 ## 🚀 Quick Start
 
@@ -256,7 +257,7 @@ Once connected, your AI Agent gains access to the following tools:
 - `memory_curate`: Cluster raw events into semantic slices using session-based curation.
 - `graph_audit_csa`: Run Convergent Specification Architecture (CSA) compliance audit for a project.
 - `graph_fix_csa`: Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files).
-- `project_snapshot`: Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files. Also detects untracked/ignored physical junk files if requested (`auditJunk: true`).
+- `project_snapshot`: Take a snapshot of the project directory structure, record metadata to SQLite, and verify protected files. Also detects and classifies physical junk files based on active profiles (`auditJunk: true`), returning both a backward-compatible flat list and a 3-tier safety report.
 - `project_diff`: Compare two project snapshots to identify added, removed, and modified files (physical drift detection).
 - `project_protected_files`: List, add, or remove protected files for a project.
 - `project_session_compact`: Scan rules, skills, and project contract, and write a compacted context summary for agent recovery.

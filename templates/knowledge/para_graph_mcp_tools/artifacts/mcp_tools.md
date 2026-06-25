@@ -84,8 +84,9 @@ The `para-graph` MCP server registers **23 tools** across 6 functional domains. 
 ## Domain 5: Project Safety — L2 File Structure (4 tools)
 
 ### 18. `project_snapshot`
-- **Purpose**: Take a snapshot of the project directory structure, record file tree metadata to SQLite, and verify protected files. Also detects untracked/ignored physical junk files if requested.
-- **Key Params**: `projectName`, `auditJunk?` (boolean, triggers Junk Audit scan via git CLI allowlist)
+- **Purpose**: Take a snapshot of the project directory structure, record file tree metadata to SQLite, and verify protected files. Also detects and classifies untracked/ignored physical junk files according to active project profiles and configuration.
+- **Key Params**: `projectName`, `auditJunk?` (boolean, triggers profile-driven Junk Audit scan)
+- **Note**: The response contains both a flat backward-compatible list (`junkFiles[]`) and a detailed profile-driven classification report (`junkReport`) categorized into 3 tiers: Tier 1 (Safe to auto-delete), Tier 2 (Prompt user for deletion), and Tier 3 (Report-only).
 
 ### 19. `project_diff`
 - **Purpose**: Compare two project snapshots to identify added, removed, and modified files (physical drift detection).

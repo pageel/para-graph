@@ -6,7 +6,9 @@
     "tsconfig.json", "tsconfig.build.json",
     ".gitignore", "tool.manifest.yml",
     "install-hooks.sh", "project.md",
-    "README.md", "LICENSE", "CHANGELOG.md"
+    "README.md", "LICENSE", "CHANGELOG.md",
+    ".agents/**", ".beads/**", "artifacts/**",
+    "docs/**", "sessions/**", "templates/**"
   ],
   "tiers": {
     "safe": ["*.log"],

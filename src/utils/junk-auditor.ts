@@ -116,10 +116,25 @@ export function auditJunk(repoPath: string, config: MergedJunkConfig): AuditJunk
     const junkFiles = allFiles.filter(file => {
       const normalizedPath = file.replace(/\\/g, '/');
 
-      // Check if file matches any pattern in the allowlist
       const isAllowed = config.allowlist.some(pattern => {
+        // 1. Exact match
+        if (normalizedPath === pattern) return true;
+
+        // 1.5 Directory prefix match
+        if (pattern.endsWith('/') && normalizedPath.startsWith(pattern)) return true;
+
+        // 2. Glob match (picomatch)
         try {
-          // If the pattern contains regex metadata, evaluate as regex
+          const hasSlash = pattern.includes('/');
+          if (picomatch(pattern, { dot: true, matchBase: !hasSlash })(normalizedPath)) {
+            return true;
+          }
+        } catch {
+          // Skip glob parse error
+        }
+
+        // 3. Regex match (backward compatibility)
+        try {
           if (
             pattern.startsWith('^') ||
             pattern.endsWith('$') ||
@@ -128,9 +143,10 @@ export function auditJunk(repoPath: string, config: MergedJunkConfig): AuditJunk
             return new RegExp(pattern).test(normalizedPath);
           }
         } catch {
-          // Fallback to exact match on error
+          // Skip regex syntax error
         }
-        return normalizedPath === pattern;
+
+        return false;
       });
 
       return !isAllowed;
