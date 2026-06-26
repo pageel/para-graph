@@ -18,17 +18,26 @@ export interface AuditJunkResult {
   autoDetected: boolean;
 }
 
+// @para-doc [#csa-junk-gov-tier-dir-prefix]
 function compilePatterns(patterns: string[]) {
   if (patterns.length === 0) {
     return () => false;
   }
   const matchers = patterns.map(p => {
     const hasSlash = p.includes('/');
-    return picomatch(p, { dot: true, matchBase: !hasSlash });
+    return {
+      pattern: p,
+      match: picomatch(p, { dot: true, matchBase: !hasSlash })
+    };
   });
   return (file: string) => {
     const normalized = file.replace(/\\/g, '/');
-    return matchers.some(m => m(normalized));
+    return matchers.some(m => {
+      if (m.pattern.endsWith('/') && normalized.startsWith(m.pattern)) {
+        return true;
+      }
+      return m.match(normalized);
+    });
   };
 }
 

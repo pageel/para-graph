@@ -276,6 +276,36 @@ describe('Junk Auditor Tests', () => {
       expect(result.prompt).toContain('logs/archive.tar.gz');
       expect(result.safe).not.toContain('logs/archive.tar.gz');
     });
+
+    it('should classify directory prefix patterns correctly when pattern ends with /', () => {
+      const config = {
+        allowlist: [],
+        tiers: {
+          safe: ['output/', 'Projects/'],
+          prompt: [],
+          report: []
+        },
+        autoClean: false,
+        cleanScope: 'safe' as const,
+        profileUsed: 'default',
+        autoDetected: false
+      };
+
+      const files = [
+        'output/entities.jsonl',
+        'Projects/p1/db.db',
+        'Projects/test.db',
+        'other/file.txt'
+      ];
+
+      const result = classifyJunkFiles(files, config);
+      expect(result.safe).toContain('output/entities.jsonl');
+      expect(result.safe).toContain('Projects/p1/db.db');
+      expect(result.safe).toContain('Projects/test.db');
+      expect(result.report).toContain('other/file.txt');
+      expect(result.safe.length).toBe(3);
+      expect(result.report.length).toBe(1);
+    });
   });
 });
 
