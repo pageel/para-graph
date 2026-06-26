@@ -1,9 +1,15 @@
 {
   "title": "PARA Graph Workflows & CLI Integration",
-  "summary": "CLI commands (build, serve, link, ki sync, audit csa) and their integration with PARA workflows (/para-graph, /docs, CSA plan phases). Covers doc-anchoring workflow via graph_link_docs and CSA audit gates in plan checkpoints.",
+  "summary": "CLI command integration (build, serve, inject, hooks, mem, ki sync, audit csa, fix csa, project-snapshot, project-diff) and their mapping to workspace workflows (/para-graph, /docs, and CSA audit gates). Explains deprecation of link/doc-anchoring and migration to Unified CSA double-binding.",
   "owner": "para",
   "scope": "workspace",
   "domain": "workflows",
   "purpose": "reference",
-  "references": []
+  "version": "1.1",
+  "para_version": "0.17.6.2",
+  "references": [],
+  "relates_to": ["para_graph_mcp_tools", "para_graph_architecture"],
+  "tags": ["workflows", "cli", "csa", "sync"],
+  "code_refs": ["src/commands/audit.ts", "src/commands/build.ts", "src/commands/serve.ts"],
+  "concepts": ["csa-audit", "ki-sync", "mcp-server"]
 }

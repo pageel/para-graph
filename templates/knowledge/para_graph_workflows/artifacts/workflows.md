@@ -10,18 +10,39 @@
 
 ### 2. `para-graph serve`
 - Starts the MCP server on stdio.
-- Exposes 21 tools to AI Agents for codebase semantic queries, memory, insights, CSA governance, and project safety.
+- Exposes 25 tools to AI Agents for codebase semantic queries, memory, insights, CSA governance, project safety, and session telemetry.
 
-### 3. `para-graph link <project-name>`
-- Scans documentation and specification files for anchors and creates `DOCUMENTED_BY` edges pointing to the code entities that implement them.
-- Covers both CSA spec anchors (`<span id="csa-...">`) and doc graph-node anchors (`<!-- @graph-node -->`).
+### 3. `para-graph link <project-name>` [DEPRECATED & DISABLED]
+- **Deprecated & Disabled since v0.17.4**: Previously scanned documentation for anchors. Throws deprecation error if run. Use Unified CSA instead.
 
 ### 4. `para-graph ki sync`
-- Syncs the para-graph specific knowledge templates (`repo/templates/knowledge/`) to the user's local AI agent knowledge store (`~/.gemini/antigravity/knowledge/`).
+- Syncs the para-graph specific knowledge templates (`repo/templates/knowledge/`) to the user's local AI agent knowledge store (`~/.gemini/antigravity-ide/knowledge/`).
 
 ### 5. `para-graph audit csa <project-name>`
 - CLI equivalent of `graph_audit_csa` MCP tool.
 - Runs CSA compliance audit checking bidirectional Spec↔Code traceability.
+
+### 6. `para-graph fix csa <project-name>`
+- CLI equivalent of `graph_fix_csa` MCP tool.
+- Runs self-healing fuzzy matching to correct drifted `// @para-doc` code comments.
+
+### 7. `para-graph inject <project-name> <json-edges>`
+- Injects custom edges into the graph.
+
+### 8. `para-graph hooks <project-name>`
+- Manages repository integration hooks.
+
+### 9. `para-graph mem <project-name> <command>`
+- Directly query, push, or curate memory events from the command line.
+
+### 10. `para-graph project-snapshot <project-name>`
+- CLI equivalent of `project_snapshot` MCP tool. Captures directory structure and runs profile-driven Junk Audit scan.
+
+### 11. `para-graph project-diff <project-name> <snap1> <snap2>`
+- CLI equivalent of `project_diff` MCP tool. Compares snapshots for physical drift.
+
+### 12. `para-graph --version`
+- Displays the current version of the tool.
 
 ## Workflow Integration Points
 
@@ -30,9 +51,9 @@
 - Actions: `build`, `enrich`, `status`, `serve`.
 
 ### `/docs` workflow integration
-- After creating or updating docs, Agent calls `graph_link_docs` MCP tool to establish doc↔code traceability.
-- Graph Traceability statistics are auto-updated in `docs/README.md` via `--graph` flag.
-- Uses `<!-- @graph-node: nodeId -->` anchors in doc files (unidirectional, Docs→Code).
+- Doc files in `docs/` are integrated into the **Unified CSA (Tier 2)** gating.
+- Traceability statistics are audited via `audit csa` and verified before release.
+- Legacy `graph_link_docs` tool and `para-graph link` CLI command are disabled.
 
 ### CSA integration (plan phases)
 - CSA audit gates are embedded in plan phase checkpoints.

@@ -75,6 +75,23 @@ Since v0.17.2, the two legacy doc-code systems have been merged into a single **
 - **Protected Files**: `project_protected_files` manages a watchlist of critical files (`project.md`, `.agents/rules.md`, etc.) and alerts on deletion or unauthorized modification.
 - **Compaction**: `project_session_compact` scans active session files (rules, skills, and project contract) and writes a compacted markdown summary to `para_vibecode_session/artifacts/session.md` for context recovery.
 
+## Junk Governance
+
+The Junk Governance subsystem manages physical repository drift by scanning, auditing, and cleaning untracked or ignored physical junk files:
+- **Profile-Driven Scanning**: `junk-profile-loader.ts` resolves language/environment junk profiles (e.g., `typescript-node`) containing glob match patterns.
+- **Prefix Path Resolution**: `junk-auditor.ts` compiles these patterns using Picomatch. It includes specific enhancements for directory-level prefix matching (e.g., matching trailing slashes like `output/` against nested subpaths) to prevent sub-item leaks.
+- **Three-Tier Classification**: Junk files are classified into three tiers for controlled teardown safety:
+  - **Tier 1 (Safe)**: Temporary build artifacts or generated files that are completely safe to auto-delete.
+  - **Tier 2 (Prompt)**: Untracked configuration edits or logs that might contain local state, prompting the user before removal.
+  - **Tier 3 (Report)**: Critical files or sensitive items that are never auto-deleted but reported as configuration anomalies.
+
+## Session Telemetry
+
+The Session Telemetry subsystem logs runtime agent metrics and performs trend analysis for workspace optimization:
+- **SQLite Storage**: The `session_telemetry` table in `<project-name>.db` stores telemetry events tracking total token consumption (input/output), session duration, execution step counts, error counts, and modified files.
+- **Data Model**: Managed via the type-safe `SessionTelemetryData` interface.
+- **Trend Analyzer**: `TelemetryAnalyzer` parses historical logs to generate usage trends, pinpointing high-cost operations, recurring errors, or high-churn file directories.
+
 ## Search & Context Retrieval Engines
 
 - **RRF Score Fusion**: Combines search results from FTS5 keyword query matching and substring LIKE similarity matching (e.g. for `graph_query`, `memory_search`, `insight_search`) using Reciprocal Rank Fusion (RRF) (default $k=60$).

@@ -1,9 +1,15 @@
 {
   "title": "PARA Graph Core Architecture",
-  "summary": "Core architecture of the hybrid code-knowledge graph: node schema (GraphNode with SemanticAttributes including docAnchors), edge schema (GraphEdge with confidence levels), two distinct traceability mechanisms (CSA Double-Binding for Specs, Graph Doc-Anchoring for Docs), SQLite storage layout (.beads/graph/), Memory Engine (events + semantic slices), Project Insights (lessons/risks/patterns), and L2 File Structure safety (snapshots, diff, protected files).",
+  "summary": "Core architecture of the hybrid code-knowledge graph: node schema (GraphNode with SemanticAttributes), edge schema (GraphEdge with confidence levels), Unified CSA traceability mechanism (bidirectional Code↔Spec/Doc binding), SQLite storage layout (.beads/graph/), Memory Engine (events + semantic slices), Project Insights (lessons/risks/patterns), L2 File Structure safety (snapshots, diff, protected files, session_compact), Junk Governance (profile-driven classification), and Session Telemetry (usage logs and optimization analysis).",
   "owner": "para",
   "scope": "workspace",
   "domain": "architecture",
   "purpose": "reference",
-  "references": []
+  "version": "1.1",
+  "para_version": "0.17.6.2",
+  "references": [],
+  "relates_to": ["para_graph_mcp_tools", "para_graph_workflows"],
+  "tags": ["architecture", "database", "telemetry", "csa", "junk"],
+  "code_refs": ["src/graph/store/sqlite-manager.ts", "src/utils/junk-auditor.ts"],
+  "concepts": ["csa", "junk-governance", "telemetry-analyzer"]
 }

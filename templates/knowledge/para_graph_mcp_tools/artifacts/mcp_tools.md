@@ -1,6 +1,6 @@
 # PARA Graph MCP Tools Guide
 
-The `para-graph` MCP server registers **23 tools** across 6 functional domains. AI Agents use these tools to query, enrich, analyze, and govern codebase structures.
+The `para-graph` MCP server registers **25 tools** across 7 functional domains. AI Agents use these tools to query, enrich, analyze, and govern codebase structures.
 
 ## Domain 1: Graph Core (9 tools)
 
@@ -109,6 +109,16 @@ The `para-graph` MCP server registers **23 tools** across 6 functional domains. 
 ### 23. `project_state_sync`
 - **Purpose**: Sync and cache project metadata and task counts from config files (`project.md`, `backlog.md`, `sprint-current.md`) into SQLite database.
 - **Key Params**: `projectName`
+
+## Domain 7: Session Telemetry (2 tools)
+
+### 24. `session_telemetry_push`
+- **Purpose**: Push session telemetry data (token usage, duration, steps count, error count, files modified) to SQLite database.
+- **Key Params**: `projectName`, `telemetry` (object)
+
+### 25. `session_telemetry_query`
+- **Purpose**: Query session telemetry logs and run trend analysis for optimization (e.g. identify high-churn files, token leaks, and error patterns).
+- **Key Params**: `projectName`, `limit?`
 
 ## Unified CSA Traceability (v0.17.2+)
 
