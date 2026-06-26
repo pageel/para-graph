@@ -172,7 +172,7 @@ No blockquotes here.
           name: 'csa-legacy-anchor',
           type: NodeType.SPEC_ANCHOR,
           filePath: 'artifacts/specs/spec-legacy.md',
-          semantic: 'legacy text thô' as any,
+          semantic: 'raw legacy text' as any,
         }
       ];
       

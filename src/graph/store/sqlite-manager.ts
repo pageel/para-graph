@@ -355,15 +355,15 @@ export class SqliteManager {
         model_used TEXT,
         workflow TEXT,
         tool_calls_total INTEGER DEFAULT 0,
-        tool_calls_breakdown TEXT,         -- JSON Object: {"view_file": 12}
+        tool_calls_breakdown TEXT,
         files_read_count INTEGER DEFAULT 0,
-        files_read_list TEXT,              -- JSON Array: ["src/cli.ts"]
+        files_read_list TEXT,
         files_changed_count INTEGER DEFAULT 0,
-        files_changed_list TEXT,           -- JSON Array: ["package.json"]
+        files_changed_list TEXT,
         token_estimate_input INTEGER DEFAULT 0,
         token_estimate_output INTEGER DEFAULT 0,
         friction_count INTEGER DEFAULT 0,
-        friction_details TEXT,             -- JSON Array: [{"type": "build_error"}]
+        friction_details TEXT,
         duration_seconds INTEGER,
         captured_at INTEGER NOT NULL
       )
