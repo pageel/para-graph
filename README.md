@@ -383,7 +383,7 @@ workspace-root/
 │   ├── tool.manifest.yml           # Manifest declaring agent assets
 │   └── install-hooks.sh            # Post-install hook script
 │
-├── Projects/para-workspace/repo/cli/commands/graph.sh  # [Area B] CLI Shell Wrapper
+├── Resources/references/para-workspace/cli/commands/graph.sh  # [Area B] CLI Shell Wrapper (or Projects/para-workspace/repo/... in dev profile)
 │
 ├── .agents/                        # [Area C] Agent Intelligence
 │   ├── workflows/para-graph.md     # Graph operation workflow
@@ -402,7 +402,7 @@ workspace-root/
 * **A. Engine Core (`.para/tools/graph/`)**: The actual executable code of the tool, extracted from the release tarball.
   * **No Source Code (`src/`)**: TypeScript source files are omitted. Only compiled JavaScript files exist in `dist/` for zero-overhead runtime.
   * **`install-hooks.sh`**: Auto-runs after extraction to trigger dependency installation, synchronize Knowledge Items, and register the MCP server in the IDE configuration.
-* **B. CLI Wrapper (`cli/commands/graph.sh`)**: Sourced by the main `para` script. When you type `./para graph build ...`, it maps to `node .para/tools/graph/dist/cli.js build ...`.
+* **B. CLI Wrapper (`cli/commands/graph.sh`)**: Sourced by the main `para` script. In production, this wrapper is generated at `Resources/references/para-workspace/cli/commands/graph.sh`. On developer environments with the dev profile active, it installs into `Projects/para-workspace/repo/cli/commands/graph.sh` instead. When you run `./para graph build ...`, this wrapper maps to `node .para/tools/graph/dist/cli.js build ...` to execute the engine.
 * **C. Agent Intelligence (`.agents/`)**: Copied from the tool templates to empower the IDE's AI Agent with commands (`/para-graph`), skills, and rules.
 * **D. Knowledge Items (`~/.gemini/.../knowledge/`)**: Markdown-based context files synchronized to the IDE storage. They provide the AI Agent with immediate awareness of the code graph's architecture, tools, and commands.
 

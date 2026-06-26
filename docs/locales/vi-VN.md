@@ -371,7 +371,7 @@ workspace-root/
 │   ├── tool.manifest.yml           # Manifest khai báo các agent assets cần cài đặt
 │   └── install-hooks.sh            # Post-install hook tự động chạy sau khi cài
 │
-├── Projects/para-workspace/repo/cli/commands/graph.sh  # [Khu vực B] CLI Wrapper lệnh shell
+├── Resources/references/para-workspace/cli/commands/graph.sh  # [Khu vực B] CLI Wrapper lệnh shell (hoặc Projects/para-workspace/repo/... nếu ở chế độ dev)
 │
 ├── .agents/                        # [Khu vực C] Agent Intelligence (shipped từ tool)
 │   ├── workflows/para-graph.md     # Workflow vận hành đồ thị
@@ -390,7 +390,7 @@ workspace-root/
 * **A. Nhân công cụ (Engine Core) — `.para/tools/graph/`**: Đây là thư mục chứa mã chạy thực tế của công cụ.
   * **Không chứa mã nguồn gốc (`src/`)**: Toàn bộ mã nguồn TypeScript đã được compile sẵn thành JavaScript và đặt trong `dist/` để chạy ngay mà không cần cài trình biên dịch.
   * **`install-hooks.sh`**: Đoạn mã Bash tự động chạy sau khi cài đặt xong để cài đặt production dependencies, đồng bộ Knowledge Items và đăng ký MCP Server vào cấu hình IDE.
-* **B. CLI Wrapper — `cli/commands/graph.sh`**: Sourced bởi CLI chính. Khi người dùng chạy `./para graph build ...`, wrapper này sẽ thực thi: `node .para/tools/graph/dist/cli.js build ...`.
+* **B. CLI Wrapper — `cli/commands/graph.sh`**: Sourced bởi CLI chính. Trên môi trường production của người dùng cuối, file wrapper này được tự động tạo tại `Resources/references/para-workspace/cli/commands/graph.sh`. Đối với môi trường phát triển (profile dev hoạt động), nó sẽ cài đặt vào `Projects/para-workspace/repo/cli/commands/graph.sh`. Khi người dùng chạy `./para graph build ...`, wrapper này sẽ thực thi: `node .para/tools/graph/dist/cli.js build ...`.
 * **C. Agent Intelligence — `.agents/`**: Trình cài đặt phân tích file `tool.manifest.yml` và sao chép các file template agent assets từ tool vào thư mục `.agents/` của workspace (workflows, skills, rules) để định hình và mở rộng khả năng cho AI Agent.
 * **D. Knowledge Items (KI Store) — `~/.gemini/.../knowledge/`**: Các tài liệu lý thuyết, kiến trúc dạng Markdown được đồng bộ từ thư mục `templates/knowledge/` của công cụ sang thư mục Knowledge cục bộ của IDE. Giúp AI Agent ngay lập tức có tri thức vận hành đồ thị.
 
