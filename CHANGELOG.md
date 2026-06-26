@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.6.3] - 2026-06-26
+
+### Added
+- **Reverse Spec Generation** — Implemented code-to-spec reverse adoption flow allowing AI Agent to analyze modules, present entity triage blueprints, and output standard specification files containing CSA anchors.
+- **Spec Lifecycle Metadata** — Added blockquote metadata parser extracting `deprecated`, `deprecated-by`, `renamed-from`, and `anchor-prefix` fields to control active spec lifecycle.
+- **Spec Candidates MCP Tool** — Created `graph_spec_candidates` MCP tool providing read-only intelligence briefs, weight-tier classification, and unique candidate anchor suggestions (`suggestedAnchorId`) preventing collision.
+- **Self-Healing Extension** — Extended `graph_fix_csa` tool with `suggest-missing` mode inserting code comment backlinks and `dangling` mode auto-redirecting broken links using `Deprecated-By` rules.
+- **Double-Binding CSA Mapping** — Mapped and bound all 29 spec anchor IDs to logical source code declarations, successfully passing the 100% Spec Coverage audit gate.
+
 ## [0.17.6.2] - 2026-06-26
 
 ### Added
