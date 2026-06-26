@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach, afterAll, beforeEach } from 'vitest';
 import { GraphStore } from '../../../src/graph/store/GraphStore.js';
 import * as fs from 'node:fs';
 
@@ -7,7 +7,79 @@ import Database from 'better-sqlite3';
 import { SqliteManager } from '../../../src/graph/store/sqlite-manager.js';
 SqliteManager.DatabaseConstructor = Database;
 
+/**
+ * Track all ProjectGraph instances created during tests so we can force-close
+ * them in afterEach — even if flushGraph() already removed them from cache.
+ */
+const allCreatedGraphs: any[] = [];
+const originalGetGraph = GraphStore.getGraph.bind(GraphStore);
+
 describe('GraphStore Refactoring', () => {
+  beforeEach(() => {
+    // Monkeypatch flushGraph to close immediately instead of deferring 5s
+    // This prevents EBUSY deadlock when afterEach tries to rmSync .db files
+    const origFlush = GraphStore.flushGraph.bind(GraphStore);
+    vi.spyOn(GraphStore, 'flushGraph').mockImplementation((projectName: string) => {
+      const cache = (GraphStore as any).cache;
+      const graph = cache.get(projectName);
+      if (graph) {
+        try { graph.close(); } catch (e) {}
+        cache.delete(projectName);
+      }
+    });
+
+    // Wrap getGraph to track all created graphs
+    vi.spyOn(GraphStore, 'getGraph').mockImplementation((workspaceRoot: string, projectName: string) => {
+      const graph = originalGetGraph(workspaceRoot, projectName);
+      allCreatedGraphs.push(graph);
+      return graph;
+    });
+  });
+
+  afterEach(() => {
+    // Force-close ALL tracked graphs (including ones removed from cache by flushGraph)
+    for (const graph of allCreatedGraphs) {
+      try { graph.close(); } catch (e) {}
+    }
+    allCreatedGraphs.length = 0;
+
+    // Also close any remaining in cache (belt-and-suspenders)
+    const cache = (GraphStore as any).cache;
+    if (cache) {
+      for (const graph of cache.values()) {
+        try { graph.close(); } catch (e) {}
+      }
+      cache.clear();
+    }
+
+    vi.restoreAllMocks();
+
+    const projectsDir = require('node:path').join(process.cwd(), 'Projects');
+    if (fs.existsSync(projectsDir)) {
+      fs.rmSync(projectsDir, { recursive: true, force: true });
+    }
+  });
+
+  afterAll(() => {
+    for (const graph of allCreatedGraphs) {
+      try { graph.close(); } catch (e) {}
+    }
+    allCreatedGraphs.length = 0;
+
+    const cache = (GraphStore as any).cache;
+    if (cache) {
+      for (const graph of cache.values()) {
+        try { graph.close(); } catch (e) {}
+      }
+      cache.clear();
+    }
+
+    const projectsDir = require('node:path').join(process.cwd(), 'Projects');
+    if (fs.existsSync(projectsDir)) {
+      fs.rmSync(projectsDir, { recursive: true, force: true });
+    }
+  });
+
   it('should initialize SqliteGraphRepository when loading a graph', () => {
     // Clear cache
     GraphStore.flushGraph('test-refactor');

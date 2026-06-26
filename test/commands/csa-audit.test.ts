@@ -5,6 +5,7 @@ import { mkdirSync, rmSync, existsSync } from 'node:fs';
 import { SqliteManager } from '../../src/graph/store/sqlite-manager.js';
 import { NodeType, EdgeRelation } from '../../src/graph/models.js';
 import { runAudit } from '../../src/commands/audit.js';
+import { GraphStore } from '../../src/graph/store/GraphStore.js';
 import * as workspaceUtils from '../../src/utils/workspace.js';
 import Database from 'better-sqlite3';
 
@@ -89,6 +90,12 @@ describe('CLI runAudit command', () => {
   let errors: string[] = [];
 
   beforeEach(() => {
+    // Preemptive cleanup
+    if (existsSync(TEST_DIR)) {
+      rmSync(TEST_DIR, { recursive: true, force: true });
+    }
+    mkdirSync(TEST_DIR, { recursive: true });
+
     originalExit = process.exit;
     originalLog = console.log;
     originalError = console.error;
@@ -116,6 +123,22 @@ describe('CLI runAudit command', () => {
     console.log = originalLog;
     console.error = originalError;
     vi.restoreAllMocks();
+
+    // Close all graph connections immediately to unlock db files before deleting TEST_DIR
+    const cache = (GraphStore as any).cache;
+    if (cache) {
+      for (const graph of cache.values()) {
+        try {
+          graph.close();
+        } catch (e) {}
+      }
+      cache.clear();
+    }
+
+    // Teardown cleanup
+    if (existsSync(TEST_DIR)) {
+      rmSync(TEST_DIR, { recursive: true, force: true });
+    }
   });
 
   it('should pass with exit code 0 when coverage is 100%', () => {
