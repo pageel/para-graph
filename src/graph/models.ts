@@ -466,6 +466,7 @@ export interface CsaTieredResult {
 
 // --- Spec Lifecycle Metadata & CSA Events Types (v0.17.6.3) ---
 
+// @para-doc [#csa-spec-lifecycle-metadata]
 export interface SpecMetadata {
   deprecated?: boolean;
   deprecatedBy?: string;
@@ -513,6 +514,7 @@ export type CsaEventDetails =
   | CsaBindingRemovedEventDetails
   | CsaSpecLifecycleEventDetails;
 
+// @para-doc [#csa-logging-history]
 export interface CsaEvent {
   id?: number;
   timestamp?: string; // ISO 8601

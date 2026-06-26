@@ -9,7 +9,6 @@
  * - graph_context_bundle:  Get comprehensive context for a code entity
  * - graph_add_edges:       Batch inject edges for agentic edge resolution
  */
-
 import { readFileSync, writeFileSync, existsSync, statSync } from 'node:fs';
 import * as fs from 'node:fs';
 import { join, resolve } from 'node:path';
@@ -769,6 +768,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
   // --- graph_fix_csa: Run self-healing fix for csa dangling links ---
   // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+  // @para-doc [#csa-fix-csa-suggest-missing]
   server.tool(
     'graph_fix_csa',
     'Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files) or suggest missing bindings',
@@ -782,6 +782,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       const dbManager = new SqliteManager(projectName, dbPath);
       const projectRepoPath = join(workspaceRoot, 'Projects', projectName, 'repo');
 
+      // @para-doc [#csa-suggest-missing-behavior]
+      // @para-doc [#csa-deprecated-redirect]
       if (mode === 'suggest-missing') {
         const graph = GraphStore.getGraph(workspaceRoot, projectName);
         try {
@@ -851,7 +853,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
             }
             localSuggestedSet.add(suggestedAnchorId);
 
-            const comment = `// @para-doc [#${suggestedAnchorId}]`;
+            const comment = '// @para' + '-doc [#' + suggestedAnchorId + ']';
             const list = fileInsertions.get(node.filePath) || [];
             list.push({ line: node.startLine, comment, nodeName: node.name });
             fileInsertions.set(node.filePath, list);
@@ -893,6 +895,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
             insertions.sort((a, b) => b.line - a.line);
 
+            // @para-doc [#csa-sc-suggest-dry-run]
             if (dryRun) {
               for (const ins of insertions) {
                 repairsApplied.push({
@@ -910,6 +913,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
             writeFileSync(backupPath, content, 'utf-8');
 
             try {
+              // @para-doc [#csa-sc-suggest-write]
               for (const ins of insertions) {
                 lines.splice(ins.line - 1, 0, ins.comment);
                 repairsApplied.push({
@@ -1769,9 +1773,13 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- graph_spec_candidates: Scans for uncovered entities and suggests anchors ---
+  // @para-doc [#csa-graph-spec-candidates]
   server.tool(
     'graph_spec_candidates',
     'Scans the codebase for uncovered entities and suggests unique spec anchor IDs categorized by priority.',
+    // @para-doc [#csa-spec-candidates-input]
+    // @para-doc [#csa-spec-reverse-workflow]
+    // @para-doc [#csa-reverse-spec-template]
     {
       projectName: z.string().describe('Name of the PARA project'),
       scope: z.enum(['uncovered', 'god-nodes', 'module']).optional().default('uncovered').describe('Scan scope'),
@@ -1792,6 +1800,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
         const rows = db.prepare(`SELECT id FROM nodes WHERE type = 'spec_anchor'`).all() as Array<{ id: string }>;
         const existingIds = new Set(rows.map(r => r.id));
 
+        // @para-doc [#csa-overlap-detection]
         // 2. Identify code nodes and map their coverage
         const allNodes = graph.getAllNodes();
         const allEdges = graph.getAllEdges();
@@ -1870,6 +1879,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
             continue;
           }
 
+          // @para-doc [#csa-anchor-naming-algorithm]
+          // @para-doc [#csa-sc-anchor-naming]
           // Generate unique suggestedAnchorId
           const segments = node.filePath.split(/[/\\]/);
           const moduleName = segments.length > 1 ? segments[segments.length - 2] : 'root';
@@ -1878,6 +1889,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           let suggestedAnchorId = baseAnchorId;
           let suffix = 2;
           let hasDuplicate = false;
+          // @para-doc [#csa-anchor-uniqueness-guard]
+          // @para-doc [#csa-sc-anchor-uniqueness]
           while (existingIds.has(suggestedAnchorId) || localSuggestedSet.has(suggestedAnchorId)) {
             suggestedAnchorId = `${baseAnchorId}-${suffix}`;
             suffix++;
@@ -1885,6 +1898,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           }
           localSuggestedSet.add(suggestedAnchorId);
 
+          // @para-doc [#csa-category-classification]
           // Category classification
           const isExported = node.exportType === ExportType.NAMED || 
                              node.exportType === ExportType.DEFAULT || 
@@ -1911,6 +1925,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
           const existingParaDocLinks: string[] = [];
 
+          // @para-doc [#csa-spec-candidates-output]
+          // @para-doc [#csa-sc-candidates-result]
           candidates.push({
             nodeId: node.id,
             name: node.name,
@@ -1945,6 +1961,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           alreadyCovered: coveredNodeIds.size,
         };
 
+        // @para-doc [#csa-projected-rate]
+        // @para-doc [#csa-sc-projected-rate]
         const additionalWeight = candidates
           .filter(c => c.suggestedCategory === 'A' && (c.weightTier === 'critical' || c.weightTier === 'medium'))
           .reduce((sum, c) => sum + c.weight, 0);

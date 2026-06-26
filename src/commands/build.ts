@@ -9,6 +9,9 @@
  *   para-graph build <target-dir> [output-dir] [--import]
  */
 
+// @para-doc [#csa-testing-strategy]
+// @para-doc [#csa-success-criteria]
+// @para-doc [#csa-technical-plan]
 import { resolve, join, dirname, relative } from 'node:path';
 import { existsSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { walkDirectory } from '../parser/file-walker.js';
@@ -131,10 +134,14 @@ export function runBuild(options: BuildOptions): void {
     for (const mdFile of mdFiles) {
       const relPath = relative(projectRoot, mdFile).replace(/\\/g, '/');
       try {
+        // @para-doc [#csa-build-metadata-injection]
         const specMeta = extractSpecMetadata(mdFile);
+        // @para-doc [#csa-sc-backward-compat]
         const hasMeta = Object.keys(specMeta).length > 0;
         const anchors = extractSpecAnchors(mdFile);
         for (const anchor of anchors) {
+          // @para-doc [#csa-build-duplicate-guard]
+          // @para-doc [#csa-sc-build-duplicate-guard]
           const existingFile = globalSeenAnchors.get(anchor.id);
           if (existingFile) {
             console.warn(

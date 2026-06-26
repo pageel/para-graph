@@ -1,3 +1,9 @@
+// @para-doc [#csa-reverse-spec-workflow]
+// @para-doc [#csa-reverse-spec-objective]
+// @para-doc [#csa-boundaries]
+// @para-doc [#csa-governance]
+// @para-doc [#csa-project-structure]
+// @para-doc [#csa-sc-reverse-output]
 import { readFileSync } from 'node:fs';
 import type { SpecMetadata } from '../graph/models.js';
 
@@ -9,6 +15,9 @@ export interface SpecAnchorNode {
   specMeta?: SpecMetadata;
 }
 
+// @para-doc [#csa-parser-metadata-extraction]
+// @para-doc [#csa-sc-metadata-parse]
+// @para-doc [#csa-extract-spec-metadata]
 export function extractSpecMetadata(filePath: string): SpecMetadata {
   const content = readFileSync(filePath, 'utf-8');
   const lines = content.split(/\r?\n/).slice(0, 30); // metadata in first 30 lines

@@ -493,6 +493,8 @@ export class SqliteManager {
 
     // 1. Fetch spec anchors (defined as anchors in artifacts/specs/ or having no filePath/null)
     // Exclude deprecated anchors (v0.17.6.3) using json_valid() safe guard
+    // @para-doc [#csa-audit-skip-deprecated]
+    // @para-doc [#csa-sc-deprecated-skip]
     const rawSpecAnchors = db.prepare(`
       SELECT id, file_path, semantic FROM nodes 
       WHERE type = 'spec_anchor' 
@@ -647,6 +649,8 @@ export class SqliteManager {
       sourceLine: row.source_line || 0,
     }));
 
+    // @para-doc [#csa-anchor-prefix-warn]
+    // @para-doc [#csa-sc-prefix-warn]
     // Prefix Mismatches Validation (v0.17.6.3)
     const prefixMismatches: PrefixMismatch[] = [];
     for (const anchor of specAnchorsRows) {
@@ -925,7 +929,7 @@ export class SqliteManager {
     }));
   }
 
-  // @para-doc [#csa-events-logging]
+  // @para-doc [#csa-sc-events-logging]
   public logCsaEvent(event: CsaEvent): void {
     const db = this.getConnection();
     const stmt = db.prepare(`
