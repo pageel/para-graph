@@ -20,7 +20,7 @@ import { z } from 'zod';
 import { scanDirectory } from '../utils/file-scanner.js';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { GraphNode, GraphEdge, SemanticAttributes, TraversalDirection, GodNodeProfile, ProjectInsight, CsaConfig, SessionTelemetryData } from '../graph/models.js';
-import { EdgeRelation } from '../graph/models.js';
+import { EdgeRelation, NodeType, ExportType } from '../graph/models.js';
 
 import { GraphStore } from '../graph/store/GraphStore.js';
 import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.js';
@@ -771,16 +771,196 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
   server.tool(
     'graph_fix_csa',
-    'Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files)',
+    'Run CSA self-healing fix for dangling spec references (auto-replaces drifted spec anchors in code files) or suggest missing bindings',
     {
       projectName: z.string().describe('Name of the PARA project'),
       dryRun: z.boolean().optional().default(false).describe('If true, only preview proposed fixes without writing to files'),
+      mode: z.enum(['dangling', 'suggest-missing']).optional().default('dangling').describe('Fix mode: dangling links or suggest missing bindings'),
     },
-    async ({ projectName, dryRun }) => {
+    async ({ projectName, dryRun, mode = 'dangling' }) => {
       const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
       const dbManager = new SqliteManager(projectName, dbPath);
       const projectRepoPath = join(workspaceRoot, 'Projects', projectName, 'repo');
 
+      if (mode === 'suggest-missing') {
+        const graph = GraphStore.getGraph(workspaceRoot, projectName);
+        try {
+          dbManager.initSchema();
+          const db = dbManager.getConnection();
+
+          const rows = db.prepare(`SELECT id FROM nodes WHERE type = 'spec_anchor'`).all() as Array<{ id: string }>;
+          const existingIds = new Set(rows.map(r => r.id));
+
+          const allNodes = graph.getAllNodes();
+          const allEdges = graph.getAllEdges();
+
+          const coveredNodeIds = new Set<string>();
+          for (const edge of allEdges) {
+            if (edge.relation === EdgeRelation.DOCUMENTED_BY) {
+              coveredNodeIds.add(edge.sourceId);
+            }
+          }
+
+          const uncoveredCodeNodes = allNodes.filter(n => 
+            (n.type === NodeType.CLASS || 
+             n.type === NodeType.INTERFACE || 
+             n.type === NodeType.FUNCTION || 
+             n.type === NodeType.VARIABLE) &&
+            !coveredNodeIds.has(n.id)
+          );
+
+          const criticalUncovered = uncoveredCodeNodes.filter(n => {
+            const nodeDegree = allEdges.filter(e => e.sourceId === n.id || e.targetId === n.id).length;
+            return nodeDegree >= 20;
+          });
+
+          if (criticalUncovered.length === 0) {
+            dbManager.close();
+            return {
+              content: [{
+                type: 'text' as const,
+                text: JSON.stringify({
+                  success: true,
+                  message: 'No critical uncovered code entities found. Nothing to suggest.',
+                  fixedCount: 0,
+                  repairsApplied: []
+                }, null, 2)
+              }]
+            };
+          }
+
+          const fileInsertions = new Map<string, Array<{ line: number; comment: string; nodeName: string }>>();
+          const localSuggestedSet = new Set<string>();
+
+          const slugify = (s: string) => 
+            s.replace(/([a-z])([A-Z])/g, '$1-$2')
+             .toLowerCase()
+             .replace(/[^a-z0-9]+/g, '-')
+             .replace(/(^-|-$)/g, '');
+
+          for (const node of criticalUncovered) {
+            const segments = node.filePath.split(/[/\\]/);
+            const moduleName = segments.length > 1 ? segments[segments.length - 2] : 'root';
+            const baseAnchorId = `csa-${slugify(moduleName)}-${slugify(node.name)}`;
+
+            let suggestedAnchorId = baseAnchorId;
+            let suffix = 2;
+            while (existingIds.has(suggestedAnchorId) || localSuggestedSet.has(suggestedAnchorId)) {
+              suggestedAnchorId = `${baseAnchorId}-${suffix}`;
+              suffix++;
+            }
+            localSuggestedSet.add(suggestedAnchorId);
+
+            const comment = `// @para-doc [#${suggestedAnchorId}]`;
+            const list = fileInsertions.get(node.filePath) || [];
+            list.push({ line: node.startLine, comment, nodeName: node.name });
+            fileInsertions.set(node.filePath, list);
+          }
+
+          let fixedCount = 0;
+          const repairsApplied: any[] = [];
+
+          if (!dryRun) {
+            try {
+              const rootDir = resolveSourceDir(workspaceRoot, projectName);
+              const filePaths = scanDirectory(rootDir, { 
+                excludePatterns: ['**/node_modules/**', '**/dist/**', '**/build/**', '**/.git/**', '**/test-output/**', '**/*.log'], 
+                rootDir 
+              });
+              const snapshotId = `snap-${randomUUID()}`;
+              const filesToInsert: Array<{ filePath: string; size: number; hash: string }> = [];
+
+              for (const f of filePaths) {
+                const fullPath = resolve(rootDir, f);
+                const stat = statSync(fullPath);
+                if (stat.isFile()) {
+                  const hash = createHash('sha256').update(readFileSync(fullPath)).digest('hex');
+                  filesToInsert.push({ filePath: f, size: stat.size, hash });
+                }
+              }
+              dbManager.insertSnapshot(snapshotId, filesToInsert);
+            } catch (e) {
+              console.warn('Snapshot warning:', e);
+            }
+          }
+
+          for (const [relPath, insertions] of fileInsertions.entries()) {
+            const fullPath = resolve(projectRepoPath, relPath);
+            if (!existsSync(fullPath)) continue;
+
+            const content = readFileSync(fullPath, 'utf-8');
+            const lines = content.split(/\r?\n/);
+
+            insertions.sort((a, b) => b.line - a.line);
+
+            if (dryRun) {
+              for (const ins of insertions) {
+                repairsApplied.push({
+                  sourceFile: relPath,
+                  line: ins.line,
+                  oldAnchor: '',
+                  newAnchor: ins.comment,
+                  method: 'Suggest Missing Binding (dry-run)'
+                });
+              }
+              continue;
+            }
+
+            const backupPath = `${fullPath}.bak`;
+            writeFileSync(backupPath, content, 'utf-8');
+
+            try {
+              for (const ins of insertions) {
+                lines.splice(ins.line - 1, 0, ins.comment);
+                repairsApplied.push({
+                  sourceFile: relPath,
+                  line: ins.line,
+                  oldAnchor: '',
+                  newAnchor: ins.comment,
+                  method: 'Suggest Missing Binding'
+                });
+                fixedCount++;
+              }
+
+              const hasCRLF = content.includes('\r\n');
+              writeFileSync(fullPath, lines.join(hasCRLF ? '\r\n' : '\n'), 'utf-8');
+
+              if (existsSync(backupPath)) {
+                fs.rmSync(backupPath, { force: true });
+              }
+            } catch (err) {
+              if (existsSync(backupPath)) {
+                fs.copyFileSync(backupPath, fullPath);
+                fs.rmSync(backupPath, { force: true });
+              }
+              throw err;
+            }
+          }
+
+          dbManager.close();
+
+          return {
+            content: [{
+              type: 'text' as const,
+              text: JSON.stringify({
+                success: true,
+                message: dryRun ? `Previewed suggestions for project ${projectName}` : `Applied suggestions for project ${projectName}`,
+                fixedCount,
+                repairsApplied
+              }, null, 2)
+            }]
+          };
+
+        } catch (err: any) {
+          try { dbManager.close(); } catch {}
+          return {
+            content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+            isError: true,
+          };
+        }
+      }
+
+      // Default mode: dangling
       try {
         dbManager.initSchema();
         const auditResult = dbManager.runCsaAudit();
@@ -804,13 +984,47 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           const sourceFile = edge.sourceFile;
           const sourceLine = edge.sourceLine;
 
+          let proposedTarget: string | null = null;
+          let method = '';
+          const resolvedAnchorId = targetId.includes('#') ? targetId.split('#')[1] : targetId;
+
+          // Look up target in nodes table to check deprecation
+          const targetNode = db.prepare(`
+            SELECT semantic FROM nodes 
+            WHERE id = ? AND type = 'spec_anchor'
+          `).get(resolvedAnchorId) as { semantic: string | null } | undefined;
+
+          if (targetNode?.semantic) {
+            try {
+              const sem = JSON.parse(targetNode.semantic);
+              const specMeta = sem.specMeta;
+              if (specMeta && specMeta.deprecated && specMeta.deprecatedBy) {
+                const depBy = specMeta.deprecatedBy;
+                const repAnchors = db.prepare(`
+                  SELECT id FROM nodes 
+                  WHERE type = 'spec_anchor' AND file_path LIKE '%' || ?
+                `).all(depBy) as Array<{ id: string }>;
+                const repIds = repAnchors.map(r => r.id);
+                if (repIds.length > 0) {
+                  const match = findFuzzyMatch(resolvedAnchorId, repIds);
+                  if (match) {
+                    proposedTarget = `artifacts/specs/${depBy}#${match}`;
+                    method = `Deprecation Redirect (to ${depBy})`;
+                  }
+                }
+              }
+            } catch (e) {}
+          }
+
           // Git Log Rename
-          let proposedTarget = findRenamedAnchorInGit(targetId, projectRepoPath);
-          let method = 'Git Log Rename';
+          if (!proposedTarget) {
+            proposedTarget = findRenamedAnchorInGit(targetId, projectRepoPath);
+            method = 'Git Log Rename';
+          }
 
           // Levenshtein Fuzzy Match
           if (!proposedTarget) {
-            proposedTarget = findFuzzyMatch(targetId, existingAnchorIds);
+            proposedTarget = findFuzzyMatch(resolvedAnchorId, existingAnchorIds);
             method = 'Fuzzy Match (Levenshtein)';
           }
 
@@ -1544,6 +1758,216 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
             }, null, 2)
           }]
         };
+      } catch (err: any) {
+        try { dbManager.close(); } catch {}
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify({ error: err.message }) }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // --- graph_spec_candidates: Scans for uncovered entities and suggests anchors ---
+  server.tool(
+    'graph_spec_candidates',
+    'Scans the codebase for uncovered entities and suggests unique spec anchor IDs categorized by priority.',
+    {
+      projectName: z.string().describe('Name of the PARA project'),
+      scope: z.enum(['uncovered', 'god-nodes', 'module']).optional().default('uncovered').describe('Scan scope'),
+      modulePath: z.string().optional().describe('Relative path to module, required when scope = "module"'),
+      tier: z.enum(['all', 'critical', 'medium']).optional().default('all').describe('Filter by weight tier'),
+      limit: z.number().optional().default(30).describe('Limit the number of candidates returned'),
+    },
+    async ({ projectName, scope = 'uncovered', modulePath, tier = 'all', limit = 30 }) => {
+      const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
+      const dbManager = new SqliteManager(projectName, dbPath);
+      const graph = GraphStore.getGraph(workspaceRoot, projectName);
+
+      try {
+        dbManager.initSchema();
+        const db = dbManager.getConnection();
+
+        // 1. Get all existing spec anchor IDs to prevent duplicate suggestions
+        const rows = db.prepare(`SELECT id FROM nodes WHERE type = 'spec_anchor'`).all() as Array<{ id: string }>;
+        const existingIds = new Set(rows.map(r => r.id));
+
+        // 2. Identify code nodes and map their coverage
+        const allNodes = graph.getAllNodes();
+        const allEdges = graph.getAllEdges();
+
+        // Build a map of covered node IDs
+        const coveredNodeIds = new Set<string>();
+        for (const edge of allEdges) {
+          if (edge.relation === EdgeRelation.DOCUMENTED_BY) {
+            coveredNodeIds.add(edge.sourceId);
+          }
+        }
+
+        // Filter for code nodes (exclude file and spec_anchor)
+        const codeNodes = allNodes.filter(n => 
+          n.type === NodeType.CLASS || 
+          n.type === NodeType.INTERFACE || 
+          n.type === NodeType.FUNCTION || 
+          n.type === NodeType.VARIABLE
+        );
+
+        // Helper to slugify strings for kebab-case
+        const slugify = (s: string) => 
+          s.replace(/([a-z])([A-Z])/g, '$1-$2')
+           .toLowerCase()
+           .replace(/[^a-z0-9]+/g, '-')
+           .replace(/(^-|-$)/g, '');
+
+        const localSuggestedSet = new Set<string>();
+        const candidates: any[] = [];
+        let totalWeight = 0;
+        let currentCoveredWeight = 0;
+
+        for (const node of codeNodes) {
+          // Degree calculation: count incoming + outgoing edges
+          const nodeDegree = allEdges.filter(e => e.sourceId === node.id || e.targetId === node.id).length;
+
+          // Weight classification
+          let weight = 0.5;
+          let weightTier: 'critical' | 'medium' | 'low' = 'low';
+
+          if (nodeDegree >= 20) {
+            weight = 5.0;
+            weightTier = 'critical';
+          } else if (
+            node.type === NodeType.CLASS ||
+            node.type === NodeType.INTERFACE ||
+            node.semantic?.complexity === 'high' ||
+            node.semantic?.complexity === 'medium'
+          ) {
+            weight = 2.0;
+            weightTier = 'medium';
+          }
+
+          totalWeight += weight;
+          const isCovered = coveredNodeIds.has(node.id);
+          if (isCovered) {
+            currentCoveredWeight += weight;
+            continue;
+          }
+
+          // Scope filtering
+          if (scope === 'god-nodes' && weightTier !== 'critical') {
+            continue;
+          }
+          if (scope === 'module') {
+            if (!modulePath || !node.filePath.toLowerCase().startsWith(modulePath.toLowerCase())) {
+              continue;
+            }
+          }
+
+          // Tier filtering
+          if (tier === 'critical' && weightTier !== 'critical') {
+            continue;
+          }
+          if (tier === 'medium' && weightTier !== 'medium') {
+            continue;
+          }
+
+          // Generate unique suggestedAnchorId
+          const segments = node.filePath.split(/[/\\]/);
+          const moduleName = segments.length > 1 ? segments[segments.length - 2] : 'root';
+          const baseAnchorId = `csa-${slugify(moduleName)}-${slugify(node.name)}`;
+          
+          let suggestedAnchorId = baseAnchorId;
+          let suffix = 2;
+          let hasDuplicate = false;
+          while (existingIds.has(suggestedAnchorId) || localSuggestedSet.has(suggestedAnchorId)) {
+            suggestedAnchorId = `${baseAnchorId}-${suffix}`;
+            suffix++;
+            hasDuplicate = true;
+          }
+          localSuggestedSet.add(suggestedAnchorId);
+
+          // Category classification
+          const isExported = node.exportType === ExportType.NAMED || 
+                             node.exportType === ExportType.DEFAULT || 
+                             (node.exportType as string) === 'named' || 
+                             (node.exportType as string) === 'default';
+          
+          let suggestedCategory: 'A' | 'B' | 'C' = 'C';
+          let rationale = '';
+
+          if (isExported || node.type === NodeType.CLASS || node.type === NodeType.INTERFACE || nodeDegree >= 10) {
+            suggestedCategory = 'A';
+            rationale = `Legitimate Gap: Public/exported ${node.type} with degree ${nodeDegree}`;
+          } else if (!isExported && nodeDegree < 3 && node.semantic?.complexity === 'low') {
+            suggestedCategory = 'B';
+            rationale = `Over-Granular: Internal helper with low complexity and degree ${nodeDegree}`;
+          } else {
+            suggestedCategory = 'C';
+            rationale = `Ambiguous: Internal entity with degree ${nodeDegree} and complexity ${node.semantic?.complexity || 'low'}`;
+          }
+
+          if (hasDuplicate) {
+            rationale += ` (renamed: "${baseAnchorId}" already exists in another spec)`;
+          }
+
+          const existingParaDocLinks: string[] = [];
+
+          candidates.push({
+            nodeId: node.id,
+            name: node.name,
+            type: node.type,
+            filePath: node.filePath,
+            weightTier,
+            weight,
+            degree: nodeDegree,
+            existingParaDocLinks,
+            boundToAnchors: [],
+            isCovered: false,
+            suggestedAnchorId,
+            suggestedCategory,
+            rationale,
+          });
+        }
+
+        const tierPrecedence: Record<string, number> = { critical: 3, medium: 2, low: 1 };
+        candidates.sort((a, b) => {
+          const tierDiff = tierPrecedence[b.weightTier] - tierPrecedence[a.weightTier];
+          if (tierDiff !== 0) return tierDiff;
+          return b.degree - a.degree;
+        });
+
+        const limitedCandidates = candidates.slice(0, limit);
+
+        const summary = {
+          total: candidates.length,
+          critical: candidates.filter(c => c.weightTier === 'critical').length,
+          medium: candidates.filter(c => c.weightTier === 'medium').length,
+          low: candidates.filter(c => c.weightTier === 'low').length,
+          alreadyCovered: coveredNodeIds.size,
+        };
+
+        const additionalWeight = candidates
+          .filter(c => c.suggestedCategory === 'A' && (c.weightTier === 'critical' || c.weightTier === 'medium'))
+          .reduce((sum, c) => sum + c.weight, 0);
+
+        const currentRate = totalWeight > 0 ? (currentCoveredWeight / totalWeight) * 100 : 0;
+        const projectedRate = totalWeight > 0 ? ((currentCoveredWeight + additionalWeight) / totalWeight) * 100 : 0;
+
+        dbManager.close();
+
+        return {
+          content: [{
+            type: 'text' as const,
+            text: JSON.stringify({
+              candidates: limitedCandidates,
+              summary,
+              weightedCoverageImpact: {
+                currentRate,
+                projectedRate,
+              }
+            }, null, 2)
+          }]
+        };
+
       } catch (err: any) {
         try { dbManager.close(); } catch {}
         return {

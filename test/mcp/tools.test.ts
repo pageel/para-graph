@@ -303,7 +303,8 @@ describe('MCP Tools: graph_fix_csa', () => {
 
     const mockDb = {
       prepare: vi.fn().mockReturnValue({
-        all: vi.fn().mockReturnValue([{ id: 'csa-new-anchor' }])
+        all: vi.fn().mockReturnValue([{ id: 'csa-new-anchor' }]),
+        get: vi.fn().mockReturnValue(undefined)
       })
     };
     vi.spyOn(SqliteManager.prototype, 'getConnection').mockReturnValue(mockDb as any);
