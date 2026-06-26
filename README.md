@@ -369,6 +369,43 @@ Source files → File Walker → Registry Lookup → Tree-sitter Parser + SSEC Q
                                                                                  MCP Server → AI Agent
 ```
 
+### Installed Directory Structure & Integration
+
+When you run `./para install-tool para-graph`, the tool is installed and distributes its components across 4 different areas in the PARA Workspace:
+
+```
+workspace-root/
+├── .para/tools/graph/              # [Area A] Tool Engine Core
+│   ├── dist/                       # Compiled JavaScript files
+│   │   ├── cli.js                  # Main CLI Router
+│   │   └── mcp/server.js           # MCP Server Core
+│   ├── package.json                # Runtime dependencies and version
+│   ├── tool.manifest.yml           # Manifest declaring agent assets
+│   └── install-hooks.sh            # Post-install hook script
+│
+├── Projects/para-workspace/repo/cli/commands/graph.sh  # [Area B] CLI Shell Wrapper
+│
+├── .agents/                        # [Area C] Agent Intelligence
+│   ├── workflows/para-graph.md     # Graph operation workflow
+│   ├── skills/para-graph/          # Skill for AI Agent interactions
+│   ├── skills/csa/                 # Skill for CSA compliance auditing
+│   └── rules/graph-first-policy.md # Rule enforcing graph queries
+│
+└── ~/.gemini/antigravity-ide/knowledge/  # [Area D] Knowledge Items (IDE Context Store)
+    ├── para_graph_architecture/    # Architecture documentation for AI
+    ├── para_graph_mcp_tools/       # MCP tools usage instructions
+    └── para_graph_workflows/       # CLI commands catalog
+```
+
+#### Area Description
+
+* **A. Engine Core (`.para/tools/graph/`)**: The actual executable code of the tool, extracted from the release tarball.
+  * **No Source Code (`src/`)**: TypeScript source files are omitted. Only compiled JavaScript files exist in `dist/` for zero-overhead runtime.
+  * **`install-hooks.sh`**: Auto-runs after extraction to trigger dependency installation, synchronize Knowledge Items, and register the MCP server in the IDE configuration.
+* **B. CLI Wrapper (`cli/commands/graph.sh`)**: Sourced by the main `para` script. When you type `./para graph build ...`, it maps to `node .para/tools/graph/dist/cli.js build ...`.
+* **C. Agent Intelligence (`.agents/`)**: Copied from the tool templates to empower the IDE's AI Agent with commands (`/para-graph`), skills, and rules.
+* **D. Knowledge Items (`~/.gemini/.../knowledge/`)**: Markdown-based context files synchronized to the IDE storage. They provide the AI Agent with immediate awareness of the code graph's architecture, tools, and commands.
+
 ## 🛠️ Development
 
 ```bash

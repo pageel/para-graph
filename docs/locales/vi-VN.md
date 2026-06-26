@@ -357,6 +357,43 @@ File mã nguồn → File Walker → Đăng ký Ngôn ngữ → Trình phân tí
                                                                                   MCP Server → AI Agent
 ```
 
+### Cấu trúc Thư mục & Tích hợp sau khi Cài đặt
+
+Khi người dùng chạy lệnh `./para install-tool para-graph`, công cụ được cài đặt và phân phối các cấu phần vào 4 khu vực khác nhau trong Workspace:
+
+```
+workspace-root/
+├── .para/tools/graph/              # [Khu vực A] Nhân công cụ (Engine Core)
+│   ├── dist/                       # Mã chạy JavaScript biên dịch sẵn
+│   │   ├── cli.js                  # CLI Router chính
+│   │   └── mcp/server.js           # Nhân MCP Server
+│   ├── package.json                # Khai báo dependency và phiên bản
+│   ├── tool.manifest.yml           # Manifest khai báo các agent assets cần cài đặt
+│   └── install-hooks.sh            # Post-install hook tự động chạy sau khi cài
+│
+├── Projects/para-workspace/repo/cli/commands/graph.sh  # [Khu vực B] CLI Wrapper lệnh shell
+│
+├── .agents/                        # [Khu vực C] Agent Intelligence (shipped từ tool)
+│   ├── workflows/para-graph.md     # Workflow vận hành đồ thị
+│   ├── skills/para-graph/          # Skill của AI Agent tương tác với đồ thị
+│   ├── skills/csa/                 # Skill CSA audit
+│   └── rules/graph-first-policy.md # Luật bắt buộc sử dụng đồ thị
+│
+└── ~/.gemini/antigravity-ide/knowledge/  # [Khu vực D] Knowledge Items (IDE Context Store)
+    ├── para_graph_architecture/    # Tài liệu kiến trúc cho AI đọc
+    ├── para_graph_mcp_tools/       # Hướng dẫn sử dụng MCP tools
+    └── para_graph_workflows/       # Danh mục lệnh CLI
+```
+
+#### Chi tiết các Khu vực Cài đặt
+
+* **A. Nhân công cụ (Engine Core) — `.para/tools/graph/`**: Đây là thư mục chứa mã chạy thực tế của công cụ.
+  * **Không chứa mã nguồn gốc (`src/`)**: Toàn bộ mã nguồn TypeScript đã được compile sẵn thành JavaScript và đặt trong `dist/` để chạy ngay mà không cần cài trình biên dịch.
+  * **`install-hooks.sh`**: Đoạn mã Bash tự động chạy sau khi cài đặt xong để cài đặt production dependencies, đồng bộ Knowledge Items và đăng ký MCP Server vào cấu hình IDE.
+* **B. CLI Wrapper — `cli/commands/graph.sh`**: Sourced bởi CLI chính. Khi người dùng chạy `./para graph build ...`, wrapper này sẽ thực thi: `node .para/tools/graph/dist/cli.js build ...`.
+* **C. Agent Intelligence — `.agents/`**: Trình cài đặt phân tích file `tool.manifest.yml` và sao chép các file template agent assets từ tool vào thư mục `.agents/` của workspace (workflows, skills, rules) để định hình và mở rộng khả năng cho AI Agent.
+* **D. Knowledge Items (KI Store) — `~/.gemini/.../knowledge/`**: Các tài liệu lý thuyết, kiến trúc dạng Markdown được đồng bộ từ thư mục `templates/knowledge/` của công cụ sang thư mục Knowledge cục bộ của IDE. Giúp AI Agent ngay lập tức có tri thức vận hành đồ thị.
+
 <a name="phat-trien"></a>
 ## 🛠️ Phát triển
 

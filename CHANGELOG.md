@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.17.6.2] - 2026-06-26
 
+### Added
+- **Installed Structure Documentation** — Documented the installed app directory structure and integration across the workspace (Core Engine, CLI wrapper, Agent Intelligence, and Knowledge Items) in public `README.md` and `vi-VN.md` translations.
+
 ### Fixed
 - **Prefix Path Matching** — Fixed directory-level prefix matching in `compilePatterns` (handling trailing slashes like `output/` against subpaths) to prevent sub-item leaks in Junk Governance.
 - **Teardown Deadlocks** — Resolved Vitest afterEach hangs by closing SQLite connections immediately instead of waiting for 5s deferred close timer, and tracked all instantiated ProjectGraph objects for guaranteed cleanup.
