@@ -320,6 +320,149 @@ describe('MCP Tools: graph_fix_csa', () => {
 
     vi.restoreAllMocks();
   });
+
+  it('should run csa self-healing fix in suggest-missing mode', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const fixCsaHandler = handlers['graph_fix_csa'];
+    expect(fixCsaHandler).toBeDefined();
+
+    const mockNodes = [
+      {
+        id: 'src/main.ts::main',
+        name: 'main',
+        type: 'function',
+        filePath: 'src/main.ts',
+        startLine: 1,
+        endLine: 5,
+      }
+    ];
+    const mockEdges = Array.from({ length: 20 }, (_, i) => ({
+      sourceId: 'src/main.ts::main',
+      targetId: `node-${i}`,
+      relation: 'CALLS' as any
+    }));
+
+    const mockGraph = {
+      getAllNodes: () => mockNodes,
+      getAllEdges: () => mockEdges,
+    };
+    const getGraphSpy = vi.spyOn(GraphStore, 'getGraph').mockReturnValue(mockGraph as any);
+    const resolveSourceDirSpy = vi.spyOn(pathResolver, 'resolveSourceDir').mockReturnValue('/workspace/repo');
+
+    const initSchemaSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    const mockDb = {
+      prepare: vi.fn().mockReturnValue({
+        all: vi.fn().mockReturnValue([])
+      })
+    };
+    const getConnectionSpy = vi.spyOn(SqliteManager.prototype, 'getConnection').mockReturnValue(mockDb as any);
+
+    // dryRun = true
+    const resultDryRun = await fixCsaHandler({ projectName: 'test-project', dryRun: true, mode: 'suggest-missing' });
+    const contentDryRun = JSON.parse(resultDryRun.content[0].text);
+
+    expect(contentDryRun.success).toBe(true);
+    expect(contentDryRun.fixedCount).toBe(0);
+    expect(contentDryRun.repairsApplied).toHaveLength(1);
+    expect(contentDryRun.repairsApplied[0].method).toContain('Suggest Missing Binding (dry-run)');
+
+    // dryRun = false
+    const result = await fixCsaHandler({ projectName: 'test-project', dryRun: false, mode: 'suggest-missing' });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(content.success).toBe(true);
+    expect(content.fixedCount).toBe(1);
+    expect(content.repairsApplied[0].method).toContain('Suggest Missing Binding');
+    expect(writeFileSync).toHaveBeenCalled();
+
+    getGraphSpy.mockRestore();
+    resolveSourceDirSpy.mockRestore();
+    initSchemaSpy.mockRestore();
+    closeSpy.mockRestore();
+    getConnectionSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
+
+  it('should redirect dangling edges using Deprecated-By metadata', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const fixCsaHandler = handlers['graph_fix_csa'];
+
+    const mockAuditResult = {
+      totalAnchors: 10,
+      coveredAnchors: 8,
+      coverageRate: 80.0,
+      danglingEdges: [
+        {
+          sourceId: 'src/main.ts::main',
+          targetId: 'csa-old-anchor',
+          relation: 'documented_by',
+          sourceFile: 'src/main.ts',
+          sourceLine: 1
+        }
+      ]
+    };
+
+    const initSchemaSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const runCsaAuditSpy = vi.spyOn(SqliteManager.prototype, 'runCsaAudit').mockReturnValue(mockAuditResult as any);
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    const mockDb = {
+      prepare: vi.fn().mockImplementation((query) => {
+        if (query.includes("file_path LIKE")) {
+          return {
+            all: vi.fn().mockReturnValue([{ id: 'csa-old-anchor' }])
+          };
+        } else if (query.includes("semantic FROM nodes")) {
+          return {
+            get: vi.fn().mockReturnValue({
+              semantic: JSON.stringify({
+                specMeta: {
+                  deprecated: true,
+                  deprecatedBy: 'spec-new-feature.md'
+                }
+              })
+            })
+          };
+        } else {
+          return {
+            all: vi.fn().mockReturnValue([{ id: 'csa-old-anchor' }]),
+            get: vi.fn().mockReturnValue(undefined)
+          };
+        }
+      })
+    };
+    const getConnectionSpy = vi.spyOn(SqliteManager.prototype, 'getConnection').mockReturnValue(mockDb as any);
+
+    const result = await fixCsaHandler({ projectName: 'test-project', dryRun: false });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(content.success).toBe(true);
+    expect(content.fixedCount).toBe(1);
+    expect(content.repairsApplied[0].method).toContain('Deprecation Redirect');
+    expect(content.repairsApplied[0].newAnchor).toBe('artifacts/specs/spec-new-feature.md#csa-old-anchor');
+
+    initSchemaSpy.mockRestore();
+    runCsaAuditSpy.mockRestore();
+    closeSpy.mockRestore();
+    getConnectionSpy.mockRestore();
+    vi.restoreAllMocks();
+  });
 });
 
 describe('MCP Tools: graph_context_bundle (Array support)', () => {
