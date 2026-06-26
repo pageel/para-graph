@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.6.2] - 2026-06-26
+
+### Fixed
+- **Prefix Path Matching** — Fixed directory-level prefix matching in `compilePatterns` (handling trailing slashes like `output/` against subpaths) to prevent sub-item leaks in Junk Governance.
+- **Teardown Deadlocks** — Resolved Vitest afterEach hangs by closing SQLite connections immediately instead of waiting for 5s deferred close timer, and tracked all instantiated ProjectGraph objects for guaranteed cleanup.
+- **KI Templates Drift** — Updated, synchronized, and verified KI Templates (`para_graph_architecture`, `para_graph_mcp_tools`, `para_graph_workflows`) to include required schema fields (version and para_version) and match the actual v0.17.6 codebase.
+
 ## [0.17.6.1] - 2026-06-25
 
 ### Added

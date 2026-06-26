@@ -879,6 +879,7 @@ export class SqliteManager {
     }));
   }
 
+  // @para-doc [#csa-junk-gov-test-teardown]
   public close(): void {
     if (this.db) {
       this.db.close();
