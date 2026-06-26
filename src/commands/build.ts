@@ -20,7 +20,7 @@ import { resolveEdges } from '../graph/edge-resolver.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { NodeType, ExportType } from '../graph/models.js';
 import type { GraphNode, GraphEdge } from '../graph/models.js';
-import { extractSpecAnchors } from '../parser/csa-parser.js';
+import { extractSpecAnchors, extractSpecMetadata } from '../parser/csa-parser.js';
 import { runLink } from './link.js';
 import { findWorkspaceRoot } from '../utils/workspace.js';
 
@@ -127,11 +127,23 @@ export function runBuild(options: BuildOptions): void {
   
   if (mdFiles.length > 0) {
     let anchorCount = 0;
+    const globalSeenAnchors = new Map<string, string>(); // anchor id -> first file path
     for (const mdFile of mdFiles) {
       const relPath = relative(projectRoot, mdFile).replace(/\\/g, '/');
       try {
+        const specMeta = extractSpecMetadata(mdFile);
+        const hasMeta = Object.keys(specMeta).length > 0;
         const anchors = extractSpecAnchors(mdFile);
         for (const anchor of anchors) {
+          const existingFile = globalSeenAnchors.get(anchor.id);
+          if (existingFile) {
+            console.warn(
+              `[para-graph] ⚠️ DUPLICATE anchor "${anchor.id}" — ` +
+              `first in "${existingFile}", also in "${relPath}". Skipping duplicate.`
+            );
+            continue;
+          }
+          globalSeenAnchors.set(anchor.id, relPath);
           graph.addNode({
             id: anchor.id,
             type: NodeType.SPEC_ANCHOR,
@@ -141,6 +153,10 @@ export function runBuild(options: BuildOptions): void {
             endLine: anchor.line,
             exportType: ExportType.NONE,
             signature: anchor.title,
+            semantic: {
+              ...(hasMeta ? { specMeta } : {}),
+              line: anchor.line,
+            },
           });
           anchorCount++;
         }

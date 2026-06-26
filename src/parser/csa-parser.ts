@@ -1,10 +1,33 @@
 import { readFileSync } from 'node:fs';
+import type { SpecMetadata } from '../graph/models.js';
 
 // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-SpecAnchorNode]
 export interface SpecAnchorNode {
   id: string;
   title: string;
   line: number;
+  specMeta?: SpecMetadata;
+}
+
+export function extractSpecMetadata(filePath: string): SpecMetadata {
+  const content = readFileSync(filePath, 'utf-8');
+  const lines = content.split(/\r?\n/).slice(0, 30); // metadata in first 30 lines
+  const meta: SpecMetadata = {};
+  
+  const metaRegex = /^>\s*\*\*(Deprecated|Deprecated-By|Renamed-From|Anchor-Prefix):\*\*\s*(.+)/i;
+  for (const line of lines) {
+    const match = metaRegex.exec(line);
+    if (match) {
+      const [, key, value] = match;
+      switch (key.toLowerCase()) {
+        case 'deprecated': meta.deprecated = value.trim().toLowerCase() === 'true'; break;
+        case 'deprecated-by': meta.deprecatedBy = value.trim(); break;
+        case 'renamed-from': meta.renamedFrom = value.trim(); break;
+        case 'anchor-prefix': meta.anchorPrefix = value.trim(); break;
+      }
+    }
+  }
+  return meta;
 }
 
 // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-src/parser/csa-parser.ts]

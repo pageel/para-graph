@@ -72,4 +72,82 @@ describe('Build CSA Integration', () => {
     expect(docEdge?.targetId).toBe('csa-feature-x');
     expect(docEdge?.sourceId).toBe('index.ts::main');
   });
+
+  it('should inject spec metadata into SPEC_ANCHOR nodes during build', () => {
+    // 1. Write mock spec with metadata
+    writeFileSync(
+      join(docsDir, 'spec-meta.md'),
+      `# Specs\n\n> **Deprecated:** true\n> **Deprecated-By:** spec-new.md\n> **Renamed-From:** spec-old.md\n> **Anchor-Prefix:** csa-meta\n\n## Feature Y <span id="csa-feature-y"></span>`,
+      'utf-8'
+    );
+    // Write dummy code to avoid early exit
+    writeFileSync(join(repoDir, 'dummy.ts'), 'export function dummy() {}', 'utf-8');
+
+    // 2. Run Build
+    runBuild({
+      targetDir: repoDir,
+      outputDir: outputDir,
+      useClean: true,
+      projectName: 'mock-project'
+    });
+
+    // 3. Import graph and verify metadata
+    const graph = importFromJsonl(outputDir);
+    const anchorNode = graph.getNode('csa-feature-y');
+    expect(anchorNode).toBeDefined();
+    expect(anchorNode?.semantic?.specMeta).toEqual({
+      deprecated: true,
+      deprecatedBy: 'spec-new.md',
+      renamedFrom: 'spec-old.md',
+      anchorPrefix: 'csa-meta',
+    });
+  });
+
+  it('should implement cross-file duplicate anchor detection (first-wins + warn)', () => {
+    // 1. Write two mock specs with the same anchor ID
+    writeFileSync(
+      join(docsDir, 'spec-first.md'),
+      `# Specs First\n\n## Feature Dup <span id="csa-feature-dup"></span>`,
+      'utf-8'
+    );
+    writeFileSync(
+      join(docsDir, 'spec-second.md'),
+      `# Specs Second\n\n## Feature Dup Second <span id="csa-feature-dup"></span>`,
+      'utf-8'
+    );
+    // Write dummy code to avoid early exit
+    writeFileSync(join(repoDir, 'dummy.ts'), 'export function dummy() {}', 'utf-8');
+
+    // Spy on console.warn
+    const warnings: string[] = [];
+    const originalWarn = console.warn;
+    console.warn = (msg: string) => {
+      warnings.push(msg);
+    };
+
+    try {
+      // 2. Run Build
+      runBuild({
+        targetDir: repoDir,
+        outputDir: outputDir,
+        useClean: true,
+        projectName: 'mock-project'
+      });
+
+      // 3. Import graph and verify
+      const graph = importFromJsonl(outputDir);
+      const anchorNode = graph.getNode('csa-feature-dup');
+      expect(anchorNode).toBeDefined();
+      // First wins — should point to spec-first.md, not spec-second.md
+      expect(anchorNode?.filePath).toBe('docs/spec-first.md');
+
+      // Verify duplicate warning was logged
+      const duplicateWarning = warnings.find(w => w.includes('DUPLICATE anchor "csa-feature-dup"'));
+      expect(duplicateWarning).toBeDefined();
+      expect(duplicateWarning).toContain('first in "docs/spec-first.md", also in "docs/spec-second.md"');
+    } finally {
+      console.warn = originalWarn;
+    }
+  });
 });
+

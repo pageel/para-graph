@@ -61,6 +61,10 @@ export interface SemanticAttributes {
   docAnchors?: string[];
   /** ISO 8601 timestamp — when node code changed since last enrichment */
   staleSince?: string | null;
+  /** Spec metadata for anchoring lifecycle (v0.17.6.3) */
+  specMeta?: SpecMetadata;
+  /** Line number of the anchor in the spec file (v0.17.6.3) */
+  line?: number;
 }
 
 // --- Interfaces ---
@@ -458,4 +462,62 @@ export interface CsaTieredResult {
   specCoverage: CsaCoverageDetails;
   docCoverage: CsaCoverageDetails;
   combinedHealth: number;    // Weighted health score (spec/doc average)
+}
+
+// --- Spec Lifecycle Metadata & CSA Events Types (v0.17.6.3) ---
+
+export interface SpecMetadata {
+  deprecated?: boolean;
+  deprecatedBy?: string;
+  renamedFrom?: string;
+  anchorPrefix?: string;
+}
+
+export type CsaEventKind = 'coverage_snapshot' | 'binding_added' | 'binding_removed' | 'spec_lifecycle';
+
+export interface CsaCoverageSnapshotEventDetails {
+  coverageRate: number;
+  specCoverage: {
+    totalAnchors: number;
+    coveredAnchors: number;
+    coverageRate: number;
+  };
+  docCoverage: {
+    totalAnchors: number;
+    coveredAnchors: number;
+    coverageRate: number;
+  };
+  combinedHealth: number;
+}
+
+export interface CsaBindingAddedEventDetails {
+  entityId: string;
+  anchorId: string;
+  filePath: string;
+}
+
+export interface CsaBindingRemovedEventDetails {
+  entityId: string;
+  anchorId: string;
+  filePath: string;
+}
+
+export interface CsaSpecLifecycleEventDetails {
+  action: 'deprecated' | 'renamed' | 'created';
+  metadata: SpecMetadata;
+}
+
+export type CsaEventDetails = 
+  | CsaCoverageSnapshotEventDetails
+  | CsaBindingAddedEventDetails
+  | CsaBindingRemovedEventDetails
+  | CsaSpecLifecycleEventDetails;
+
+export interface CsaEvent {
+  id?: number;
+  timestamp?: string; // ISO 8601
+  eventType: CsaEventKind;
+  targetId: string | null;
+  details: CsaEventDetails;
+  sessionId?: string | null;
 }

@@ -1,9 +1,16 @@
 import { createRequire } from 'module';
 import path from 'path';
 import fs from 'fs';
-import { CsaConfig, SessionTelemetryData, SessionTelemetryRow } from '../models.js';
+import { CsaConfig, SessionTelemetryData, SessionTelemetryRow, CsaEvent } from '../models.js';
 
 const require = createRequire(import.meta.url);
+
+export interface PrefixMismatch {
+  anchorId: string;
+  expectedPrefix: string;
+  filePath: string;
+  line: number;
+}
 
 export interface CsaAuditResult {
   totalAnchors: number;
@@ -39,6 +46,7 @@ export interface CsaAuditResult {
     sourceFile: string;
     sourceLine: number;
   }>;
+  prefixMismatches?: PrefixMismatch[];
 }
 
 // @para-doc [docs/architecture/para-graph-core.md#csa-sqlite-database]
@@ -374,6 +382,20 @@ export class SqliteManager {
     try {
       db.exec(`ALTER TABLE project_state ADD COLUMN sprint_hash TEXT DEFAULT NULL;`);
     } catch (e) {}
+
+    // csa_events table (v0.17.6.3)
+    db.exec(`
+      CREATE TABLE IF NOT EXISTS csa_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
+        event_type TEXT NOT NULL,
+        target_id TEXT,
+        details TEXT,
+        session_id TEXT
+      )
+    `);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_csa_events_type ON csa_events(event_type)`);
+    db.exec(`CREATE INDEX IF NOT EXISTS idx_csa_events_target ON csa_events(target_id)`);
   }
 
   public static DatabaseConstructor: any = null;
@@ -470,23 +492,27 @@ export class SqliteManager {
     };
 
     // 1. Fetch spec anchors (defined as anchors in artifacts/specs/ or having no filePath/null)
+    // Exclude deprecated anchors (v0.17.6.3) using json_valid() safe guard
     const rawSpecAnchors = db.prepare(`
-      SELECT id, file_path FROM nodes 
+      SELECT id, file_path, semantic FROM nodes 
       WHERE type = 'spec_anchor' 
         AND (file_path LIKE 'artifacts/specs/%' OR file_path IS NULL OR file_path = '')
-    `).all() as Array<{ id: string; file_path: string | null }>;
+        AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
+    `).all() as Array<{ id: string; file_path: string | null; semantic: string | null }>;
     
     const specAnchorsRows = rawSpecAnchors.filter(row => !isExcluded(row.file_path));
     const totalSpecAnchorsCount = specAnchorsRows.length;
     
     // 2. Fetch doc anchors (defined as anchors NOT in artifacts/specs/ and having a valid filePath)
+    // Exclude deprecated anchors (v0.17.6.3) using json_valid() safe guard
     const rawDocAnchors = db.prepare(`
-      SELECT id, file_path FROM nodes 
+      SELECT id, file_path, semantic FROM nodes 
       WHERE type = 'spec_anchor' 
         AND file_path NOT LIKE 'artifacts/specs/%' 
         AND file_path IS NOT NULL 
         AND file_path != ''
-    `).all() as Array<{ id: string; file_path: string | null }>;
+        AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
+    `).all() as Array<{ id: string; file_path: string | null; semantic: string | null }>;
     
     const docAnchorsRows = rawDocAnchors.filter(row => !isExcluded(row.file_path));
     const totalDocAnchorsCount = docGate === 'off' ? 0 : docAnchorsRows.length;
@@ -621,6 +647,25 @@ export class SqliteManager {
       sourceLine: row.source_line || 0,
     }));
 
+    // Prefix Mismatches Validation (v0.17.6.3)
+    const prefixMismatches: PrefixMismatch[] = [];
+    for (const anchor of specAnchorsRows) {
+      if (anchor.semantic) {
+        try {
+          const semanticObj = JSON.parse(anchor.semantic);
+          const meta = semanticObj.specMeta;
+          if (meta?.anchorPrefix && !anchor.id.startsWith(meta.anchorPrefix)) {
+            prefixMismatches.push({
+              anchorId: anchor.id,
+              expectedPrefix: meta.anchorPrefix,
+              filePath: anchor.file_path || '',
+              line: semanticObj.line || 0,
+            });
+          }
+        } catch {}
+      }
+    }
+
     return {
       // Legacy compatibility fields
       totalAnchors: totalSpecAnchorsCount + totalDocAnchorsCount,
@@ -654,7 +699,8 @@ export class SqliteManager {
         pass: docPass
       },
       combinedHealth: Math.round(combinedHealth),
-      danglingEdges
+      danglingEdges,
+      prefixMismatches
     };
   }
 
@@ -876,6 +922,39 @@ export class SqliteManager {
       frictionDetails: row.friction_details ? JSON.parse(row.friction_details) : [],
       durationSeconds: row.duration_seconds !== null ? row.duration_seconds : undefined,
       capturedAt: row.captured_at
+    }));
+  }
+
+  // @para-doc [#csa-events-logging]
+  public logCsaEvent(event: CsaEvent): void {
+    const db = this.getConnection();
+    const stmt = db.prepare(`
+      INSERT INTO csa_events (
+        event_type, target_id, details, session_id
+      ) VALUES (?, ?, ?, ?)
+    `);
+    stmt.run(
+      event.eventType,
+      event.targetId,
+      JSON.stringify(event.details),
+      event.sessionId || null
+    );
+  }
+
+  public queryCsaEvents(limit: number = 100): any[] {
+    const db = this.getConnection();
+    const rows = db.prepare(`
+      SELECT * FROM csa_events
+      ORDER BY timestamp DESC
+      LIMIT ?
+    `).all(limit) as any[];
+    return rows.map(r => ({
+      id: r.id,
+      timestamp: r.timestamp,
+      eventType: r.event_type,
+      targetId: r.target_id,
+      details: r.details ? JSON.parse(r.details) : {},
+      sessionId: r.session_id,
     }));
   }
 
