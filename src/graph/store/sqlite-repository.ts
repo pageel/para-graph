@@ -127,7 +127,7 @@ export class SqliteGraphRepository {
     );
   }
 
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  // @para-doc [#csa-db-schema]
   public getInsight(insightId: string): ProjectInsight | null {
     const db = this.manager.getConnection();
     const stmt = db.prepare(`SELECT * FROM project_insights WHERE id = ?`);
@@ -150,7 +150,7 @@ export class SqliteGraphRepository {
     };
   }
 
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  // @para-doc [#csa-db-schema]
   public findSimilarInsight(insight: ProjectInsight): ProjectInsight | null {
     const db = this.manager.getConnection();
     const words = (insight.title.toLowerCase().match(/\w+/g) || [])

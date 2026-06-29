@@ -6,7 +6,7 @@ import { resolveSourceDir, resolveGraphDir } from '../graph/store/pathResolver.j
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { scanDirectory } from '../utils/file-scanner.js';
 
-// @para-doc [docs/guides/cli.md#csa-cli-snapshot]
+// @para-doc [#csa-cli-snapshot]
 export function runProjectSnapshot(projectName: string): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {

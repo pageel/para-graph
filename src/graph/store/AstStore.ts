@@ -401,7 +401,7 @@ export class AstStore {
    * @returns ContextBundle with source, callers, callees, imports, tests
    * @throws Error if nodeId is not found in the graph
    */
-  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-multiseed-context]
+  // @para-doc [#csa-multiseed-context]
   public getContextBundle(
     nodeId: string | string[],
     rootDir: string,

@@ -389,7 +389,8 @@ workspace-root/
 │   ├── workflows/para-graph.md     # Graph operation workflow
 │   ├── skills/para-graph/          # Skill for AI Agent interactions
 │   ├── skills/csa/                 # Skill for CSA compliance auditing
-│   └── rules/graph-first-policy.md # Rule enforcing graph queries
+│   ├── rules/graph-first-policy.md # Rule enforcing graph queries
+│   └── rules/csa-compliance.md     # Rule enforcing CSA double-binding
 │
 └── ~/.gemini/antigravity-ide/knowledge/  # [Area D] Knowledge Items (IDE Context Store)
     ├── para_graph_architecture/    # Architecture documentation for AI

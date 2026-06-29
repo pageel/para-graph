@@ -2,7 +2,7 @@ import { AstStore } from '../store/AstStore.js';
 import { NodeType, EdgeRelation } from '../models.js';
 import type { GraphNode, GraphEdge, TraversalResult } from '../models.js';
 
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-PruningConfig]
+// @para-doc [#csa-PruningConfig]
 export interface PruningConfig {
   maxDepth: number;
   topologyBarrierThreshold: number;  // Stop deep traversal if node.fan_in > threshold
@@ -12,7 +12,7 @@ export interface PruningConfig {
   utilityPatterns?: string[];        // Glob patterns to detect utility files
 }
 
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-ScoredNode]
+// @para-doc [#csa-ScoredNode]
 export interface ScoredNode {
   node: GraphNode;
   score: number;
@@ -21,7 +21,7 @@ export interface ScoredNode {
   edge?: GraphEdge;
 }
 
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-SearchContext]
+// @para-doc [#csa-SearchContext]
 export interface SearchContext {
   nearest: ScoredNode[];    // min-heap tracking top-N best hits
   candidates: ScoredNode[]; // max-heap tracking active frontier
@@ -32,7 +32,7 @@ export interface SearchContext {
  * Simple glob matching using regex.
  * Supports standard wildcards: ** (recursive) and * (single level).
  */
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-matchGlob]
+// @para-doc [#csa-matchGlob]
 function matchGlob(path: string, pattern: string): boolean {
   let regexPattern = pattern
     .replace(/[.+^${}()|[\]\\]/g, '\\$&') // escape regex special chars
@@ -66,7 +66,7 @@ function getTopologyMetrics(store: AstStore, nodeId: string): { fanIn: number; f
 /**
  * Heuristic Scorer for a candidate node.
  */
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-scoreNode]
+// @para-doc [#csa-scoreNode]
 function scoreNode(
   node: GraphNode,
   edge: GraphEdge | undefined,
@@ -95,7 +95,7 @@ function scoreNode(
 /**
  * Classify if a node is a Utility Node.
  */
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-isUtilityNode]
+// @para-doc [#csa-isUtilityNode]
 function isUtilityNode(store: AstStore, node: GraphNode, config: PruningConfig): boolean {
   const patterns = config.utilityPatterns || ['**/utils/**', '**/helpers/**', '**/constants/**', '**/types.ts', '**/*.d.ts'];
   const matchesPattern = patterns.some(pattern => matchGlob(node.filePath, pattern));
@@ -109,7 +109,7 @@ function isUtilityNode(store: AstStore, node: GraphNode, config: PruningConfig):
   return false;
 }
 
-// @para-doc [artifacts/specs/spec-2026-06-23-beam-search-traverser.md#csa-beam-search-traverser]
+// @para-doc [#csa-beam-search-traverser]
 export class BeamSearchTraverser {
   private readonly store: AstStore;
 

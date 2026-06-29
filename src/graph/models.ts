@@ -8,7 +8,7 @@
 // --- Enums ---
 
 /** Type of code entity represented by a graph node */
-// @para-doc [docs/references/schema.md#csa-data-schema]
+// @para-doc [#csa-data-schema]
 export enum NodeType {
   FILE = 'file',
   CLASS = 'class',
@@ -25,6 +25,7 @@ export enum EdgeRelation {
   INHERITS = 'INHERITS',
   IMPLEMENTS = 'IMPLEMENTS',
   DOCUMENTED_BY = 'DOCUMENTED_BY',
+  // @para-doc [#csa-transitive-enum]
   DOCUMENTS = 'DOCUMENTS',
 }
 
@@ -360,7 +361,7 @@ export interface ProjectInsight {
 
 // --- RRF Score Fusion Types (P2: RRF Search) ---
 
-// @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-RrfConfig]
+// @para-doc [#csa-RrfConfig]
 /** Configuration options for Reciprocal Rank Fusion (RRF) */
 export interface RrfConfig {
   /** Smoothing constant to prevent rank inflation (default: 60) */
@@ -368,7 +369,7 @@ export interface RrfConfig {
 }
 
 /** Result structure for an item fused via RRF */
-// @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-FusedResult]
+// @para-doc [#csa-FusedResult]
 export interface FusedResult<T> {
   /** The original item being ranked */
   item: T;

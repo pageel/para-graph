@@ -27,7 +27,7 @@ import { extractSpecAnchors, extractSpecMetadata, extractInheritsReferences } fr
 import { runLink } from './link.js';
 import { findWorkspaceRoot } from '../utils/workspace.js';
 
-// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+// @para-doc [#csa-build-integration]
 function findMdFiles(dir: string): string[] {
   const results: string[] = [];
   if (!existsSync(dir)) return results;
@@ -54,7 +54,7 @@ export interface BuildOptions {
 
 /**
  * Execute the build command — scan, parse, merge, export.
- * @para-doc [docs/architecture/para-graph-core.md#csa-core-build-flow]
+ * @para-doc [#csa-core-build-flow]
  */
 export function runBuild(options: BuildOptions): void {
   const targetDir = resolve(options.targetDir);

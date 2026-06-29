@@ -14,7 +14,7 @@ export interface SprintInfo {
   completedCount: number;
 }
 
-// @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-project-parser]
+// @para-doc [#csa-project-parser]
 export function parseProjectFile(content: string): ProjectInfo {
   const result: ProjectInfo = { version: '', status: '', active_plan: '' };
   try {

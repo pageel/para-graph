@@ -419,9 +419,9 @@ export class TreeSitterParser {
 
   /**
    * Scan lines for para-doc references and link to the most specific matching node.
-   * @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-TreeSitterParser.extractCsaComments]
-   * @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-comments]
-   * @para-doc [artifacts/specs/spec-2026-06-24-csa-id-resolution.md#csa-id-resolution]
+   * @para-doc [#csa-TreeSitterParser.extractCsaComments]
+   * @para-doc [#csa-parser-comments]
+   * @para-doc [#csa-id-resolution]
    */
   private extractCsaComments(lines: string[], relPath: string, graph: CodeGraph): void {
     const csaRegex = /@para-doc\s+\[?(?:([^\]#\s]+)#)?([^\]\s]+)\]?/g;

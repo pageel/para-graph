@@ -377,7 +377,8 @@ workspace-root/
 │   ├── workflows/para-graph.md     # Workflow vận hành đồ thị
 │   ├── skills/para-graph/          # Skill của AI Agent tương tác với đồ thị
 │   ├── skills/csa/                 # Skill CSA audit
-│   └── rules/graph-first-policy.md # Luật bắt buộc sử dụng đồ thị
+│   ├── rules/graph-first-policy.md # Luật bắt buộc sử dụng đồ thị
+│   └── rules/csa-compliance.md     # Luật bắt buộc sử dụng CSA double-binding
 │
 └── ~/.gemini/antigravity-ide/knowledge/  # [Khu vực D] Knowledge Items (IDE Context Store)
     ├── para_graph_architecture/    # Tài liệu kiến trúc cho AI đọc

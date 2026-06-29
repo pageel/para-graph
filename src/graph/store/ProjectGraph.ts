@@ -209,7 +209,7 @@ export class ProjectGraph {
 
   // --- Facade Orchestration ---
 
-  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-multiseed-context]
+  // @para-doc [#csa-multiseed-context]
   public getContextBundle(nodeId: string | string[], rootDir: string, previewOnly: boolean = false, includeTestFixtures: boolean = false): ContextBundle {
     const bundle = this.astStore.getContextBundle(nodeId, rootDir, previewOnly, includeTestFixtures);
     
@@ -284,7 +284,7 @@ export class ProjectGraph {
 
   private readonly insightsList: ProjectInsight[] = [];
 
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  // @para-doc [#csa-db-schema]
   public pushInsight(insight: ProjectInsight): string {
     const exists = this.insightsList.findIndex(i => i.id === insight.id);
     
@@ -324,7 +324,7 @@ export class ProjectGraph {
     return insight.id;
   }
 
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  // @para-doc [#csa-db-schema]
   public getInsight(insightId: string): ProjectInsight | null {
     if (this.repository) {
       try {

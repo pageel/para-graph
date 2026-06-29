@@ -69,7 +69,7 @@ Examples:
   para-graph serve                               Auto-detect workspace root
 `;
 
-// @para-doc [docs/architecture/para-graph-core.md#csa-technical-components]
+// @para-doc [#csa-technical-components]
 function main(): void {
   const args = process.argv.slice(2);
   const command = args[0];

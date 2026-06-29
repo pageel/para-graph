@@ -55,7 +55,7 @@ export interface CsaAuditResult {
   prefixMismatches?: PrefixMismatch[];
 }
 
-// @para-doc [docs/architecture/para-graph-core.md#csa-sqlite-database]
+// @para-doc [#csa-sqlite-database]
 export class SqliteManager {
   private dbPath: string;
   private db: any | null = null;
@@ -72,7 +72,7 @@ export class SqliteManager {
     return this.dbPath;
   }
 
-  // @para-doc [docs/references/sqlite-schema.md#csa-sqlite-schema]
+  // @para-doc [#csa-sqlite-schema]
   // @para-doc [#csa-test-schema]
   public initSchema(): void {
     const db = this.getConnection();
@@ -333,7 +333,7 @@ export class SqliteManager {
     seedProtected.run('.gitignore', 'Git exclude patterns', seedTime);
 
     // Project state cache table
-    // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-db-project-state]
+    // @para-doc [#csa-db-project-state]
     db.exec(`
       CREATE TABLE IF NOT EXISTS project_state (
         project_name TEXT PRIMARY KEY,
@@ -468,7 +468,7 @@ export class SqliteManager {
     transaction();
   }
 
-  // @para-doc [artifacts/specs/spec-2026-06-19-csa-loophole-guard.md#csa-loophole-guard]
+  // @para-doc [#csa-loophole-guard]
   public runCsaAudit(config?: Partial<CsaConfig>): CsaAuditResult {
     const db = this.getConnection();
     
@@ -528,6 +528,7 @@ export class SqliteManager {
     // Check which anchors have DOCUMENTED_BY edge (resolving both short and long syntax)
     // Supports both direct (Code -> Anchor) and transitive (Code -> Doc File -> Anchor) links
     // @para-doc [#csa-transitive-resolution]
+    // @para-doc [#csa-transitive-audit]
     const checkCovered = db.prepare(`
       SELECT COUNT(*) as count 
       FROM edges e1

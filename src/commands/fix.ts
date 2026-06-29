@@ -1,4 +1,4 @@
-// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+// @para-doc [#csa-build-integration]
 import { findWorkspaceRoot } from '../utils/workspace.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
@@ -24,8 +24,8 @@ function askQuestion(query: string): Promise<string> {
   }));
 }
 
-// @para-doc [docs/guides/cli.md#csa-cli-fix]
-// @para-doc [docs/strategy/strategy-csa.md#csa-self-healing]
+// @para-doc [#csa-cli-fix]
+// @para-doc [#csa-self-healing]
 export async function runFix({ projectPath, auto = false, dryRun = false }: FixCsaOptions): Promise<void> {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {

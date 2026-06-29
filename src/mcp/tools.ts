@@ -64,12 +64,12 @@ function validateSemantic(data: unknown): string | null {
  *
  * @param server - MCP server instance
  * @param workspaceRoot - Root directory of the PARA Workspace
- * @para-doc [docs/features/mcp-tools.md#csa-mcp-tools-register]
+ * @para-doc [#csa-mcp-tools-register]
  */
 export function registerTools(server: McpServer, workspaceRoot: string): void {
 
   // --- graph_query: Filter and search graph nodes ---
-  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-mcp-integration]
+  // @para-doc [#csa-mcp-integration]
   server.tool(
     'graph_query',
     'Query graph nodes with optional filters by type and name pattern',
@@ -241,7 +241,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- graph_context_bundle: Get comprehensive context for a code entity ---
-  // @para-doc [artifacts/specs/spec-2026-06-18-rrf-multiseed.md#csa-mcp-integration]
+  // @para-doc [#csa-mcp-integration]
   server.tool(
     'graph_context_bundle',
     'Get a comprehensive context bundle for a code entity — includes source code, callers, callees, imports, and related tests',
@@ -528,7 +528,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- insight_push: Push a project insight to SQLite database ---
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  // @para-doc [#csa-db-schema]
   server.tool(
     'insight_push',
     'Push a project insight (lesson, risk, decision, pattern, gotcha) to durable SQLite storage',
@@ -607,7 +607,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- insight_validate: Validate and update insight confidence lifecycle ---
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-db-schema]
+  // @para-doc [#csa-db-schema]
   server.tool(
     'insight_validate',
     'Update the confidence lifecycle of a project insight (hypothesis -> validated -> deprecated)',
@@ -733,8 +733,8 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   }
 
   // --- graph_audit_csa: Run CSA compliance audit ---
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
-  // @para-doc [docs/strategy/strategy-csa.md#csa-tiered-gate]
+  // @para-doc [#csa-build-integration]
+  // @para-doc [#csa-tiered-gate]
   server.tool(
     'graph_audit_csa',
     'Run Convergent Specification Architecture (CSA) compliance audit for a project',
@@ -767,7 +767,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- graph_fix_csa: Run self-healing fix for csa dangling links ---
-  // @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+  // @para-doc [#csa-build-integration]
   // @para-doc [#csa-fix-csa-suggest-missing]
   server.tool(
     'graph_fix_csa',
@@ -1093,7 +1093,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_snapshot: Take a project file structure snapshot and verify protected files ---
-  // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-project-snapshot]
+  // @para-doc [#csa-mcp-project-snapshot]
   // @para-doc [#csa-junk-gov-snapshot-update]
   // @para-doc [#csa-junk-gov-backward-compat]
   // @para-doc [#csa-junk-gov-first-run]
@@ -1367,7 +1367,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_session_compact: Compact workspace and project context into Vibecode Session KI ---
-  // @para-doc [artifacts/specs/spec-2026-06-19-session-compaction.md#csa-session-compact]
+  // @para-doc [#csa-session-compact]
   server.tool(
     'project_session_compact',
     'Compact workspace and project context (rules, skills, contract, guidelines) into Vibecode Session KI',
@@ -1487,7 +1487,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_state_get: Get cached project state from SQLite ---
-  // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-state-get]
+  // @para-doc [#csa-mcp-state-get]
   server.tool(
     'project_state_get',
     'Get cached project metadata and task counts from SQLite. Checks freshness against config files.',
@@ -1556,7 +1556,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- project_state_sync: Sync project config files to SQLite cache ---
-  // @para-doc [artifacts/specs/spec-2026-06-24-state-cache.md#csa-mcp-state-sync]
+  // @para-doc [#csa-mcp-state-sync]
   server.tool(
     'project_state_sync',
     'Sync and cache project metadata and task counts from config files into SQLite database.',

@@ -17,7 +17,7 @@ export interface ServeOptions {
 
 /**
  * Execute the serve command — create MCP server and connect via stdio.
- * @para-doc [docs/architecture/para-graph-core.md#csa-mcp-server]
+ * @para-doc [#csa-mcp-server]
  */
 export async function runServe(options: ServeOptions): Promise<void> {
   const server = createServer(options.workspaceRoot);

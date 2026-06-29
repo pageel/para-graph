@@ -79,6 +79,7 @@ export interface SpecInheritReference {
 }
 
 // @para-doc [#csa-transitive-parser]
+// @para-doc [#csa-transitive-syntax]
 export function extractInheritsReferences(filePath: string): SpecInheritReference[] {
   const content = readFileSync(filePath, 'utf-8');
   const inheritRegex = /<span\s+data-csa-inherits=["']([^"']+)["']\s*><\/span>/g;
@@ -93,7 +94,7 @@ export function extractInheritsReferences(filePath: string): SpecInheritReferenc
       const ids = rawIds
         .split(',')
         .map(id => id.trim())
-        .filter(id => id.startsWith('csa-'));
+        .filter(id => id.startsWith('csa-') && !id.includes('...'));
       for (const id of ids) {
         results.push({
           targetId: id,

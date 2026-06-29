@@ -1,4 +1,5 @@
-// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-build-integration]
+// @para-doc [#csa-build-integration]
+// @para-doc [#csa-transitive-test]
 import { findWorkspaceRoot } from '../utils/workspace.js';
 import { GraphStore } from '../graph/store/GraphStore.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
@@ -31,9 +32,9 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
   return config;
 }
 
-// @para-doc [artifacts/specs/spec-2026-06-19-csa-loophole-guard.md#csa-loophole-guard]
-// @para-doc [docs/guides/cli.md#csa-cli-audit]
-// @para-doc [docs/strategy/strategy-csa.md#csa-tiered-gate]
+// @para-doc [#csa-loophole-guard]
+// @para-doc [#csa-cli-audit]
+// @para-doc [#csa-tiered-gate]
 export function runAudit({ projectPath }: AuditCsaOptions): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {
