@@ -87,11 +87,12 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
     const specFail = !auditResult.specCoverage.pass;
     const docFail = auditResult.docCoverage.gate !== 'off' && !auditResult.docCoverage.pass;
     const hasDangling = auditResult.danglingEdges.length > 0;
+    const hasDanglingInherits = auditResult.danglingInherits && auditResult.danglingInherits.length > 0;
 
     // If total anchors is 0, CSA is opt-out (0 total edges/anchors -> exit code 0)
     // Meaning the project does not apply CSA, we handle gracefully.
     // However, if the loophole guard failed (specFail is true), we must NOT exit with 0.
-    if (auditResult.totalAnchors === 0 && auditResult.danglingEdges.length === 0 && !specFail) {
+    if (auditResult.totalAnchors === 0 && auditResult.danglingEdges.length === 0 && !hasDanglingInherits && !specFail) {
       console.log('\n[CSA Audit] No CSA anchors or undocumented elements found. CSA is strictly Opt-In. Exit code 0.');
       dbManager.close();
       process.exit(0);
@@ -104,7 +105,14 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
       }
     }
 
-    if (specFail || docFail || hasDangling) {
+    if (hasDanglingInherits) {
+      console.error('\n[CSA Audit] Dangling Inherits Detected:');
+      for (const edge of auditResult.danglingInherits) {
+        console.error(`  - File "${edge.sourceId}" inherits from missing anchor "${edge.targetId}" in ${edge.sourceFile}:${edge.sourceLine}`);
+      }
+    }
+
+    if (specFail || docFail || hasDangling || hasDanglingInherits) {
       const graph = GraphStore.getGraph(wsRoot, projectName);
       
       const insightId = `ins-${randomUUID()}`;
@@ -116,7 +124,10 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
         description += `Tier 2 Doc Coverage is ${auditResult.docCoverage.coverageRate.toFixed(2)}%, which is below the ${auditResult.docCoverage.threshold}% requirement (gate: ${auditResult.docCoverage.gate}). `;
       }
       if (hasDangling) {
-        description += `Found ${auditResult.danglingEdges.length} dangling spec links: ${auditResult.danglingEdges.map(e => e.targetId).join(', ')}.`;
+        description += `Found ${auditResult.danglingEdges.length} dangling spec links: ${auditResult.danglingEdges.map(e => e.targetId).join(', ')}. `;
+      }
+      if (hasDanglingInherits) {
+        description += `Found ${auditResult.danglingInherits.length} dangling inherits references: ${auditResult.danglingInherits.map(e => e.targetId).join(', ')}.`;
       }
 
       const driftInsight: ProjectInsight = {

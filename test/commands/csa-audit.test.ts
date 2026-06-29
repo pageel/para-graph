@@ -79,6 +79,39 @@ describe('CSA SQL Audit Query', () => {
       sourceLine: 10
     });
   });
+
+  it('should detect dangling inherits references correctly via SQLite', () => {
+    // 1. Prepare nodes and edges
+    const nodes = [
+      { id: 'docs/doc.md', name: 'doc.md', type: NodeType.FILE },
+      { id: 'csa-anchor-1', name: 'csa-anchor-1', type: NodeType.SPEC_ANCHOR }
+    ];
+
+    const edges = [
+      {
+        sourceId: 'docs/doc.md',
+        targetId: 'csa-anchor-missing', // Dangling inherits link
+        relation: EdgeRelation.DOCUMENTS,
+        sourceFile: 'docs/doc.md',
+        sourceLine: 10
+      }
+    ];
+
+    // 2. Persist graph
+    manager.persistGraph(nodes, edges);
+
+    // 3. Run audit
+    const result = manager.runCsaAudit();
+
+    // 4. Assert correctness
+    expect(result.danglingInherits).toHaveLength(1);
+    expect(result.danglingInherits[0]).toEqual({
+      sourceId: 'docs/doc.md',
+      targetId: 'csa-anchor-missing',
+      sourceFile: 'docs/doc.md',
+      sourceLine: 10
+    });
+  });
 });
 
 describe('CLI runAudit command', () => {
@@ -222,5 +255,40 @@ describe('CLI runAudit command', () => {
 
     expect(exitCode).toBe(0);
     expect(logs.some(l => l.includes('No CSA anchors or undocumented elements found. CSA is strictly Opt-In'))).toBe(true);
+  });
+
+  it('should print warnings for dangling inherits references in CLI output', () => {
+    const projectPath = join(TEST_DIR, 'Projects', 'test-proj-dangling-inherits');
+    const dbDir = join(projectPath, '.beads', 'graph');
+    mkdirSync(dbDir, { recursive: true });
+
+    vi.spyOn(workspaceUtils, 'findWorkspaceRoot').mockReturnValue(TEST_DIR);
+
+    const dbPath = join(dbDir, 'test-proj-dangling-inherits.db');
+    const manager = new SqliteManager('test-proj-dangling-inherits', dbPath);
+    manager.initSchema();
+
+    const nodes = [
+      { id: 'docs/doc.md', name: 'doc.md', type: NodeType.FILE }
+    ];
+    const edges = [
+      {
+        sourceId: 'docs/doc.md',
+        targetId: 'csa-anchor-missing',
+        relation: EdgeRelation.DOCUMENTS,
+        sourceFile: 'docs/doc.md',
+        sourceLine: 12
+      }
+    ];
+    manager.persistGraph(nodes, edges);
+    manager.close();
+
+    expect(() => {
+      runAudit({ projectPath });
+    }).toThrow('exit:0');
+
+    expect(exitCode).toBe(0);
+    expect(errors.some(e => e.includes('Dangling Inherits Detected:'))).toBe(true);
+    expect(errors.some(e => e.includes('File "docs/doc.md" inherits from missing anchor "csa-anchor-missing"'))).toBe(true);
   });
 });

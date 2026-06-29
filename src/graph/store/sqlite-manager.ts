@@ -46,6 +46,12 @@ export interface CsaAuditResult {
     sourceFile: string;
     sourceLine: number;
   }>;
+  danglingInherits: Array<{
+    sourceId: string;
+    targetId: string;
+    sourceFile: string;
+    sourceLine: number;
+  }>;
   prefixMismatches?: PrefixMismatch[];
 }
 
@@ -670,6 +676,31 @@ export class SqliteManager {
       sourceLine: row.source_line || 0,
     }));
 
+    // Dangling inherits references (docs inheriting from missing spec anchors)
+    // @para-doc [#csa-dangling-inherits-detection]
+    const danglingInheritsRows = db.prepare(`
+      SELECT e.source_id, e.target_id, e.source_file, e.source_line 
+      FROM edges e 
+      LEFT JOIN nodes n ON 
+        (CASE 
+          WHEN instr(e.target_id, '#') > 0 THEN substr(e.target_id, instr(e.target_id, '#') + 1)
+          ELSE e.target_id
+        END) = n.id AND n.type = 'spec_anchor'
+      WHERE e.relation = 'DOCUMENTS' AND n.id IS NULL
+    `).all() as Array<{
+      source_id: string;
+      target_id: string;
+      source_file: string;
+      source_line: number;
+    }>;
+    
+    const danglingInherits = danglingInheritsRows.map(row => ({
+      sourceId: row.source_id,
+      targetId: row.target_id,
+      sourceFile: row.source_file || '',
+      sourceLine: row.source_line || 0,
+    }));
+
     // @para-doc [#csa-anchor-prefix-warn]
     // @para-doc [#csa-sc-prefix-warn]
     // Prefix Mismatches Validation (v0.17.6.3)
@@ -725,6 +756,7 @@ export class SqliteManager {
       },
       combinedHealth: Math.round(combinedHealth),
       danglingEdges,
+      danglingInherits,
       prefixMismatches
     };
   }
