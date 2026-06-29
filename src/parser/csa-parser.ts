@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs';
 import type { SpecMetadata } from '../graph/models.js';
 
-// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-SpecAnchorNode]
+// @para-doc [#csa-SpecAnchorNode]
 export interface SpecAnchorNode {
   id: string;
   title: string;
@@ -39,8 +39,8 @@ export function extractSpecMetadata(filePath: string): SpecMetadata {
   return meta;
 }
 
-// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-src/parser/csa-parser.ts]
-// @para-doc [artifacts/specs/spec-2026-06-16-csa-spec-intelligence.md#csa-parser-markdown]
+// @para-doc [#csa-src/parser/csa-parser.ts]
+// @para-doc [#csa-parser-markdown]
 export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
   const content = readFileSync(filePath, 'utf-8');
   const anchorRegex = /<span\s+id=["'](csa-[a-zA-Z0-9.:\/_-]+)["'][^>]*><\/span>/g;
@@ -67,6 +67,39 @@ export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
         title: lines[i].replace(/<[^>]*>/g, '').trim(),
         line: i + 1,
       });
+    }
+  }
+  return results;
+}
+
+// @para-doc [#csa-transitive-parser]
+export interface SpecInheritReference {
+  targetId: string;
+  line: number;
+}
+
+// @para-doc [#csa-transitive-parser]
+export function extractInheritsReferences(filePath: string): SpecInheritReference[] {
+  const content = readFileSync(filePath, 'utf-8');
+  const inheritRegex = /<span\s+data-csa-inherits=["']([^"']+)["']\s*><\/span>/g;
+  const results: SpecInheritReference[] = [];
+  const lines = content.split(/\r?\n/);
+
+  for (let i = 0; i < lines.length; i++) {
+    let match;
+    inheritRegex.lastIndex = 0;
+    while ((match = inheritRegex.exec(lines[i])) !== null) {
+      const rawIds = match[1];
+      const ids = rawIds
+        .split(',')
+        .map(id => id.trim())
+        .filter(id => id.startsWith('csa-'));
+      for (const id of ids) {
+        results.push({
+          targetId: id,
+          line: i + 1,
+        });
+      }
     }
   }
   return results;

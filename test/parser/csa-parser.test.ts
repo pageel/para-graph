@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { writeFileSync, unlinkSync } from 'node:fs';
-import { extractSpecAnchors } from '../../src/parser/csa-parser.js';
+import { extractSpecAnchors, extractInheritsReferences } from '../../src/parser/csa-parser.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -80,5 +80,67 @@ describe('CSA Markdown Parser', () => {
         unlinkSync(tempFile);
       } catch (e) {}
     }
+  });
+
+  describe('extractInheritsReferences', () => {
+    it('should extract single inherits reference correctly', () => {
+      const tempFile = join(FIXTURES_DIR, 'temp-single-inherit.md');
+      try {
+        writeFileSync(
+          tempFile,
+          `# Doc\nSome text.\n<span data-csa-inherits="csa-anchor-1"></span>\n`,
+          'utf-8'
+        );
+        const refs = extractInheritsReferences(tempFile);
+        expect(refs).toHaveLength(1);
+        expect(refs[0]).toEqual({
+          targetId: 'csa-anchor-1',
+          line: 3
+        });
+      } finally {
+        try {
+          unlinkSync(tempFile);
+        } catch (e) {}
+      }
+    });
+
+    it('should extract multiple comma-separated inherits references with spacing', () => {
+      const tempFile = join(FIXTURES_DIR, 'temp-multi-inherit.md');
+      try {
+        writeFileSync(
+          tempFile,
+          `# Doc\n<span data-csa-inherits="csa-anchor-1,  csa-anchor-2 ,csa-anchor-3"></span>\n`,
+          'utf-8'
+        );
+        const refs = extractInheritsReferences(tempFile);
+        expect(refs).toHaveLength(3);
+        expect(refs[0]).toEqual({ targetId: 'csa-anchor-1', line: 2 });
+        expect(refs[1]).toEqual({ targetId: 'csa-anchor-2', line: 2 });
+        expect(refs[2]).toEqual({ targetId: 'csa-anchor-3', line: 2 });
+      } finally {
+        try {
+          unlinkSync(tempFile);
+        } catch (e) {}
+      }
+    });
+
+    it('should filter out empty inherits references and ignore non-matching spans', () => {
+      const tempFile = join(FIXTURES_DIR, 'temp-empty-inherit.md');
+      try {
+        writeFileSync(
+          tempFile,
+          `# Doc\n<span data-csa-inherits=", csa-anchor-1,, csa-anchor-2 ,"></span>\n<span id="csa-anchor-3"></span>\n`,
+          'utf-8'
+        );
+        const refs = extractInheritsReferences(tempFile);
+        expect(refs).toHaveLength(2);
+        expect(refs[0]).toEqual({ targetId: 'csa-anchor-1', line: 2 });
+        expect(refs[1]).toEqual({ targetId: 'csa-anchor-2', line: 2 });
+      } finally {
+        try {
+          unlinkSync(tempFile);
+        } catch (e) {}
+      }
+    });
   });
 });
