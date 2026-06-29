@@ -520,18 +520,39 @@ export class SqliteManager {
     const totalDocAnchorsCount = docGate === 'off' ? 0 : docAnchorsRows.length;
 
     // Check which anchors have DOCUMENTED_BY edge (resolving both short and long syntax)
+    // Supports both direct (Code -> Anchor) and transitive (Code -> Doc File -> Anchor) links
+    // @para-doc [#csa-transitive-resolution]
     const checkCovered = db.prepare(`
       SELECT COUNT(*) as count 
-      FROM edges 
-      WHERE (target_id = ? OR target_id LIKE '%#' || ?) AND relation = 'DOCUMENTED_BY'
+      FROM edges e1
+      WHERE 
+        (e1.relation = 'DOCUMENTED_BY' AND (e1.target_id = ? OR e1.target_id LIKE '%#' || ?))
+        OR
+        (
+          e1.relation = 'DOCUMENTS' 
+          AND (e1.target_id = ? OR e1.target_id LIKE '%#' || ?)
+          AND EXISTS (
+            SELECT 1 FROM edges e2 
+            WHERE e2.relation = 'DOCUMENTED_BY' 
+              AND e2.target_id = e1.source_id
+          )
+        )
     `);
 
-    // Helper to calculate weight of an anchor based on related code nodes
+    // Helper to calculate weight of an anchor based on related code nodes (direct and transitive)
     const findRelatedCodeNodes = db.prepare(`
       SELECT id, type, semantic FROM nodes 
       WHERE id IN (
+        -- Direct code nodes
         SELECT source_id FROM edges 
         WHERE (target_id = ? OR target_id LIKE '%#' || ?) AND relation = 'DOCUMENTED_BY'
+        
+        UNION
+        
+        -- Transitive code nodes (Code -> Doc File -> Spec Anchor)
+        SELECT e2.source_id FROM edges e1
+        JOIN edges e2 ON e2.target_id = e1.source_id AND e2.relation = 'DOCUMENTED_BY'
+        WHERE (e1.target_id = ? OR e1.target_id LIKE '%#' || ?) AND e1.relation = 'DOCUMENTS'
       )
     `);
 
@@ -540,7 +561,7 @@ export class SqliteManager {
     `);
 
     const getAnchorWeight = (anchorId: string): number => {
-      const relatedNodes = findRelatedCodeNodes.all(anchorId, anchorId) as Array<{ id: string; type: string; semantic: string | null }>;
+      const relatedNodes = findRelatedCodeNodes.all(anchorId, anchorId, anchorId, anchorId) as Array<{ id: string; type: string; semantic: string | null }>;
       if (relatedNodes.length === 0) {
         return lowW; // Default weight for uncovered anchors
       }
@@ -582,7 +603,7 @@ export class SqliteManager {
         coveredSpecCount++;
         coveredSpecWeight += weight;
       } else {
-        const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
+        const res = checkCovered.get(row.id, row.id, row.id, row.id) as { count: number } | undefined;
         if (res && res.count > 0) {
           coveredSpecCount++;
           coveredSpecWeight += weight;
@@ -603,7 +624,7 @@ export class SqliteManager {
           coveredDocCount++;
           coveredDocWeight += weight;
         } else {
-          const res = checkCovered.get(row.id, row.id) as { count: number } | undefined;
+          const res = checkCovered.get(row.id, row.id, row.id, row.id) as { count: number } | undefined;
           if (res && res.count > 0) {
             coveredDocCount++;
             coveredDocWeight += weight;

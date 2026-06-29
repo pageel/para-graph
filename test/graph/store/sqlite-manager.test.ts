@@ -190,5 +190,55 @@ describe('SqliteManager', () => {
       expect(results[0].toolCallsBreakdown).toEqual(mockTelemetry.toolCallsBreakdown);
     });
   });
+
+  describe('runCsaAudit transitive resolution', () => {
+    it('resolves transitive coverage correctly: Code -> DOCUMENTS -> Doc File -> DOCUMENTS -> Spec Anchor', () => {
+      const db = dbManager.getConnection();
+      
+      // 1. Insert nodes
+      // Spec Anchor node
+      db.prepare(`
+        INSERT INTO nodes (id, name, type, file_path, created_at, updated_at)
+        VALUES ('csa-anchor-1', 'Anchor 1', 'spec_anchor', 'artifacts/specs/spec.md', 123, 123)
+      `).run();
+
+      // Doc File node
+      db.prepare(`
+        INSERT INTO nodes (id, name, type, file_path, created_at, updated_at)
+        VALUES ('docs/doc.md', 'doc.md', 'file', 'docs/doc.md', 123, 123)
+      `).run();
+
+      // Code Node
+      db.prepare(`
+        INSERT INTO nodes (id, name, type, file_path, created_at, updated_at)
+        VALUES ('src/index.ts::foo', 'foo', 'function', 'src/index.ts', 123, 123)
+      `).run();
+
+      // 2. Insert edges
+      // Code -> Doc File (DOCUMENTED_BY)
+      db.prepare(`
+        INSERT INTO edges (source_id, target_id, relation)
+        VALUES ('src/index.ts::foo', 'docs/doc.md', 'DOCUMENTED_BY')
+      `).run();
+
+      // Doc File -> Spec Anchor (DOCUMENTS)
+      db.prepare(`
+        INSERT INTO edges (source_id, target_id, relation)
+        VALUES ('docs/doc.md', 'csa-anchor-1', 'DOCUMENTS')
+      `).run();
+
+      // 3. Run audit
+      const result = dbManager.runCsaAudit({
+        doubleBinding: true,
+        specThreshold: 100
+      });
+
+      // 4. Verify results
+      expect(result.specCoverage.pass).toBe(true);
+      expect(result.specCoverage.totalAnchors).toBe(1);
+      expect(result.specCoverage.coveredAnchors).toBe(1);
+      expect(result.specCoverage.coverageRate).toBe(100);
+    });
+  });
 });
 
