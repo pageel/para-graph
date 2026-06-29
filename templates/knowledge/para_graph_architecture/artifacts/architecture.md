@@ -46,20 +46,25 @@ Added by Agent via `graph_enrich` MCP tool. Fields:
 
 Edges represent directed relationships between two nodes:
 - `sourceId` / `targetId`: Node IDs.
-- `relation`: One of `CALLS`, `IMPORTS_FROM`, `INHERITS`, `IMPLEMENTS`, `DOCUMENTED_BY`.
+- `relation`: One of `CALLS`, `IMPORTS_FROM`, `INHERITS`, `IMPLEMENTS`, `DOCUMENTED_BY`, `DOCUMENTS`.
 - `sourceFile` / `sourceLine`: Where the relationship originates.
 - `confidence?`: `EXTRACTED` (from AST), `INFERRED` (Agent-injected), `AMBIGUOUS`, or `EXTERNAL`.
 
-## Unified CSA Traceability (v0.17.2+)
+## Unified CSA Traceability (v0.17.2+ & v0.17.6.4+)
 
-Since v0.17.2, the two legacy doc-code systems have been merged into a single **Unified CSA** mechanism:
+Since v0.17.2 and expanded in v0.17.6.4, the documentation and specification systems are unified under the **Transitive CSA Double-Binding** mechanism:
 
-- **Unified Anchor Syntax**: `<span id="csa-xxx">` in Specs (`artifacts/specs/`) or Docs (`docs/`) bound to `// @para-doc [#xxx]` in code.
+- **Transitive Model (Hub-and-Spoke)**: 
+  - `Spec Anchor` acts as the single source of truth/hub.
+  - `Code Node` points to `Spec Anchor` via `DOCUMENTED_BY` relationship (marked by `// @para-doc [#csa-anchor-id]` in code).
+  - `Doc File` points to `Spec Anchor` via `DOCUMENTS` relationship (declared by `<span data-csa-inherits="csa-anchor-id"></span>` in documentation markdown).
+  - Code and Docs are resolved transitively; there is no direct link between Code and Docs.
+- **Unified Anchor Syntax**: `<span id="csa-xxx">` defines the Spec Anchor. Docs inherit/document it using `data-csa-inherits="csa-xxx"`.
 - **Tiered Compliance Gating**:
-  - **Tier 1: Specs (Hard Gate)**: Targets `artifacts/specs/`. Blocks release if below threshold (default 90%).
+  - **Tier 1: Specs (Hard Gate)**: Targets `artifacts/specs/`. Blocks release if below threshold (default 100%).
   - **Tier 2: Docs (Configurable Gate)**: Targets `docs/`. Configurable threshold (default 50%) and gate (`soft` warning, `hard` block, `off` bypass).
 - **Audit & Self-Healing**:
-  - **Audit**: `graph_audit_csa` MCP tool and `para-graph audit` CLI command check coverage for both specs and docs based on the configured gating.
+  - **Audit**: `graph_audit_csa` MCP tool and `para-graph audit csa` CLI command check coverage for both specs and docs based on the configured gating.
   - **Fix**: `graph_fix_csa` MCP tool applies automated rename resolution to correct drifted comments.
 - **Deprecated components**: `<!-- @graph-node -->` comments, `docAnchors[]` attribute, `graph_link_docs` tool, and `para-graph link` CLI command.
 

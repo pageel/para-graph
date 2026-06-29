@@ -1,6 +1,6 @@
 {
   "title": "PARA Graph MCP Tools Guide",
-  "summary": "Complete reference for all 25 MCP tools across 7 domains: Graph Core (query, edges, enrich, impact, context, add_edges, link_docs, god_nodes, expand_node), Memory Engine (push, search, curate), Project Insights (push, search, validate), CSA Governance (audit_csa, fix_csa), Project Safety L2 (snapshot, diff, protected_files, session_compact), Project State Cache (state_get, state_sync), and Session Telemetry (telemetry_push, telemetry_query). Documents the two distinct traceability systems: CSA Double-Binding for Specs and Graph Doc-Anchoring for Docs.",
+  "summary": "Complete reference for all 26 MCP tools across 7 domains: Graph Core (query, edges, enrich, impact, context, add_edges, link_docs, god_nodes, expand_node), Memory Engine (push, search, curate), Project Insights (push, search, validate), CSA Governance (audit_csa, fix_csa, spec_candidates), Project Safety L2 (snapshot, diff, protected_files, session_compact), Project State Cache (state_get, state_sync), and Session Telemetry (telemetry_push, telemetry_query). Documents the two distinct traceability systems: CSA Double-Binding for Specs and Graph Doc-Anchoring for Docs.",
   "owner": "para",
   "scope": "workspace",
   "domain": "tools",

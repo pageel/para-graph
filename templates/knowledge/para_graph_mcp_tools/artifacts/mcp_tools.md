@@ -1,6 +1,6 @@
 # PARA Graph MCP Tools Guide
 
-The `para-graph` MCP server registers **25 tools** across 7 functional domains. AI Agents use these tools to query, enrich, analyze, and govern codebase structures.
+The `para-graph` MCP server registers **26 tools** across 7 functional domains. AI Agents use these tools to query, enrich, analyze, and govern codebase structures.
 
 ## Domain 1: Graph Core (9 tools)
 
@@ -70,7 +70,7 @@ The `para-graph` MCP server registers **25 tools** across 7 functional domains. 
 - **Purpose**: Update the confidence lifecycle of a project insight (hypothesis → validated → deprecated).
 - **Key Params**: `projectName`, `insightId`, `confidence`
 
-## Domain 4: CSA Governance (2 tools)
+## Domain 4: CSA Governance (3 tools)
 
 ### 16. `graph_audit_csa`
 - **Purpose**: Run Convergent Specification Architecture (CSA) compliance audit. Checks bidirectional traceability between anchors (`<span id="csa-...">`) and code comments (`// @para-doc`).
@@ -81,44 +81,48 @@ The `para-graph` MCP server registers **25 tools** across 7 functional domains. 
 - **Purpose**: Run CSA self-healing fix for dangling spec references. Uses Git rename history and fuzzy matching to auto-replace drifted `// @para-doc` comments in code files.
 - **Key Params**: `projectName`
 
+### 18. `graph_spec_candidates`
+- **Purpose**: Scans the codebase for uncovered entities and suggests unique spec anchor IDs categorized by priority.
+- **Key Params**: `projectName`, `scope?` (uncovered/god-nodes/module), `modulePath?`, `tier?` (all/critical/medium), `limit?`
+
 ## Domain 5: Project Safety — L2 File Structure (4 tools)
 
-### 18. `project_snapshot`
+### 19. `project_snapshot`
 - **Purpose**: Take a snapshot of the project directory structure, record file tree metadata to SQLite, and verify protected files. Also detects and classifies untracked/ignored physical junk files according to active project profiles and configuration.
 - **Key Params**: `projectName`, `auditJunk?` (boolean, triggers profile-driven Junk Audit scan)
 - **Note**: The response contains both a flat backward-compatible list (`junkFiles[]`) and a detailed profile-driven classification report (`junkReport`) categorized into 3 tiers: Tier 1 (Safe to auto-delete), Tier 2 (Prompt user for deletion), and Tier 3 (Report-only).
 
-### 19. `project_diff`
+### 20. `project_diff`
 - **Purpose**: Compare two project snapshots to identify added, removed, and modified files (physical drift detection).
 - **Key Params**: `projectName`, `sourceSnapshotId`, `targetSnapshotId`
 
-### 20. `project_protected_files`
+### 21. `project_protected_files`
 - **Purpose**: List, add, or remove protected files for a project (core file integrity watchlist).
 - **Key Params**: `projectName`, `action` (list/add/remove), `filePath?`
 
-### 21. `project_session_compact`
+### 22. `project_session_compact`
 - **Purpose**: Scan rules, skills, and project contract, then write a compacted markdown context summary to `para_vibecode_session/artifacts/session.md` for context recovery.
 - **Key Params**: `projectName`
 
 ## Domain 6: Project State Cache (2 tools)
 
-### 22. `project_state_get`
+### 23. `project_state_get`
 - **Purpose**: Get cached project metadata and task counts from SQLite. Checks freshness against configuration files via MD5 hashes.
 - **Key Params**: `projectName`
 
-### 23. `project_state_sync`
+### 24. `project_state_sync`
 - **Purpose**: Sync and cache project metadata and task counts from config files (`project.md`, `backlog.md`, `sprint-current.md`) into SQLite database.
 - **Key Params**: `projectName`
 
 ## Domain 7: Session Telemetry (2 tools)
 
-### 24. `session_telemetry_push`
+### 25. `session_telemetry_push`
 - **Purpose**: Push session telemetry data (token usage, duration, steps count, error count, files modified) to SQLite database.
 - **Key Params**: `projectName`, `telemetry` (object)
 
-### 25. `session_telemetry_query`
+### 26. `session_telemetry_query`
 - **Purpose**: Query session telemetry logs and run trend analysis for optimization (e.g. identify high-churn files, token leaks, and error patterns).
-- **Key Params**: `projectName`, `limit?`
+- **Key Params**: `projectName`, `workflow?`, `limit?`
 
 ## Unified CSA Traceability (v0.17.2+)
 

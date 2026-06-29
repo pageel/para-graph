@@ -10,7 +10,7 @@
 
 ### 2. `para-graph serve`
 - Starts the MCP server on stdio.
-- Exposes 25 tools to AI Agents for codebase semantic queries, memory, insights, CSA governance, project safety, and session telemetry.
+- Exposes 26 tools to AI Agents for codebase semantic queries, memory, insights, CSA governance, project safety, and session telemetry.
 
 ### 3. `para-graph link <project-name>` [DEPRECATED & DISABLED]
 - **Deprecated & Disabled since v0.17.4**: Previously scanned documentation for anchors. Throws deprecation error if run. Use Unified CSA instead.
