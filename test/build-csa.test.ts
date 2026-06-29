@@ -149,5 +149,50 @@ describe('Build CSA Integration', () => {
       console.warn = originalWarn;
     }
   });
+
+  it('should scan doc markdown files containing inherits, adding FILE nodes and EdgeRelation.DOCUMENTS edges', () => {
+    // 1. Write mock spec in docs/
+    writeFileSync(
+      join(docsDir, 'spec-main.md'),
+      `# Specs Main\n\n## Core Feature <span id="csa-core-feat"></span>`,
+      'utf-8'
+    );
+
+    // 2. Write mock doc in docs/ inheriting from the spec anchor
+    writeFileSync(
+      join(docsDir, 'guide-user.md'),
+      `# User Guide\n\n<span data-csa-inherits="csa-core-feat"></span>\nThis is a user guide.`,
+      'utf-8'
+    );
+
+    // Write dummy code to avoid early exit
+    writeFileSync(join(repoDir, 'dummy.ts'), 'export function dummy() {}', 'utf-8');
+
+    // 3. Run Build
+    runBuild({
+      targetDir: repoDir,
+      outputDir: outputDir,
+      useClean: true,
+      projectName: 'mock-project'
+    });
+
+    // 4. Import graph and verify
+    const graph = importFromJsonl(outputDir);
+
+    // Verify guide-user.md node exists in the graph as a FILE type
+    const docNode = graph.getNode('docs/guide-user.md');
+    expect(docNode).toBeDefined();
+    expect(docNode?.type).toBe(NodeType.FILE);
+    expect(docNode?.filePath).toBe('docs/guide-user.md');
+
+    // Verify DOCUMENTS edge exists linking guide-user.md to csa-core-feat
+    const edges = graph.getAllEdges();
+    const documentsEdge = edges.find(
+      e => e.sourceId === 'docs/guide-user.md' && e.targetId === 'csa-core-feat'
+    );
+    expect(documentsEdge).toBeDefined();
+    expect(documentsEdge?.relation).toBe(EdgeRelation.DOCUMENTS);
+    expect(documentsEdge?.confidence).toBe('EXTRACTED');
+  });
 });
 

@@ -25,6 +25,7 @@ export enum EdgeRelation {
   INHERITS = 'INHERITS',
   IMPLEMENTS = 'IMPLEMENTS',
   DOCUMENTED_BY = 'DOCUMENTED_BY',
+  DOCUMENTS = 'DOCUMENTS',
 }
 
 /** Export visibility of a code entity */

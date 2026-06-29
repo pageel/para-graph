@@ -12,7 +12,7 @@
 // @para-doc [#csa-testing-strategy]
 // @para-doc [#csa-success-criteria]
 // @para-doc [#csa-technical-plan]
-import { resolve, join, dirname, relative } from 'node:path';
+import { resolve, join, dirname, relative, basename } from 'node:path';
 import { existsSync, unlinkSync, readdirSync, statSync } from 'node:fs';
 import { walkDirectory } from '../parser/file-walker.js';
 import { TreeSitterParser } from '../parser/tree-sitter-parser.js';
@@ -21,9 +21,9 @@ import { exportToJsonl } from '../graph/jsonl-exporter.js';
 import { importFromJsonl } from '../graph/jsonl-importer.js';
 import { resolveEdges } from '../graph/edge-resolver.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
-import { NodeType, ExportType } from '../graph/models.js';
+import { NodeType, ExportType, EdgeRelation } from '../graph/models.js';
 import type { GraphNode, GraphEdge } from '../graph/models.js';
-import { extractSpecAnchors, extractSpecMetadata } from '../parser/csa-parser.js';
+import { extractSpecAnchors, extractSpecMetadata, extractInheritsReferences } from '../parser/csa-parser.js';
 import { runLink } from './link.js';
 import { findWorkspaceRoot } from '../utils/workspace.js';
 
@@ -167,8 +167,36 @@ export function runBuild(options: BuildOptions): void {
           });
           anchorCount++;
         }
+
+        // @para-doc [#csa-transitive-build]
+        const inherits = extractInheritsReferences(mdFile);
+        if (inherits.length > 0) {
+          if (!graph.getNode(relPath)) {
+            graph.addNode({
+              id: relPath,
+              type: NodeType.FILE,
+              name: basename(relPath),
+              filePath: relPath,
+              startLine: 1,
+              endLine: 1,
+              exportType: ExportType.NONE,
+              signature: relPath,
+            });
+          }
+
+          for (const ref of inherits) {
+            graph.addEdge({
+              sourceId: relPath,
+              targetId: ref.targetId,
+              relation: EdgeRelation.DOCUMENTS,
+              sourceFile: relPath,
+              sourceLine: ref.line,
+              confidence: 'EXTRACTED',
+            });
+          }
+        }
       } catch (err) {
-        console.warn(`[para-graph] Warning: Failed to parse CSA anchors in ${mdFile}: ${(err as Error).message}`);
+        console.warn(`[para-graph] Warning: Failed to parse CSA anchors or inherits in ${mdFile}: ${(err as Error).message}`);
       }
     }
     if (anchorCount > 0) {
