@@ -91,28 +91,33 @@ post_install() {
       parse_manifest_agents
     fi
 
-    # Install agents from fetched templates (same pattern as --sync mode)
-    local i=0
-    while [ $i -lt ${#AGENT_SOURCES[@]} ]; do
-      local asource="${AGENT_SOURCES[$i]}"
-      local atype="${AGENT_TYPES[$i]}"
-      local atarget="${AGENT_TARGETS[$i]}"
-      local src_path="$sync_temp/$asource"
-      local dst_dir="$AGENTS_DIR/$atype"
-      local dst_path="$dst_dir/$atarget"
+    # Install agents from fetched templates using the installer's native function (for dirty checking)
+    if type install_agents >/dev/null 2>&1; then
+      install_agents "$sync_temp"
+    else
+      # Fallback for older para-workspace versions without install_agents argument support
+      local i=0
+      while [ $i -lt ${#AGENT_SOURCES[@]} ]; do
+        local asource="${AGENT_SOURCES[$i]}"
+        local atype="${AGENT_TYPES[$i]}"
+        local atarget="${AGENT_TARGETS[$i]}"
+        local src_path="$sync_temp/$asource"
+        local dst_dir="$AGENTS_DIR/$atype"
+        local dst_path="$dst_dir/$atarget"
 
-      if [ -e "$src_path" ]; then
-        mkdir -p "$dst_dir"
-        if [ -d "$src_path" ]; then
-          [ -d "$dst_path" ] && rm -rf "$dst_path"
-          cp -r "$src_path" "$dst_path"
-        elif [ -f "$src_path" ]; then
-          cp "$src_path" "$dst_path"
+        if [ -e "$src_path" ]; then
+          mkdir -p "$dst_dir"
+          if [ -d "$src_path" ]; then
+            [ -d "$dst_path" ] && rm -rf "$dst_path"
+            cp -r "$src_path" "$dst_path"
+          elif [ -f "$src_path" ]; then
+            cp "$src_path" "$dst_path"
+          fi
+          echo "  ✅ $atype/$atarget installed."
         fi
-        echo "  ✅ $atype/$atarget installed from GitHub."
-      fi
-      i=$((i + 1))
-    done
+        i=$((i + 1))
+      done
+    fi
   else
     echo ""
     echo "  ⚠️  Could not fetch AI Intelligence (no network or GitHub unreachable)."
