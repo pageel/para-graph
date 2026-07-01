@@ -66,20 +66,25 @@ post_install() {
   # This hook runs AFTER install_agents() — which prints "Source not found"
   # warnings because templates/ is absent. We fetch and install correctly here.
 
-  echo "  📊 para-graph: fetching AI Intelligence from GitHub..."
+  # In --sync mode, templates have already been copied from local or remote by the installer,
+  # so we bypass the remote git fetch to avoid overwriting local templates and save network calls.
+  if [ "$SYNC_MODE" = "true" ]; then
+    echo "  ⏭️  Skipping remote templates fetch in sync mode."
+  else
+    echo "  📊 para-graph: fetching AI Intelligence from GitHub..."
 
-  # Guard: ensure fetch function is available in scope
-  if ! type fetch_templates_from_git >/dev/null 2>&1; then
-    echo "  ⚠️  fetch_templates_from_git not available (para-workspace < 1.8.5?)."
-    echo "     Run: ./para install-tool para-graph --sync"
-    return 0
-  fi
+    # Guard: ensure fetch function is available in scope
+    if ! type fetch_templates_from_git >/dev/null 2>&1; then
+      echo "  ⚠️  fetch_templates_from_git not available (para-workspace < 1.8.5?)."
+      echo "     Run: ./para install-tool para-graph --sync"
+      return 0
+    fi
 
-  # Create temp directory for downloads
-  local sync_temp
-  sync_temp="$(mktemp -d)"
+    # Create temp directory for downloads
+    local sync_temp
+    sync_temp="$(mktemp -d)"
 
-  if fetch_templates_from_git "$MANIFEST_FILE" "$sync_temp"; then
+    if fetch_templates_from_git "$MANIFEST_FILE" "$sync_temp"; then
     # Re-parse manifest to populate AGENT_* arrays
     # (already populated by install-tool.sh, but re-parse to be safe)
     if type parse_manifest_agents >/dev/null 2>&1; then
@@ -118,6 +123,7 @@ post_install() {
 
   # Cleanup temp directory
   rm -rf "$sync_temp"
+  fi
 
   # Fix: Ensure dependencies are installed in production
   echo "  📦 para-graph: installing production dependencies..."
