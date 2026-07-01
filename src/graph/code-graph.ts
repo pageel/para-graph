@@ -262,6 +262,7 @@ export class CodeGraph {
   /**
    * Calculate Fan-in (number of incoming CALLS edges) for a node.
    * Excludes ?unresolved edges from the count.
+   * @para-doc [#csa-p8-graph-runtime-topology]
    */
   fanIn(nodeId: string): number {
     return this.edgeList.filter(e =>
@@ -324,6 +325,7 @@ export class CodeGraph {
    * @param topN - Number of top nodes to return (default: 10)
    * @returns Array of node profiles sorted by degree (descending)
    */
+  // @para-doc [#csa-edge-resolve-topology-calculation]
   detectGodNodes(topN: number = 10): Array<{
     id: string;
     name: string;

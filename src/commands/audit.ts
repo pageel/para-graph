@@ -8,10 +8,12 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import type { ProjectInsight, CsaConfig } from '../graph/models.js';
 
+// @para-doc [#csa-AuditCsaOptions]
 export interface AuditCsaOptions {
   projectPath: string;
 }
 
+// @para-doc [#csa-readCsaConfig]
 function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
   const config: Partial<CsaConfig> = {};
   if (!existsSync(projectMdPath)) return config;
@@ -35,6 +37,9 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
 // @para-doc [#csa-loophole-guard]
 // @para-doc [#csa-cli-audit]
 // @para-doc [#csa-tiered-gate]
+// @para-doc [#csa-runAudit]
+// @para-doc [#csa-CsaCoverageDetails]
+// @para-doc [#csa-CsaTieredResult]
 export function runAudit({ projectPath }: AuditCsaOptions): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {

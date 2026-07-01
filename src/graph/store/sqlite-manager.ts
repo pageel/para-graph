@@ -56,6 +56,8 @@ export interface CsaAuditResult {
 }
 
 // @para-doc [#csa-sqlite-database]
+// @para-doc [#csa-s5-benchmark-runner]
+// @para-doc [#csa-s5-benchmark-metrics]
 export class SqliteManager {
   private dbPath: string;
   private db: any | null = null;
@@ -74,6 +76,8 @@ export class SqliteManager {
 
   // @para-doc [#csa-sqlite-schema]
   // @para-doc [#csa-test-schema]
+  // @para-doc [#csa-s5-sqlite-migration-test]
+  // @para-doc [#csa-s5-temp-db-cleanup]
   public initSchema(): void {
     const db = this.getConnection();
 
@@ -423,6 +427,7 @@ export class SqliteManager {
     return this.db;
   }
 
+  // @para-doc [#csa-persistGraph]
   public persistGraph(nodes: any[], edges: any[]): void {
     const db = this.getConnection();
     

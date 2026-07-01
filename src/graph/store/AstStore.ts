@@ -258,12 +258,15 @@ export class AstStore {
    * @param edges - Array of edges to inject
    * @returns AddEdgesResult with added/skipped counts and error details
    */
+  // @para-doc [#csa-para-graph-bash-edge-store]
+  // @para-doc [#csa-para-graph-bash-edge-tests]
   public addEdges(edges: GraphEdge[]): AddEdgesResult {
     let added = 0;
     let skipped = 0;
     const errors: AddEdgesResult['errors'] = [];
 
     for (const edge of edges) {
+      // @para-doc [#csa-para-graph-bash-edge-safety]
       // Validate: both nodes must exist
       const sourceExists = this.nodesById.has(edge.sourceId);
       const targetExists = this.nodesById.has(edge.targetId);

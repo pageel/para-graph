@@ -92,7 +92,8 @@ function extractMethodName(targetId: string): string | null {
  * @param graph - The CodeGraph to resolve edges in
  * @returns Resolution statistics
  */
-// @para-doc [#csa-edge-resolution]
+// @para-doc [#csa-edge-resolve-engine-priority]
+// @para-doc [#csa-edge-resolve-test-suite]
 export function resolveEdges(graph: CodeGraph): EdgeResolverResult {
   const allNodes = graph.getAllNodes();
   const allEdges = graph.getAllEdges();

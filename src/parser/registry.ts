@@ -53,6 +53,7 @@ export interface LanguageProfile {
 // --- Built-in Language Profiles ---
 
 const PROFILES: LanguageProfile[] = [
+  // @para-doc [#csa-p8-scm-typescript]
   {
     name: 'typescript',
     extensions: ['.ts'],
@@ -65,6 +66,7 @@ const PROFILES: LanguageProfile[] = [
     parserModule: 'tree-sitter-typescript/tsx',
     queryFile: 'typescript.scm', // TSX reuses TS query patterns
   },
+  // @para-doc [#csa-p8-scm-python]
   {
     name: 'python',
     extensions: ['.py', '.pyw'],

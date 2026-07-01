@@ -353,6 +353,7 @@ export class TreeSitterParser {
         }
 
         // --- Relation: Member Call (object.method) ---
+        // @para-doc [#csa-p8-parser-pairing]
         case 'relation.call.object': {
           // Store object name temporarily — will be paired with method
           pendingCallObject = node.text;
@@ -444,6 +445,7 @@ export class TreeSitterParser {
             n.startLine === lineNum + 1
         );
 
+        // @para-doc [#csa-edge-resolve-source-id]
         let sourceId = relPath; // Default to file-level
         if (nodeStartingAfter.length > 0) {
           // Sort by startLine ascending to find the closest one

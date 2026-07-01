@@ -41,6 +41,7 @@ export function extractSpecMetadata(filePath: string): SpecMetadata {
 
 // @para-doc [#csa-src/parser/csa-parser.ts]
 // @para-doc [#csa-parser-markdown]
+// @para-doc [#csa-extractSpecAnchors]
 export function extractSpecAnchors(filePath: string): SpecAnchorNode[] {
   const content = readFileSync(filePath, 'utf-8');
   const anchorRegex = /<span\s+id=["'](csa-[a-zA-Z0-9.:\/_-]+)["'][^>]*><\/span>/g;

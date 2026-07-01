@@ -30,10 +30,10 @@ When writing or modifying code entities:
 
    | Language / File type | Comment Syntax | Example |
    |:---|:---|:---|
-   | **TypeScript / JavaScript / Go / Rust / PHP** | `//` | `// @para-doc [specs/doc.md#anchor]` |
-   | **Python / Shell (Bash) / Ruby** | `#` | `# @para-doc [specs/doc.md#anchor]` |
-   | **HTML / Markdown** | `<!-- ... -->` | `<!-- @para-doc [specs/doc.md#anchor] -->` |
-   | **CSS / SCSS** | `/* ... */` | `/* @para-doc [specs/doc.md#anchor] */` |
+   | **TypeScript / JavaScript / Go / Rust / PHP** | `//` | `// @para-doc [#csa-anchor-id]` |
+   | **Python / Shell (Bash) / Ruby** | `#` | `# @para-doc [#csa-anchor-id]` |
+   | **HTML / Markdown** | `<!-- ... -->` | `<!-- @para-doc [#csa-anchor-id] -->` |
+   | **CSS / SCSS** | `/* ... */` | `/* @para-doc [#csa-anchor-id] */` |
 
 ### Anchor Granularity Floor (Micro-Anchoring)
 
@@ -106,55 +106,24 @@ This file governs the behavioral standards and constraints of all AI agents oper
 
 ---
 
-### Template B: CSA Rule Specification (`.agents/rules/csa-compliance.md`)
-Create a file at `.agents/rules/csa-compliance.md` using the template below:
+### CSA Rule Activation & Reference
 
-```markdown
-# Rule: CSA Compliance and Documentation Harness
+Since CSA is distributed globally as a Workspace-level rule (stored at `.agents/rules/csa-compliance.md`), projects MUST NOT create a local copy of this rule. Instead, to activate CSA for a project:
 
-<!-- ⚠️ GOVERNED — /para-rule only. Overwritten by para update -->
+1. **Configure project.md:** Enable the `csa:` configuration and set `agent.rules: true` in `project.md`:
+   ```yaml
+   csa:
+     spec_threshold: 90
+     doc_threshold: 50
+     doc_gate: soft
+   agent:
+     rules: true
+   ```
 
-> Governance rule to enforce Convergent Specification Architecture (CSA) compliance, ensuring bidirectional traceability between source code and documentation.
-
-## Scope
-
-- [x] Project-specific
-- [ ] Global reusable
-
-## Triggers
-
-- Ending a session (`/end` or session cleanup)
-- Completing an implementation phase in `/plan`
-- Committing code changes or running build/test pipelines
-
-## Constraints
-
-### C1: Minimum CSA Coverage Gate
-- The project's **Weighted Graph Coverage** **MUST** be at least **90.0%**.
-- The Agent **MUST NOT** declare a phase completed (`✅ Done`), remove the `active_plan` marker in `project.md`, or run the `/end` session synchronization if the score is below this threshold.
-
-### C2: Mandatory Bidirectional Double-Binding
-- Every public code entity (exported class, interface, function) introduced in a phase **MUST** have a corresponding back-reference comment using the `@para-doc` syntax directly above its declaration:
-  ```typescript
-  // @para-doc [artifacts/specs/doc.md#heading-anchor]
-  export function myNewFunction() { ... }
-  ```
-- Correspondingly, the referenced documentation file **MUST** contain a unique HTML anchor `<span id="csa-anchor-id"></span>` linking to the code node to complete the double-binding.
-
-### C3: Automated Graph and Docs Synchronization
-- After making modifications to source code or documentation files, the Agent **MUST** execute:
-  1. Graph Rebuild: `npx para-graph build <project-name>` to refresh AST indices.
-  2. Compliance Audit: Run `npx para-graph audit csa --project .` to automatically verify the traceability and coverage metrics.
-
-### C4: Source-Verified Verification Gate
-- Every modified or created documentation file **MUST** pass the anti-hallucination verification step.
-- The file **MUST** carry the `<!-- ⚠️ SOURCE-VERIFIED — Cross-referenced with [files] on YYYY-MM-DD -->` guard header comment immediately below the main title.
-
-### C5: Anchor Granularity Floor (Micro-Anchoring)
-- Each CSA anchor **MUST** map to exactly **one design decision** or **one functional requirement** (G1: One-to-One Mapping).
-- Agent **MUST NOT** place anchors at aggregate-level headings (H1/H2 that contain tables, lists, or multiple unrelated concepts) and assign them to a single code file (G3: No Blanket Anchors).
-- Before inserting `// @para-doc [#csa-xxx]`, Agent **MUST** apply **Reverse Validation** (G2): *"If I change this code file, would the ENTIRE content described by `csa-xxx` be affected?"* If the answer is **"only partially"** → the anchor **MUST** be decomposed to a more specific sub-section (H3/H4 or inline `<span>` next to the relevant table row or bullet).
-```
+2. **Register in Rules Index:** Add the global rule reference to the project's rules index file `.agents/rules.md`:
+   ```markdown
+   | CSA Compliance | Ending session, phase completion, build/test run | rules/csa-compliance.md | 🔴 |
+   ```
 
 ---
 
@@ -185,7 +154,7 @@ Whenever concluding or updating an active plan/phase, the Agent must perform the
 ### 2. Entity Double-Binding
 * **Code side:** Prepend public declarations with:
   ```typescript
-  // @para-doc [artifacts/specs/spec-file.md#heading-anchor]
+  // @para-doc [#csa-target-entity]
   export class TargetEntity { ... }
   ```
 * **Spec side:** Add a unique HTML anchor in the spec section:

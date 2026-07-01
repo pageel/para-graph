@@ -130,6 +130,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- graph_enrich: Write semantic enrichment data to a node ---
+  // @para-doc [#csa-p8-mcp-architectural-label]
   server.tool(
     'graph_enrich',
     'Write semantic enrichment data (summary, complexity, domain concepts, docAnchors) to a graph node',
@@ -292,6 +293,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- graph_add_edges: Batch inject edges for agentic edge resolution ---
+  // @para-doc [#csa-para-graph-bash-edge-mcp]
   server.tool(
     'graph_add_edges',
     'Batch inject edges (CALLS, IMPORTS_FROM) into the graph — for agentic edge resolution of languages with weak AST linking (e.g., Bash)',

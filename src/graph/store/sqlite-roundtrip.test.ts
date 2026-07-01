@@ -18,6 +18,7 @@ export const PERSISTED_FIELDS = [
 ] as const;
 
 // Helper to convert snake_case to camelCase
+// @para-doc [#csa-sqlite-roundtrip-guard]
 function toCamelCase(str: string): string {
   return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
 }

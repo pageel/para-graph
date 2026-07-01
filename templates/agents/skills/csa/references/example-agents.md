@@ -17,5 +17,5 @@ This file governs the behavioral standards and constraints of all AI agents oper
 - **Git Push Gate:** Do not recommend local git commit or push until these files are fully updated and marked done in the plan walkthrough.
 
 ## 4. CSA Compliance Gate
-- **Mandatory Double-Binding:** All new code entities must have `@para-doc` comments linking back to spec file anchors, and spec headers must have corresponding `<!-- @graph-node: ... -->` comments.
+- **Mandatory Double-Binding:** All new code entities must have `@para-doc` comments using short-form references (`// @para-doc [#csa-xxx]`), and spec files must contain corresponding HTML anchors (`<span id="csa-xxx"></span>`).
 - **Hard Audit Gate:** The Agent must run `npm run graph:build && npm run csa:audit` before finishing a phase or running `/end`. Weighted Graph Coverage must be **>= 90.0%**.

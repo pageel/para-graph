@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /**
+ * @para-doc [#csa-old-anchor]
  * para-graph CLI — Subcommand router.
  *
  * Usage:

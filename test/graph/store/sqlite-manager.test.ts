@@ -12,6 +12,7 @@ describe('SqliteManager', () => {
     dbManager.initSchema();
   });
 
+  // @para-doc [#csa-s5-temp-db-cleanup]
   afterEach(() => {
     dbManager.close();
   });
@@ -49,6 +50,7 @@ describe('SqliteManager', () => {
     });
   });
 
+  // @para-doc [#csa-s5-sqlite-migration-test]
   describe('Schema Migration / Drift', () => {
     it('handles legacy edges table foreign key constraint on target_id', () => {
       const manager = new SqliteManager('test-migration', ':memory:');

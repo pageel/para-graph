@@ -2,6 +2,7 @@
 import type { FusedResult, RrfConfig } from '../models.js';
 
 // @para-doc [#csa-rrf-scorer]
+// @para-doc [#csa-fuseRankedLists]
 export function fuseRankedLists<T>(
   rankedLists: T[][],
   getKey: (item: T) => string,

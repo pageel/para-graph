@@ -17,6 +17,8 @@ const __dirname = path.dirname(__filename);
 const workspaceRoot = path.resolve(__dirname, '../../../..');
 const projectName = 'para-graph';
 
+// @para-doc [#csa-s5-benchmark-runner]
+// @para-doc [#csa-s5-benchmark-metrics]
 async function runBenchmarks() {
   console.log('====================================================');
   console.log('         PARA-GRAPH PERFORMANCE BENCHMARKS          ');

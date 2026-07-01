@@ -20,12 +20,12 @@ Whenever concluding or updating an active plan/phase, the Agent must perform the
 ### 2. Entity Double-Binding
 * **Code side:** Prepend public declarations with:
   ```typescript
-  // @para-doc [artifacts/specs/spec-file.md#heading-anchor]
+  // @para-doc [#csa-target-entity]
   export class TargetEntity { ... }
   ```
-* **Spec side:** Append hidden HTML comments to spec headers:
+* **Spec side:** Add a unique HTML anchor in the spec section:
   ```markdown
-  ### Section Title <!-- @graph-node: src/path/to/file.ts::TargetEntity -->
+  ### Section Title <span id="csa-target-entity"></span>
   ```
 
 ### 3. Automated Verification Gate

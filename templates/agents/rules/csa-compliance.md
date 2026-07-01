@@ -49,3 +49,13 @@
 ### C4: Source-Verified Verification Gate
 - Every modified or created documentation file **MUST** pass the anti-hallucination verification step.
 - The file **MUST** carry the `<!-- ⚠️ SOURCE-VERIFIED — Cross-referenced with [files] on YYYY-MM-DD -->` guard header comment immediately below the main title.
+
+### C5: Anchor Granularity Floor (Micro-Anchoring)
+- Each CSA anchor **MUST** map to exactly **one design decision** or **one functional requirement** (G1: One-to-One Mapping).
+- Agent **MUST NOT** place anchors at aggregate-level headings (H1/H2 that contain tables, lists, or multiple unrelated concepts) and assign them to a single code file (G3: No Blanket Anchors).
+- Before inserting `// @para-doc [#csa-xxx]`, Agent **MUST** apply **Reverse Validation** (G2): *"If I change this code file, would the ENTIRE content described by `csa-xxx` be affected?"* If the answer is **"only partially"** → the anchor **MUST** be decomposed to a more specific sub-section (H3/H4 or inline `<span>` next to the relevant table row or bullet).
+
+### C6: Specification Registry Maintenance
+- Every technical specification file located in `artifacts/specs/` **MUST** be registered in the project's specification index at `artifacts/specs/README.md`.
+- When creating a new spec or transitioning a legacy spec to CSA, the Agent **MUST** update its registration status in the `README.md` index table immediately.
+
