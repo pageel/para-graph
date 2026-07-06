@@ -14,6 +14,8 @@ Available actions:
 - `mem`: Trigger the CurationWorker to consolidate and cluster Semantic Memory (`memory-events.jsonl` → `memory-slices.jsonl`).
 - `compact`: Maintain Compact Memory by finding and enriching the most critical unenriched God Nodes.
 - `enrich`: Perform semantic enrichment on specific nodes using the MCP server.
+- `audit csa`: Run Convergent Specification Architecture (CSA) compliance audit. Supports `--plan-scope <path>` flag.
+- `fix csa`: Run CSA self-healing fix for dangling spec references or suggest missing ones.
 
 ## 0. Agent Indices Pre-flight
 
@@ -171,6 +173,55 @@ Use this action to semantically enrich specific existing graph nodes (classes, e
 
 The Agent MUST load `.agents/skills/para-graph/SKILL.md` and rigorously follow the **Enrichment Workflow (§2)**.
 The Agent will interact directly with the `mcp_para-graph_*` tools. No bash scripts are required for this action.
+
+---
+
+## Action: audit csa
+
+Use this action to run the CSA compliance audit on the project.
+
+```bash
+TARGET="[target]"
+PROJECT_PATH="Projects/$TARGET"
+
+CLI_PATH=".para/tools/graph/dist/cli.js"
+if [ ! -f "$CLI_PATH" ]; then
+  echo "❌ para-graph CLI not found tại $CLI_PATH."
+  exit 1
+fi
+
+# Run CSA audit.
+# Supports --plan-scope <path> flag to run plan-scoped audit.
+if [[ "$*" == *"--plan-scope"* ]]; then
+  # Extract plan file path
+  PLAN_PATH="${*#*--plan-scope }"
+  PLAN_PATH="${PLAN_PATH%% *}"
+  node "$CLI_PATH" audit csa --project "$PROJECT_PATH" --plan-scope "$PLAN_PATH"
+else
+  node "$CLI_PATH" audit csa --project "$PROJECT_PATH"
+fi
+```
+
+---
+
+## Action: fix csa
+
+Use this action to run the CSA self-healing fix to repair dangling spec references or suggest missing anchors.
+
+```bash
+TARGET="[target]"
+PROJECT_PATH="Projects/$TARGET"
+
+CLI_PATH=".para/tools/graph/dist/cli.js"
+if [ ! -f "$CLI_PATH" ]; then
+  echo "❌ para-graph CLI not found tại $CLI_PATH."
+  exit 1
+fi
+
+# Run CSA fix.
+# Supports --mode <dangling|suggest-missing> and --dry-run flags.
+node "$CLI_PATH" fix csa --project "$PROJECT_PATH" "$@"
+```
 
 ---
 

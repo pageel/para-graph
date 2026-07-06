@@ -1,5 +1,6 @@
 // @para-doc [#csa-build-integration]
 // @para-doc [#csa-transitive-test]
+// @para-doc [#csa-plan-scoped-testing-strategy]
 import { findWorkspaceRoot } from '../utils/workspace.js';
 import { GraphStore } from '../graph/store/GraphStore.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
@@ -42,6 +43,9 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
 // @para-doc [#csa-runAudit]
 // @para-doc [#csa-CsaCoverageDetails]
 // @para-doc [#csa-CsaTieredResult]
+// @para-doc [#csa-plan-scoped-commands]
+// @para-doc [#csa-double-gate-architecture]
+// @para-doc [#csa-gate1-plan-scoped]
 export function runAudit({ projectPath, planScope }: AuditCsaOptions): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {
@@ -78,9 +82,11 @@ export function runAudit({ projectPath, planScope }: AuditCsaOptions): void {
       } else {
         const planSpecIds = parsePlanSpecMapping(resolvedPlanPath);
         if (planSpecIds && planSpecIds.length > 0) {
+          // @para-doc [#csa-sc-plan-scope-filter]
           config.planSpecIds = planSpecIds;
           activePlanScope = true;
         } else {
+          // @para-doc [#csa-sc-plan-fallback]
           console.error(`\n[CSA Audit] ⚠️ Warning: Heading "## CSA Spec Mapping Table" not found or empty in plan: ${planScope}. Falling back to Global Audit.`);
         }
       }

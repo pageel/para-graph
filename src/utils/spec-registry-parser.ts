@@ -12,6 +12,7 @@ export interface SpecRegistryEntry {
 export function parseSpecRegistry(readmePath: string): Map<string, SpecRegistryEntry> {
   const registry = new Map<string, SpecRegistryEntry>();
 
+  // @para-doc [#csa-gate2-safe-fallback]
   if (!existsSync(readmePath)) {
     console.warn(`[Spec Registry Parser] Registry file not found: ${readmePath}`);
     return registry;
@@ -33,6 +34,7 @@ export function parseSpecRegistry(readmePath: string): Map<string, SpecRegistryE
     }
   }
 
+  // @para-doc [#csa-sc-safe-fallback]
   if (startIndex === -1) {
     console.warn(`[Spec Registry Parser] Registry heading not found in ${readmePath}`);
     return registry;

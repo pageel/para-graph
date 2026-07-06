@@ -738,6 +738,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   // --- graph_audit_csa: Run CSA compliance audit ---
   // @para-doc [#csa-build-integration]
   // @para-doc [#csa-tiered-gate]
+  // @para-doc [#csa-sc-mcp-integration]
   server.tool(
     'graph_audit_csa',
     'Run Convergent Specification Architecture (CSA) compliance audit for a project',
@@ -750,6 +751,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       const config = readCsaConfig(projectMdPath);
 
       if (planScope) {
+        // @para-doc [#csa-plan-scoped-mcp-integration]
         const resolvedPlanPath = resolve(planScope);
         if (existsSync(resolvedPlanPath)) {
           const planSpecIds = parsePlanSpecMapping(resolvedPlanPath);

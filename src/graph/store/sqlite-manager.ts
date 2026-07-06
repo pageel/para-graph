@@ -515,7 +515,8 @@ export class SqliteManager {
     let rawSpecAnchors: Array<{ id: string; file_path: string | null; semantic: string | null }>;
     let excludedPlannedAnchors: string[] = [];
 
-    if (isPlanScoped) {
+     if (isPlanScoped) {
+      // @para-doc [#csa-gate1-scorer-filter]
       const placeholders = planSpecIds.map(() => '?').join(',');
       rawSpecAnchors = db.prepare(`
         SELECT id, file_path, semantic FROM nodes 
@@ -524,6 +525,7 @@ export class SqliteManager {
           AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
       `).all(...planSpecIds) as Array<{ id: string; file_path: string | null; semantic: string | null }>;
     } else {
+      // @para-doc [#csa-gate2-audit-exclusion]
       // Exclude planned anchors in global mode
       rawSpecAnchors = db.prepare(`
         SELECT id, file_path, semantic FROM nodes 

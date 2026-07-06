@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.6.5] - 2026-07-06
+
+### Added
+- **Plan-Scoped CSA Audit** — Added support for scoping the CSA compliance audit to the active implementation plan via the `--plan-scope` CLI flag and `planScope` MCP tool parameter.
+- **Planned Spec Anchors Exclusion** — Configured the builder to ingest README.md spec registry, parse pending/planned specifications, and tag corresponding anchors as planned (`planned: true` in sqlite graph) to exclude them from the global compliance score while allowing active planning validation.
+
 ## [0.17.6.4] - 2026-06-29
 
 ### Added

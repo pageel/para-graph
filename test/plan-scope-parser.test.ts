@@ -1,3 +1,4 @@
+// @para-doc [#csa-gate1-plan-parser-test]
 import { describe, it, expect } from 'vitest';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';

@@ -21,6 +21,7 @@
 ### 5. `para-graph audit csa <project-name>`
 - CLI equivalent of `graph_audit_csa` MCP tool.
 - Runs CSA compliance audit checking bidirectional Spec↔Code traceability.
+- **Plan-Scoped Audit (v0.17.6.5)**: Supports `--plan-scope <path>` flag. When provided, restricts the audit coverage to specifications listed in the plan's Spec Mapping table, and excludes planned spec anchors (tagged `planned: true` during build) from the coverage calculations.
 
 ### 6. `para-graph fix csa <project-name>`
 - CLI equivalent of `graph_fix_csa` MCP tool.
@@ -48,7 +49,7 @@
 
 ### `/para-graph` workflow
 - Primary workflow for building and managing the code graph.
-- Actions: `build`, `enrich`, `status`, `serve`.
+- Actions: `build`, `enrich`, `status`, `serve`, `audit csa`, `fix csa`.
 
 ### `/docs` workflow integration
 - Doc files in `docs/` are integrated into the **Unified CSA (Tier 2)** gating.
@@ -57,5 +58,6 @@
 
 ### CSA integration (plan phases)
 - CSA audit gates are embedded in plan phase checkpoints.
-- `graph_audit_csa` runs at Phase 0 (baseline) and final phase (verification).
+- **Double-Gate Enforcement**: `graph_audit_csa` runs at Phase 0 (baseline) and final phase (verification).
+- **Plan-Scoped Gates**: By passing `--plan-scope`, the audit focuses solely on active features. Planned specs registry is parsed to tag anchors as planned (`planned: true`) which excludes them from global coverage checks but validates active development plan alignment.
 - `graph_fix_csa` auto-heals drifted spec references during development.

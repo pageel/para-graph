@@ -1,3 +1,5 @@
+// @para-doc [#csa-plan-scoped-testing-strategy]
+// @para-doc [#csa-plan-scoped-cli-test]
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';

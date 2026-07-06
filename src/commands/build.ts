@@ -141,6 +141,7 @@ export function runBuild(options: BuildOptions): void {
         // @para-doc [#csa-build-metadata-injection]
         const specMeta = extractSpecMetadata(mdFile);
         
+        // @para-doc [#csa-gate2-registry-filter]
         // Check if spec is marked as Planned in Registry
         const registryEntry = registry.get(fileName);
         const isPlanned = registryEntry
@@ -148,6 +149,9 @@ export function runBuild(options: BuildOptions): void {
             registryEntry.csaStatus?.toLowerCase().includes('planned')
           : false;
         
+        // @para-doc [#csa-gate2-build-flag]
+        // @para-doc [#csa-sc-registry-filter]
+        // @para-doc [#csa-sc-build-planned-flag]
         if (isPlanned) {
           specMeta.planned = true;
         }

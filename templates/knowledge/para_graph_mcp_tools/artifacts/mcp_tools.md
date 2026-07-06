@@ -74,7 +74,7 @@ The `para-graph` MCP server registers **26 tools** across 7 functional domains. 
 
 ### 16. `graph_audit_csa`
 - **Purpose**: Run Convergent Specification Architecture (CSA) compliance audit. Checks bidirectional traceability between anchors (`<span id="csa-...">`) and code comments (`// @para-doc`).
-- **Key Params**: `projectName`
+- **Key Params**: `projectName`, `planScope?` (path to active plan file to scope audit coverage and exclude planned spec anchors)
 - **Note**: Reports tiered coverage metrics (Tier 1 Specs: hard gate, Tier 2 Docs: soft/hard/off gate) based on `csa:` configuration in `project.md`.
 
 ### 17. `graph_fix_csa`

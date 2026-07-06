@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 /**
  * @para-doc [#csa-old-anchor]
+ * @para-doc [#csa-plan-scoped-objective]
+ * @para-doc [#csa-plan-scoped-boundaries]
+ * @para-doc [#csa-plan-scoped-project-structure]
+ * @para-doc [#csa-plan-scoped-success-criteria]
+ * @para-doc [#csa-sc-zero-regression]
+ * @para-doc [#csa-sc-test-coverage]
  * para-graph CLI — Subcommand router.
  *
  * Usage:
@@ -240,6 +246,7 @@ function main(): void {
       const projectIdx = subArgs.indexOf('--project');
       const projectPath = projectIdx !== -1 ? subArgs[projectIdx + 1] : undefined;
 
+      // @para-doc [#csa-gate1-cli-flag]
       const planScopeIdx = subArgs.indexOf('--plan-scope');
       const planScope = planScopeIdx !== -1 ? subArgs[planScopeIdx + 1] : undefined;
 

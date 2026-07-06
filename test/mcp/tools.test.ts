@@ -1,4 +1,7 @@
+// @para-doc [#csa-plan-scoped-mcp-test]
 import { describe, it, expect, vi } from 'vitest';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { registerTools } from '../../src/mcp/tools.js';
 import { GraphStore } from '../../src/graph/store/GraphStore.js';
 import { CodeGraph } from '../../src/graph/code-graph.js';
