@@ -752,7 +752,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
 
       if (planScope) {
         // @para-doc [#csa-plan-scoped-mcp-integration]
-        const resolvedPlanPath = resolve(planScope);
+        const resolvedPlanPath = path.isAbsolute(planScope) ? planScope : join(workspaceRoot, planScope);
         if (existsSync(resolvedPlanPath)) {
           const planSpecIds = parsePlanSpecMapping(resolvedPlanPath);
           if (planSpecIds && planSpecIds.length > 0) {
