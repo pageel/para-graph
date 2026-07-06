@@ -53,6 +53,9 @@ export interface CsaAuditResult {
     sourceLine: number;
   }>;
   prefixMismatches?: PrefixMismatch[];
+  mode?: 'plan-scoped' | 'global';
+  planSpecIds?: string[];
+  excludedPlannedAnchors?: string[];
 }
 
 // @para-doc [#csa-sqlite-database]
@@ -502,30 +505,74 @@ export class SqliteManager {
       return excludeFolders.some(folder => filePath.startsWith(folder));
     };
 
+    const planSpecIds = config?.planSpecIds;
+    const isPlanScoped = Array.isArray(planSpecIds) && planSpecIds.length > 0;
+
     // 1. Fetch spec anchors (defined as anchors in artifacts/specs/ or having no filePath/null)
     // Exclude deprecated anchors (v0.17.6.3) using json_valid() safe guard
     // @para-doc [#csa-audit-skip-deprecated]
     // @para-doc [#csa-sc-deprecated-skip]
-    const rawSpecAnchors = db.prepare(`
-      SELECT id, file_path, semantic FROM nodes 
-      WHERE type = 'spec_anchor' 
-        AND (file_path LIKE 'artifacts/specs/%' OR file_path IS NULL OR file_path = '')
-        AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
-    `).all() as Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    let rawSpecAnchors: Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    let excludedPlannedAnchors: string[] = [];
+
+    if (isPlanScoped) {
+      const placeholders = planSpecIds.map(() => '?').join(',');
+      rawSpecAnchors = db.prepare(`
+        SELECT id, file_path, semantic FROM nodes 
+        WHERE type = 'spec_anchor' 
+          AND id IN (${placeholders})
+          AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
+      `).all(...planSpecIds) as Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    } else {
+      // Exclude planned anchors in global mode
+      rawSpecAnchors = db.prepare(`
+        SELECT id, file_path, semantic FROM nodes 
+        WHERE type = 'spec_anchor' 
+          AND (file_path LIKE 'artifacts/specs/%' OR file_path IS NULL OR file_path = '')
+          AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
+          AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.planned') IS NOT 1)
+      `).all() as Array<{ id: string; file_path: string | null; semantic: string | null }>;
+
+      // Fetch excluded planned anchors for reporting
+      const excludedRows = db.prepare(`
+        SELECT id FROM nodes 
+        WHERE type = 'spec_anchor' 
+          AND (file_path LIKE 'artifacts/specs/%' OR file_path IS NULL OR file_path = '')
+          AND json_valid(semantic) = 1 
+          AND json_extract(semantic, '$.specMeta.planned') = 1
+      `).all() as Array<{ id: string }>;
+      excludedPlannedAnchors = excludedRows.map(row => row.id);
+    }
     
     const specAnchorsRows = rawSpecAnchors.filter(row => !isExcluded(row.file_path));
     const totalSpecAnchorsCount = specAnchorsRows.length;
     
     // 2. Fetch doc anchors (defined as anchors NOT in artifacts/specs/ and having a valid filePath)
     // Exclude deprecated anchors (v0.17.6.3) using json_valid() safe guard
-    const rawDocAnchors = db.prepare(`
-      SELECT id, file_path, semantic FROM nodes 
-      WHERE type = 'spec_anchor' 
-        AND file_path NOT LIKE 'artifacts/specs/%' 
-        AND file_path IS NOT NULL 
-        AND file_path != ''
-        AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
-    `).all() as Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    let rawDocAnchors: Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    if (isPlanScoped) {
+      // In plan-scoped mode, we also filter doc anchors by planSpecIds
+      const placeholders = planSpecIds.map(() => '?').join(',');
+      rawDocAnchors = db.prepare(`
+        SELECT id, file_path, semantic FROM nodes 
+        WHERE type = 'spec_anchor' 
+          AND id IN (${placeholders})
+          AND file_path NOT LIKE 'artifacts/specs/%' 
+          AND file_path IS NOT NULL 
+          AND file_path != ''
+          AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
+      `).all(...planSpecIds) as Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    } else {
+      rawDocAnchors = db.prepare(`
+        SELECT id, file_path, semantic FROM nodes 
+        WHERE type = 'spec_anchor' 
+          AND file_path NOT LIKE 'artifacts/specs/%' 
+          AND file_path IS NOT NULL 
+          AND file_path != ''
+          AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.deprecated') IS NOT 1)
+          AND (semantic IS NULL OR json_valid(semantic) = 0 OR json_extract(semantic, '$.specMeta.planned') IS NOT 1)
+      `).all() as Array<{ id: string; file_path: string | null; semantic: string | null }>;
+    }
     
     const docAnchorsRows = rawDocAnchors.filter(row => !isExcluded(row.file_path));
     const totalDocAnchorsCount = docGate === 'off' ? 0 : docAnchorsRows.length;
@@ -760,12 +807,15 @@ export class SqliteManager {
         gate: docGate,
         pass: docPass
       },
-      combinedHealth: Math.round(combinedHealth),
-      danglingEdges,
-      danglingInherits,
-      prefixMismatches
-    };
-  }
+       combinedHealth: Math.round(combinedHealth),
+       danglingEdges,
+       danglingInherits,
+       prefixMismatches,
+       mode: isPlanScoped ? 'plan-scoped' : 'global',
+       planSpecIds: isPlanScoped ? planSpecIds : undefined,
+       excludedPlannedAnchors: !isPlanScoped ? excludedPlannedAnchors : undefined
+     };
+   }
 
   public insertSnapshot(snapshotId: string, files: Array<{ filePath: string; size: number; hash: string }>): void {
     const db = this.getConnection();

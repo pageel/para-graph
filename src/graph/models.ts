@@ -397,6 +397,8 @@ export interface CsaConfig {
   docGate: 'soft' | 'hard' | 'off'; // default: 'soft'
   doubleBinding?: boolean;   // default: true. If false, skips double-binding check.
   calibration?: CsaCalibration;
+  planSpecIds?: string[];
+  excludePlanned?: boolean;
 }
 
 // --- Session Telemetry Types (v0.17.6) ---
@@ -474,6 +476,7 @@ export interface SpecMetadata {
   deprecatedBy?: string;
   renamedFrom?: string;
   anchorPrefix?: string;
+  planned?: boolean;
 }
 
 export type CsaEventKind = 'coverage_snapshot' | 'binding_added' | 'binding_removed' | 'spec_lifecycle';
