@@ -26,6 +26,7 @@ import type { GraphNode, GraphEdge } from '../graph/models.js';
 import { extractSpecAnchors, extractSpecMetadata, extractInheritsReferences } from '../parser/csa-parser.js';
 import { runLink } from './link.js';
 import { findWorkspaceRoot } from '../utils/workspace.js';
+import { parseSpecRegistry } from '../utils/spec-registry-parser.js';
 
 // @para-doc [#csa-build-integration]
 function findMdFiles(dir: string): string[] {
@@ -127,15 +128,30 @@ export function runBuild(options: BuildOptions): void {
   const plansPath = join(projectRoot, 'artifacts', 'plans');
   const specsPath = join(projectRoot, 'artifacts', 'specs');
   const mdFiles = [...findMdFiles(docsPath), ...findMdFiles(plansPath), ...findMdFiles(specsPath)];
+  const registryPath = join(specsPath, 'README.md');
+  const registry = existsSync(registryPath) ? parseSpecRegistry(registryPath) : new Map();
   
   if (mdFiles.length > 0) {
     let anchorCount = 0;
     const globalSeenAnchors = new Map<string, string>(); // anchor id -> first file path
     for (const mdFile of mdFiles) {
       const relPath = relative(projectRoot, mdFile).replace(/\\/g, '/');
+      const fileName = basename(mdFile);
       try {
         // @para-doc [#csa-build-metadata-injection]
         const specMeta = extractSpecMetadata(mdFile);
+        
+        // Check if spec is marked as Planned in Registry
+        const registryEntry = registry.get(fileName);
+        const isPlanned = registryEntry
+          ? registryEntry.businessStatus?.toLowerCase().includes('planned') ||
+            registryEntry.csaStatus?.toLowerCase().includes('planned')
+          : false;
+        
+        if (isPlanned) {
+          specMeta.planned = true;
+        }
+
         // @para-doc [#csa-sc-backward-compat]
         const hasMeta = Object.keys(specMeta).length > 0;
         const anchors = extractSpecAnchors(mdFile);

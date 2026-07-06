@@ -4,7 +4,7 @@ import { GraphStore } from '../../src/graph/store/GraphStore.js';
 import { CodeGraph } from '../../src/graph/code-graph.js';
 import * as pathResolver from '../../src/graph/store/pathResolver.js';
 import { SqliteManager } from '../../src/graph/store/sqlite-manager.js';
-import { writeFileSync } from 'node:fs';
+import fs, { writeFileSync, existsSync, readFileSync } from 'node:fs';
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
@@ -264,6 +264,59 @@ describe('MCP Tools: graph_audit_csa', () => {
     expect(initSchemaSpy).toHaveBeenCalled();
     expect(runCsaAuditSpy).toHaveBeenCalled();
     expect(closeSpy).toHaveBeenCalled();
+
+    vi.restoreAllMocks();
+  });
+
+  it('should accept planScope parameter and run plan-scoped csa audit', async () => {
+    const handlers: Record<string, any> = {};
+    const mockServer = {
+      tool: (name: string, desc: string, schema: any, handler: any) => {
+        handlers[name] = handler;
+      }
+    };
+
+    registerTools(mockServer as any, '/workspace');
+    const auditCsaHandler = handlers['graph_audit_csa'];
+    expect(auditCsaHandler).toBeDefined();
+
+    const mockAuditResult = {
+      totalAnchors: 2,
+      coveredAnchors: 1,
+      coverageRate: 50.0,
+      danglingEdges: [],
+      mode: 'plan-scoped',
+      planSpecIds: ['csa-anchor-1']
+    };
+
+    const initSchemaSpy = vi.spyOn(SqliteManager.prototype, 'initSchema').mockImplementation(() => {});
+    const runCsaAuditSpy = vi.spyOn(SqliteManager.prototype, 'runCsaAudit').mockReturnValue(mockAuditResult as any);
+    const closeSpy = vi.spyOn(SqliteManager.prototype, 'close').mockImplementation(() => {});
+
+    // Mock existsSync and readFileSync for the plan file path
+    const planFile = '/workspace/Projects/test-project/artifacts/plans/plan-v1.md';
+    vi.mocked(existsSync).mockImplementation((path: any) => {
+      if (path === planFile) return true;
+      return typeof path === 'string' && (path.includes('src/main.ts') || path.includes('src/utils/fuzzy-match.ts') || path.includes('src/utils/git-scanner.ts'));
+    });
+    vi.mocked(readFileSync).mockImplementation((path: any, options?: any) => {
+      if (path === planFile) {
+        return '# Plan\n\n## CSA Spec Mapping Table\n| Symbol | Spec File |\n| `csa-anchor-1` | spec.md |\n';
+      }
+      if (typeof path === 'string' && path.includes('src/main.ts')) {
+        return '// @para-doc [docs/spec.md#csa-old-anchor]\nexport function main() {}';
+      }
+      return '';
+    });
+
+    const result = await auditCsaHandler({ projectName: 'test-project', planScope: planFile });
+    const content = JSON.parse(result.content[0].text);
+
+    expect(content.mode).toBe('plan-scoped');
+    expect(content.planSpecIds).toEqual(['csa-anchor-1']);
+    expect(runCsaAuditSpy).toHaveBeenCalledWith(expect.objectContaining({
+      planSpecIds: ['csa-anchor-1']
+    }));
 
     vi.restoreAllMocks();
   });

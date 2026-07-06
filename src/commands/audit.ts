@@ -7,10 +7,12 @@ import path from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import type { ProjectInsight, CsaConfig } from '../graph/models.js';
+import { parsePlanSpecMapping } from '../parser/plan-scope-parser.js';
 
 // @para-doc [#csa-AuditCsaOptions]
 export interface AuditCsaOptions {
   projectPath: string;
+  planScope?: string;
 }
 
 // @para-doc [#csa-readCsaConfig]
@@ -40,7 +42,7 @@ function readCsaConfig(projectMdPath: string): Partial<CsaConfig> {
 // @para-doc [#csa-runAudit]
 // @para-doc [#csa-CsaCoverageDetails]
 // @para-doc [#csa-CsaTieredResult]
-export function runAudit({ projectPath }: AuditCsaOptions): void {
+export function runAudit({ projectPath, planScope }: AuditCsaOptions): void {
   const wsRoot = findWorkspaceRoot();
   if (!wsRoot) {
     console.error('Error: Could not auto-detect workspace root.');
@@ -67,9 +69,26 @@ export function runAudit({ projectPath }: AuditCsaOptions): void {
     dbManager.initSchema();
     const projectMdPath = path.join(wsRoot, 'Projects', projectName, 'project.md');
     const config = readCsaConfig(projectMdPath);
+
+    let activePlanScope = false;
+    if (planScope) {
+      const resolvedPlanPath = path.resolve(planScope);
+      if (!existsSync(resolvedPlanPath)) {
+        console.error(`\n[CSA Audit] ⚠️ Warning: Plan file not found: ${planScope}. Falling back to Global Audit.`);
+      } else {
+        const planSpecIds = parsePlanSpecMapping(resolvedPlanPath);
+        if (planSpecIds && planSpecIds.length > 0) {
+          config.planSpecIds = planSpecIds;
+          activePlanScope = true;
+        } else {
+          console.error(`\n[CSA Audit] ⚠️ Warning: Heading "## CSA Spec Mapping Table" not found or empty in plan: ${planScope}. Falling back to Global Audit.`);
+        }
+      }
+    }
+
     const auditResult = dbManager.runCsaAudit(config);
 
-    console.log(`\n=== CSA COMPLIANCE AUDIT REPORT: ${projectName} ===`);
+    console.log(`\n=== CSA COMPLIANCE AUDIT REPORT: ${projectName} (${activePlanScope ? 'Plan-Scoped' : 'Global'}) ===`);
     console.log(`Combined Health Score: ${auditResult.combinedHealth.toFixed(2)}%`);
     console.log(`Dangling Edges:        ${auditResult.danglingEdges.length}`);
     

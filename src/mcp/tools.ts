@@ -28,6 +28,7 @@ import { CurationWorker } from '../graph/curation-worker.js';
 import { SqliteManager } from '../graph/store/sqlite-manager.js';
 import { TelemetryAnalyzer } from '../graph/store/telemetry-analyzer.js';
 import { findRenamedAnchorInGit } from '../utils/git-scanner.js';
+import { parsePlanSpecMapping } from '../parser/plan-scope-parser.js';
 import { findFuzzyMatch } from '../utils/fuzzy-match.js';
 import * as junkAuditor from '../utils/junk-auditor.js';
 import { loadJunkProfile, mergeJunkConfig, ProjectJunkConfig } from '../utils/junk-profile-loader.js';
@@ -742,10 +743,21 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
     'Run Convergent Specification Architecture (CSA) compliance audit for a project',
     {
       projectName: z.string().describe('Name of the PARA project'),
+      planScope: z.string().optional().describe('Path to the plan file to run plan-scoped audit'),
     },
-    async ({ projectName }) => {
+    async ({ projectName, planScope }) => {
       const projectMdPath = join(workspaceRoot, 'Projects', projectName, 'project.md');
       const config = readCsaConfig(projectMdPath);
+
+      if (planScope) {
+        const resolvedPlanPath = resolve(planScope);
+        if (existsSync(resolvedPlanPath)) {
+          const planSpecIds = parsePlanSpecMapping(resolvedPlanPath);
+          if (planSpecIds && planSpecIds.length > 0) {
+            config.planSpecIds = planSpecIds;
+          }
+        }
+      }
 
       const dbPath = join(workspaceRoot, 'Projects', projectName, '.beads', 'graph', `${projectName}.db`);
       const dbManager = new SqliteManager(projectName, dbPath);

@@ -240,12 +240,15 @@ function main(): void {
       const projectIdx = subArgs.indexOf('--project');
       const projectPath = projectIdx !== -1 ? subArgs[projectIdx + 1] : undefined;
 
+      const planScopeIdx = subArgs.indexOf('--plan-scope');
+      const planScope = planScopeIdx !== -1 ? subArgs[planScopeIdx + 1] : undefined;
+
       if (!projectPath) {
         console.error('Error: audit csa requires --project <path> argument.');
         process.exit(1);
       }
 
-      runAudit({ projectPath });
+      runAudit({ projectPath, planScope });
       break;
     }
 

@@ -194,5 +194,58 @@ describe('Build CSA Integration', () => {
     expect(documentsEdge?.relation).toBe(EdgeRelation.DOCUMENTS);
     expect(documentsEdge?.confidence).toBe('EXTRACTED');
   });
+
+  it('should inject planned: true into specMeta for anchors in planned specs', () => {
+    // 1. Create artifacts/specs directory
+    const specsDir = join(projectDir, 'artifacts', 'specs');
+    mkdirSync(specsDir, { recursive: true });
+
+    // 2. Write Specification Registry README.md with spec-planned.md marked as Planned
+    writeFileSync(
+      join(specsDir, 'README.md'),
+      `## Specification Registry
+
+| Symbol | Spec File | Created Date | Version | Business Status | CSA Status | CSA Anchors | Note |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| \`S2\` | [spec-planned.md](file:///path/to/spec-planned.md) | 2026-07-06 | \`v0.1.0\` | Planned | Pending | 0 anchors | Planned spec |
+| \`S3\` | [spec-active.md](file:///path/to/spec-active.md) | 2026-07-06 | \`v0.1.0\` | Active | Approved | 1 anchors | Active spec |`,
+      'utf-8'
+    );
+
+    // 3. Write mock spec files
+    writeFileSync(
+      join(specsDir, 'spec-planned.md'),
+      `# Spec Planned\n\n## Planned Anchor <span id="csa-planned-anchor"></span>`,
+      'utf-8'
+    );
+
+    writeFileSync(
+      join(specsDir, 'spec-active.md'),
+      `# Spec Active\n\n## Active Anchor <span id="csa-active-anchor"></span>`,
+      'utf-8'
+    );
+
+    // Write dummy code to avoid early exit
+    writeFileSync(join(repoDir, 'dummy.ts'), 'export function dummy() {}', 'utf-8');
+
+    // 4. Run Build
+    runBuild({
+      targetDir: repoDir,
+      outputDir: outputDir,
+      useClean: true,
+      projectName: 'mock-project'
+    });
+
+    // 5. Import graph and verify planned flag
+    const graph = importFromJsonl(outputDir);
+    
+    const plannedNode = graph.getNode('csa-planned-anchor');
+    expect(plannedNode).toBeDefined();
+    expect(plannedNode?.semantic?.specMeta?.planned).toBe(true);
+
+    const activeNode = graph.getNode('csa-active-anchor');
+    expect(activeNode).toBeDefined();
+    expect(activeNode?.semantic?.specMeta?.planned).toBeUndefined();
+  });
 });
 
