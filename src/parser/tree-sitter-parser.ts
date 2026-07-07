@@ -61,23 +61,7 @@ export class TreeSitterParser {
       return;
     }
 
-    // Step 1: Load language module (lazy, cached)
-    const languageModule = loadLanguageModule(profile);
-    if (!languageModule) return;
-
-    // Step 2: Set language and parse
-    this.parser.setLanguage(languageModule);
     const content = readFileSync(filePath, 'utf-8');
-
-    let tree: SyntaxNode;
-    try {
-      const bufferSize = Math.max(32768, content.length * 2 + 1024);
-      tree = this.parser.parse(content, null, { bufferSize });
-    } catch (error) {
-      console.warn(`[para-graph] Warning: Failed to parse file ${filePath}. Skipping... Error: ${(error as Error).message}`);
-      return;
-    }
-
     const relPath = relative(this.rootDir, filePath).replace(/\\/g, '/');
     const lines = content.split('\n');
 
@@ -93,6 +77,32 @@ export class TreeSitterParser {
       signature: relPath,
     };
     graph.addNode(fileNode);
+
+    // // @para-doc [#csa-astro-parser-fallback]
+    // Early return for profiles that don't use AST parsing (e.g., Astro)
+    if (!profile.parserModule) {
+      if (ext === '.astro') {
+        this.parseAstroFrontmatter(content, relPath, graph);
+      }
+      this.extractCsaComments(lines, relPath, graph);
+      return;
+    }
+
+    // Step 1: Load language module (lazy, cached)
+    const languageModule = loadLanguageModule(profile);
+    if (!languageModule) return;
+
+    // Step 2: Set language and parse
+    this.parser.setLanguage(languageModule);
+
+    let tree: SyntaxNode;
+    try {
+      const bufferSize = Math.max(32768, content.length * 2 + 1024);
+      tree = this.parser.parse(content, null, { bufferSize });
+    } catch (error) {
+      console.warn(`[para-graph] Warning: Failed to parse file ${filePath}. Skipping... Error: ${(error as Error).message}`);
+      return;
+    }
 
     // Step 3: Run SSEC query
     const query = this.getQuery(profile, languageModule);
@@ -477,6 +487,58 @@ export class TreeSitterParser {
         };
         graph.addEdge(edge);
       }
+    }
+  }
+
+  // // @para-doc [#csa-astro-frontmatter-ast]
+  private parseAstroFrontmatter(content: string, relPath: string, graph: CodeGraph): void {
+    const lines = content.split('\n');
+    const frontmatterLines: string[] = [];
+    let inFrontmatter = false;
+    let fenceCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.trim() === '---') {
+        fenceCount++;
+        inFrontmatter = (fenceCount === 1);
+        frontmatterLines.push('');
+        continue;
+      }
+
+      if (inFrontmatter) {
+        frontmatterLines.push(line);
+      } else {
+        frontmatterLines.push('');
+      }
+    }
+
+    const frontmatterCode = frontmatterLines.join('\n');
+    const tsProfile = getProfile('.ts');
+    if (!tsProfile) return;
+
+    const tsModule = loadLanguageModule(tsProfile);
+    if (!tsModule) return;
+
+    // Delegate to tree-sitter-typescript parser
+    this.parser.setLanguage(tsModule);
+
+    let tree: any;
+    try {
+      tree = this.parser.parse(frontmatterCode);
+    } catch (error) {
+      console.warn(`[para-graph] Warning: Failed to parse Astro frontmatter in ${relPath}. Error: ${(error as Error).message}`);
+      return;
+    }
+
+    const query = this.getQuery(tsProfile, tsModule);
+    if (!query) return;
+
+    const captures = query.captures(tree.rootNode);
+    this.mapCapturesToGraph(captures, relPath, lines, graph);
+
+    if (tsProfile.postProcess) {
+      tsProfile.postProcess(captures, graph);
     }
   }
 }

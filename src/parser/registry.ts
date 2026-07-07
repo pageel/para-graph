@@ -91,6 +91,13 @@ const PROFILES: LanguageProfile[] = [
     parserModule: 'tree-sitter-bash',
     queryFile: 'bash.scm',
   },
+  // @para-doc [#csa-astro-registry]
+  {
+    name: 'astro',
+    extensions: ['.astro'],
+    parserModule: '',
+    queryFile: '',
+  },
 ];
 
 // --- Extension → Profile Map (built once at module load) ---
