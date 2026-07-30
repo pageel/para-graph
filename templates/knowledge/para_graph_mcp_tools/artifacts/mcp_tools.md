@@ -45,12 +45,13 @@ The `para-graph` MCP server registers **26 tools** across 7 functional domains. 
 ## Domain 2: Memory Engine (3 tools)
 
 ### 10. `memory_push`
-- **Purpose**: Push a memory event (conversation, tool_use, decision, observation, error) to the project MemoryStore (SQLite).
-- **Key Params**: `projectName`, `kind`, `content`, `sessionId`, `metadata?`
+- **Purpose**: Push a memory event (conversation, tool_use, decision, cot-decision, cot-matrix, observation, error) to the project MemoryStore (SQLite).
+- **Key Params**: `projectName`, `kind`, `content`, `sessionId`, `metadata?`, `cotMetadata?` (`doorType` ['one-way'|'two-way'], `weightedScore`, `scoringMatrix`, `failureModesCount`, `selectedOption`)
 
 ### 11. `memory_search`
-- **Purpose**: Search for memory events by keyword using FTS5 full-text search.
-- **Key Params**: `projectName`, `query`, `limit?`
+- **Purpose**: Search for memory events by keyword using FTS5 full-text search with optional `kind` and `doorType` filters.
+- **Key Params**: `projectName`, `query`, `limit?`, `since?`, `includeArchived?`, `kind?`, `doorType?` ('one-way' | 'two-way')
+
 
 ### 12. `memory_curate`
 - **Purpose**: Curate raw memory events into semantic slices — clusters related events into topic-based summaries linked to graph nodes.
