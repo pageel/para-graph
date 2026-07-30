@@ -142,7 +142,7 @@ describe('MCP Tools: memory_search', () => {
     await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, since: isoString });
 
     const expectedSince = new Date(isoString).getTime();
-    expect(mockGraph.searchMemory).toHaveBeenCalledWith('foo', 10, expectedSince, undefined);
+    expect(mockGraph.searchMemory).toHaveBeenCalledWith('foo', 10, expectedSince, undefined, undefined, undefined);
     
     // Test invalid ISO string
     const resultInvalid = await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, since: 'not-a-date' });
@@ -151,9 +151,10 @@ describe('MCP Tools: memory_search', () => {
     
     // Test includeArchived
     await memorySearchHandler({ projectName: 'test', query: 'foo', limit: 10, includeArchived: true });
-    expect(mockGraph.searchMemory).toHaveBeenCalledWith('foo', 10, undefined, true);
+    expect(mockGraph.searchMemory).toHaveBeenCalledWith('foo', 10, undefined, true, undefined, undefined);
 
     vi.restoreAllMocks();
+
   });
 });
 

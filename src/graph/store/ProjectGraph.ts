@@ -191,8 +191,15 @@ export class ProjectGraph {
     this.memoryStore.pushEvent(event);
   }
 
-  public searchMemory(query: string, limit?: number, since?: number, includeArchived?: boolean): MemoryEvent[] {
-    return this.memoryStore.searchEvents(query, limit, since, includeArchived);
+  public searchMemory(
+    query: string,
+    limit?: number,
+    since?: number,
+    includeArchived?: boolean,
+    kind?: string,
+    doorType?: 'one-way' | 'two-way'
+  ): MemoryEvent[] {
+    return this.memoryStore.searchEvents(query, limit, since, includeArchived, kind, doorType);
   }
 
   public getMemorySlices(): SemanticSlice[] {

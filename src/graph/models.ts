@@ -341,11 +341,30 @@ export interface GodNodeProfile {
   enriched: boolean;
 }
 
+// --- Deep Reasoning (CoT) Engine Types (v0.17.7) ---
+
+/** Metadata structure for Deep Reasoning (Chain-of-Thought) decisions and scoring matrices */
+// @para-doc [#csa-cot-mcp-integration]
+export interface CotMetadata {
+
+  doorType?: 'one-way' | 'two-way';
+  weightedScore?: number;
+  scoringMatrix?: {
+    blastRadiusScore: number;
+    maintainabilityScore: number;
+    securityScore: number;
+    reversibilityScore: number;
+    efficiencyScore: number;
+  };
+  failureModesCount?: number;
+  selectedOption?: string;
+}
+
 // --- Project Intelligence Types (P5: Project Insights) ---
 
 export interface ProjectInsight {
   id: string;
-  category: 'lesson' | 'risk' | 'decision' | 'pattern' | 'gotcha';
+  category: 'lesson' | 'risk' | 'decision' | 'pattern' | 'gotcha' | 'cot-decision' | 'cot-matrix';
   domain: string;          // e.g., 'path-handling', 'memory', 'parser', 'mcp'
   title: string;
   description: string;

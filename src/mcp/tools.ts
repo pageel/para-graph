@@ -433,17 +433,32 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- memory_push: Push a memory event to the project MemoryStore ---
+  // @para-doc [#csa-cot-mcp-integration]
   server.tool(
+
     'memory_push',
     'Push a memory event to the project MemoryStore',
     {
       projectName: z.string().describe('Name of the PARA project'),
-      kind: z.string().describe('Category of event'),
+      kind: z.string().describe('Category of event (e.g. conversation, tool_use, decision, cot-decision, cot-matrix)'),
       content: z.string().describe('Summary or content of the event'),
       sessionId: z.string().describe('Session or run ID'),
       metadata: z.record(z.string(), z.any()).optional().describe('Additional structured data'),
+      cotMetadata: z.object({
+        doorType: z.enum(['one-way', 'two-way']).optional().describe('Decision door classification'),
+        weightedScore: z.number().optional().describe('Weighted score of selected option'),
+        scoringMatrix: z.object({
+          blastRadiusScore: z.number(),
+          maintainabilityScore: z.number(),
+          securityScore: z.number(),
+          reversibilityScore: z.number(),
+          efficiencyScore: z.number(),
+        }).optional().describe('5-dimension CoT scoring matrix'),
+        failureModesCount: z.number().optional().describe('Count of identified failure modes'),
+        selectedOption: z.string().optional().describe('Title of selected option'),
+      }).optional().describe('Structured Deep Reasoning (CoT) metadata'),
     },
-    async ({ projectName, kind, content, sessionId, metadata }) => {
+    async ({ projectName, kind, content, sessionId, metadata, cotMetadata }) => {
       if (content.length > 10240) {
         return {
           content: [{ type: 'text' as const, text: JSON.stringify({ success: false, error: 'Content exceeds 10KB limit' }) }],
@@ -455,12 +470,17 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
       const eventId = randomUUID();
       
+      const mergedMetadata = {
+        ...(metadata || {}),
+        ...(cotMetadata ? { cotMetadata } : {}),
+      };
+
       const event = {
         id: eventId,
         kind,
         sessionId,
         content: safeContent,
-        metadata,
+        metadata: Object.keys(mergedMetadata).length > 0 ? mergedMetadata : undefined,
         timestamp: new Date().toISOString(),
       };
       
@@ -474,17 +494,21 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
   );
 
   // --- memory_search: Full-text search over events ---
+  // @para-doc [#csa-cot-mcp-integration]
+
   server.tool(
     'memory_search',
-    'Search for memory events by keyword',
+    'Search for memory events by keyword and optional kind / doorType filters',
     {
       projectName: z.string().describe('Name of the PARA project'),
       query: z.string().describe('Search term'),
       limit: z.number().optional().describe('Maximum number of results (default 50)'),
       since: z.string().optional().describe('Filter events newer than this ISO 8601 timestamp (e.g. 2026-05-01T00:00:00Z)'),
       includeArchived: z.boolean().optional().describe('If true, returns both active and archived events (default false)'),
+      kind: z.string().optional().describe('Filter events by specific kind (e.g. cot-decision, cot-matrix)'),
+      doorType: z.enum(['one-way', 'two-way']).optional().describe('Filter CoT events by door classification (one-way or two-way)'),
     },
-    async ({ projectName, query, limit, since, includeArchived }) => {
+    async ({ projectName, query, limit, since, includeArchived, kind, doorType }) => {
       const graph = GraphStore.getGraph(workspaceRoot, projectName);
       let sinceTimestamp: number | undefined;
       if (since !== undefined) {
@@ -496,13 +520,14 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
           };
         }
       }
-      const results = graph.searchMemory(query, limit ?? 50, sinceTimestamp, includeArchived);
+      const results = graph.searchMemory(query, limit ?? 50, sinceTimestamp, includeArchived, kind, doorType);
       
       return {
         content: [{ type: 'text' as const, text: JSON.stringify({ results, count: results.length }, null, 2) }],
       };
     },
   );
+
 
   // --- memory_curate: Curate raw events into slices ---
   server.tool(
@@ -1416,7 +1441,7 @@ export function registerTools(server: McpServer, workspaceRoot: string): void {
       compactedText += `- **Plan Checklist Verification:** You MUST check that the task checklist in the active plan/phase is marked as completed (\`[x]\`) BEFORE proposing or executing a git commit or push. For details, you MUST read the para_implementation_plan_guidelines KI.\n`;
       compactedText += `- **Pre-Commit Task Sync Guard:** Before proposing or executing a git commit/push or finishing a phase, you MUST verify that the Project Implementation Plan file (under \`artifacts/plans/\`) is updated, and all completed tasks in the active phase are marked as \`[x]\`. Proposing a git commit while leaving implemented tasks unchecked (\`[ ]\`) in the Project Plan is a strict workflow violation.\n`;
       compactedText += `- **Strict TDD Compliance:** If TDD is active, you MUST run tests exclusively using the TDD evidence logger (\`tdd-test.sh\` script), e.g., \`bash <workspace-root>/.agents/skills/tdd/scripts/tdd-test.sh <test-command>\`. Do NOT run raw test commands directly. Ensure that a failing test (RED) is recorded in \`tdd-evidence.log\` before writing the corresponding production code (GREEN).\n`;
-      compactedText += `- **CSA Double-Binding:** Every public code entity (class, interface, function, API endpoint) must link to its corresponding design specification anchor using a \`// @para-doc [#csa-anchor-id]\` comment, and vice versa. Always run \`graph_audit_csa\` before phase completion to verify compliance.\n`;
+      compactedText += `- **CSA Double-Binding:** Every public code entity (class, interface, function, API endpoint) must link to its corresponding design specification anchor using a para-doc tag, and vice versa. Always run \`graph_audit_csa\` before phase completion to verify compliance.\n`;
       compactedText += `- **Pre-Flight Problem & Drift Check:** BEFORE proposing any git commit/push or concluding an implementation phase, you MUST run a physical directory status check (\`git status --ignored --porcelain\`) and run project tests to ensure no junk files, syntax errors, or failing tests exist.\n\n`;
       compactedText += `## ⛔ Platform Harness Guards\n\n`;
       compactedText += `### Checkpoint Gate (Interactive Pause)\n`;

@@ -36,17 +36,41 @@ export class MemoryStore {
     return `"${escaped}"*`;
   }
 
-  public searchEvents(query: string, limit: number = 50, since?: number, includeArchived: boolean = false): MemoryEvent[] {
-    const toMemoryEvent = (row: any): MemoryEvent => ({
-      id: row.id,
-      sessionId: row.session_id,
-      kind: row.kind,
-      content: row.content,
-      metadata: row.metadata ? JSON.parse(row.metadata) : undefined,
-      timestamp: new Date(row.timestamp).toISOString(),
-      weight: row.weight,
-      archived: row.archived === 1
-    });
+  // @para-doc [#csa-cot-mcp-integration]
+  public searchEvents(
+    query: string,
+    limit: number = 50,
+    since?: number,
+    includeArchived: boolean = false,
+    kind?: string,
+    doorType?: 'one-way' | 'two-way'
+  ): MemoryEvent[] {
+    const toMemoryEvent = (row: any): MemoryEvent => {
+      let parsedMetadata: any = undefined;
+      if (row.metadata) {
+        try {
+          parsedMetadata = JSON.parse(row.metadata);
+        } catch {
+          parsedMetadata = undefined;
+        }
+      }
+      return {
+        id: row.id,
+        sessionId: row.session_id,
+        kind: row.kind,
+        content: row.content,
+        metadata: parsedMetadata,
+        timestamp: new Date(row.timestamp).toISOString(),
+        weight: row.weight,
+        archived: row.archived === 1
+      };
+    };
+
+    const matchesFilter = (event: MemoryEvent): boolean => {
+      if (kind && event.kind !== kind) return false;
+      if (doorType && event.metadata?.cotMetadata?.doorType !== doorType) return false;
+      return true;
+    };
 
     if (this.sqliteManager) {
       try {
@@ -103,8 +127,8 @@ export class MemoryStore {
           substringRows = stmt.all(`%${query}%`, `%${query}%`);
         }
 
-        const ftsResults: MemoryEvent[] = ftsRows.map(toMemoryEvent);
-        const substringResults: MemoryEvent[] = substringRows.map(toMemoryEvent);
+        const ftsResults: MemoryEvent[] = ftsRows.map(toMemoryEvent).filter(matchesFilter);
+        const substringResults: MemoryEvent[] = substringRows.map(toMemoryEvent).filter(matchesFilter);
 
         // Rank fusion via RRF
         const fused = fuseRankedLists<MemoryEvent>([ftsResults, substringResults], (e: MemoryEvent) => e.id, { k: 60 });
@@ -126,6 +150,8 @@ export class MemoryStore {
         const eventTime = new Date(event.timestamp).getTime();
         if (eventTime < since) continue;
       }
+
+      if (!matchesFilter(event)) continue;
       
       if (event.content.toLowerCase().includes(q)) {
         contentMatches.push(event);
@@ -150,6 +176,7 @@ export class MemoryStore {
     const fused = fuseRankedLists<MemoryEvent>([contentMatches, kindMatches], (e: MemoryEvent) => e.id, { k: 60 });
     return fused.map((f) => f.item).slice(0, limit);
   }
+
 
   /** Add a curated semantic slice */
   public addSlice(slice: SemanticSlice): void {
