@@ -13,7 +13,8 @@
 
   <p>
     <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.17.6.5-brightgreen.svg" alt="Version 0.17.6.5">
+    <img src="https://img.shields.io/badge/version-0.17.7-brightgreen.svg" alt="Version 0.17.7">
+
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -73,6 +74,8 @@ Part of the [PARA Workspace](https://github.com/pageel/para-workspace) ecosystem
 - **RRF Hybrid Search Scorer (v0.17.1+)** — Integrates Reciprocal Rank Fusion (RRF) to merge FTS5 keyword results and LIKE similarity matches.
 - **Multi-seed Context Retrieval (v0.17.1+)** — Gathers comprehensive context from multiple seed node IDs with topological distance capping (20 per seed, 50 globally).
 - **Profile-Driven Junk Governance (v0.17.6.1+)** — Auto-detects and classifies untracked or ignored junk files based on profile markers (Astro, TypeScript, CF Workers, Python, PHP) or explicit configuration, categorizing them into 3 safety tiers.
+- **Deep Reasoning CoT Engine Integration (v0.17.7+)** — Extends Memory Engine and MCP protocol (`memory_push`, `memory_search`) with Chain-of-Thought decision metadata (`cotMetadata`), decision door classification (`one-way`, `two-way`), and scoring matrices.
+
 
 ## 🚀 Quick Start
 

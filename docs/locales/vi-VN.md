@@ -13,7 +13,8 @@
 
   <p>
     <a href="../../LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
-    <img src="https://img.shields.io/badge/version-0.17.6.5-brightgreen.svg" alt="Version 0.17.6.5">
+    <img src="https://img.shields.io/badge/version-0.17.7-brightgreen.svg" alt="Version 0.17.7">
+
     <img src="https://img.shields.io/badge/Node-%3E%3D18-green.svg" alt="Node >= 18">
     <img src="https://img.shields.io/badge/TypeScript-5.x-blue.svg" alt="TypeScript 5.x">
   </p>
@@ -69,6 +70,8 @@ Công cụ sử dụng [Tree-sitter](https://tree-sitter.github.io/tree-sitter/)
 - **Tìm kiếm lai RRF (v0.17.1+)** — Tích hợp thuật toán Reciprocal Rank Fusion (RRF) để kết hợp kết quả khớp từ khóa FTS5 và tìm kiếm LIKE.
 - **Truy xuất bối cảnh đa nguồn (v0.17.1+)** — Hỗ trợ thu thập callers, callees, imports, tests từ nhiều node ID (multi-seed) đồng thời, tự động loại bỏ trùng lặp và tỉa theo khoảng cách tô-pô (giới hạn 20 mỗi seed, 50 toàn cục).
 - **Quản lý file rác theo Profile (v0.17.6.1+)** — Tự động nhận diện và phân loại các tệp tin rác không được theo dõi hoặc bị bỏ qua dựa trên các profile marker (Astro, TypeScript, CF Workers, Python, PHP) hoặc cấu hình dự án, chia thành 3 phân tầng an toàn để hỗ trợ dọn dẹp.
+- **Tích hợp Bộ nhớ Suy luận Sâu CoT (v0.17.7+)** — Mở rộng Memory Engine và giao thức MCP (`memory_push`, `memory_search`) hỗ trợ thông tin metadata quyết định Chain-of-Thought (`cotMetadata`), phân loại cửa quyết định (`one-way`, `two-way`), và ma trận chấm điểm rủi ro.
+
 
 <a name="bat-dau-nhanh"></a>
 ## 🚀 Bắt đầu nhanh
